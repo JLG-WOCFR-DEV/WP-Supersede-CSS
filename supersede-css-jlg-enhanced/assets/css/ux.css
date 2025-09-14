@@ -1,0 +1,51 @@
+:root{--ssc-bg:#f8fafc;--ssc-card:#ffffff;--ssc-border:#e5e7eb;--ssc-text:#0f172a;--ssc-muted:#64748b;--ssc-accent:#4f46e5;}
+/* Thème sombre avec contraste encore amélioré */
+.ssc-dark:root,.ssc-dark{--ssc-bg:#030712;--ssc-card:#111827;--ssc-border:#374151;--ssc-text:#e5e7eb;--ssc-muted:#d1d5db;--ssc-accent:#a5b4fc;}
+.ssc-shell{position:relative}
+.ssc-topbar{position:sticky;top:0;z-index:1000;display:flex;align-items:center;gap:8px;background:var(--ssc-card);border-bottom:1px solid var(--ssc-border);padding:8px 16px;margin:0}
+.ssc-topbar .ssc-title{font-weight:700} .ssc-topbar .ssc-spacer{flex:1}
+
+/* CORRECTION : La sidebar utilise maintenant les variables du thème */
+.ssc-sidebar{
+    position:sticky;
+    top:69px; /* Ajusté pour l'espace sous la topbar */
+    align-self:flex-start;
+    width:220px;
+    background:var(--ssc-card); /* Ajout du fond */
+    border:1px solid var(--ssc-border); /* Ajout de la bordure */
+    border-radius:12px; /* Ajout du radius pour la cohérence */
+    padding:8px;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+}
+
+.ssc-sidebar a{display:flex;gap:8px;align-items:center;padding:8px;border-radius:8px;color:var(--ssc-text);text-decoration:none;border:1px solid transparent}
+.ssc-sidebar a.active{background:rgba(165, 180, 252, 0.1);border-color:var(--ssc-border); color: var(--ssc-accent); font-weight: 600;}
+.ssc-layout{display:grid;grid-template-columns:220px 1fr;gap:16px; align-items: flex-start;}
+.ssc-main-content { padding-left: 16px; }
+
+/* Nouveau bouton de retour */
+.ssc-topbar .ssc-back-to-admin { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; padding: 4px 8px; }
+.ssc-topbar .ssc-back-to-admin .dashicons { font-size: 18px; line-height: 1; }
+
+/* Titres des groupes dans la sidebar */
+.ssc-sidebar-group { margin-bottom: 12px; }
+.ssc-sidebar-heading {
+    padding: 8px 8px 4px;
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--ssc-muted);
+    letter-spacing: 0.5px;
+}
+
+#ssc-cmdp{position:fixed;inset:0;display:none;align-items:flex-start;justify-content:center;background:rgba(2,6,23,.5);z-index:9999}
+#ssc-cmdp.active{display:flex}
+#ssc-cmdp .panel{margin-top:10vh;width:min(720px,92vw);background:var(--ssc-card);border:1px solid var(--ssc-border);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);overflow:hidden}
+#ssc-cmdp ul{max-height:50vh;overflow:auto;margin:0;padding:0;list-style:none}
+#ssc-cmdp li a{display:flex;padding:10px;text-decoration:none;color:var(--ssc-text);border-bottom:1px solid var(--ssc-border)}
+#ssc-cmdp li a:hover{background:rgba(165, 180, 252, 0.1)}
+#ssc-toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:99999}
+.ssc-toast{background:var(--ssc-card);border:1px solid var(--ssc-border);border-radius:10px;padding:10px 12px;box-shadow:0 10px 20px rgba(0,0,0,.12); opacity: 0; transform: translateY(10px); animation: ssc-toast-in 0.3s ease forwards;}
+@keyframes ssc-toast-in { to { opacity: 1; transform: translateY(0); } }

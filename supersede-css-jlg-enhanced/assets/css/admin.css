@@ -1,0 +1,107 @@
+/* Main SSC Styles */
+.ssc-app, .ssc-wrap { 
+    font: 14px/1.5 system-ui, sans-serif; 
+    max-width: none;
+    color: var(--ssc-text);
+}
+.ssc-app h1, .ssc-wrap h1,
+.ssc-app h2, .ssc-wrap h2,
+.ssc-app h3, .ssc-wrap h3,
+.ssc-app h4, .ssc-wrap h4 {
+    color: var(--ssc-text);
+}
+.ssc-app p, .ssc-wrap p,
+.ssc-app .description, .ssc-wrap .description,
+.ssc-app label, .ssc-wrap label {
+    color: var(--ssc-muted);
+}
+
+.ssc-two { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+@media (max-width: 782px) { .ssc-two { grid-template-columns: 1fr; } }
+.ssc-pane, .ssc-panel { background:var(--ssc-card); border:1px solid var(--ssc-border); border-radius:12px; padding:16px; }
+.ssc-actions { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+.ssc-code { background:#0f172a; color:#e5e7eb; border-radius:8px; padding:12px; overflow:auto; font-family: monospace; font-size: 13px; line-height: 1.6; }
+.ssc-list { list-style:none; padding:0; margin:0; display:grid; gap:8px;}
+.ssc-list li { padding:8px 10px; border:1px solid var(--ssc-border); border-radius:8px; display:flex; justify-content:space-between; align-items:center; }
+.ssc-health-badge{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:999px;border:1px solid #e5e7eb}.ssc-health-badge.ok{background:#ecfdf5;color:#065f46}.ssc-health-badge.warn{background:#fffbeb;color:#92400e}.ssc-health-badge.err{background:#fef2f2;color:#991b1b}
+
+/* Style for Danger Zone */
+.ssc-danger-zone {
+    background-color: #fef2f2;
+    border-color: #f87171;
+}
+.ssc-danger-zone h2 { color: #991b1b; }
+.ssc-danger-zone p { color: #b91c1c; }
+
+.ssc-dark .ssc-danger-zone {
+    background-color: #450a0a;
+    border-color: #991b1b;
+}
+.ssc-dark .ssc-danger-zone h2 {
+    color: #fca5a5;
+}
+/* CORRECTION : Ciblage par ID pour garantir la couleur du texte */
+.ssc-dark #ssc-danger-intro,
+.ssc-dark #ssc-danger-desc {
+    color: #ffffff !important;
+}
+
+
+/* Utilities Page */
+.ssc-utilities-wrap .ssc-editor-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; height: calc(100vh - 250px); }
+.ssc-editor-column, .ssc-preview-column { display: flex; flex-direction: column; }
+.ssc-editor-header, .ssc-preview-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid var(--ssc-border); margin-bottom: 8px; }
+.ssc-editor-container, .ssc-preview-frame-container { flex-grow: 1; position: relative; }
+.CodeMirror { border: 1px solid var(--ssc-border); border-radius: 8px; }
+.ssc-editor-container .CodeMirror { position: absolute; inset: 0; height: 100% !important; }
+.ssc-preview-frame-container iframe { width: 100%; height: 100%; border: 1px solid var(--ssc-border); background: #fff; border-radius: 8px; }
+.ssc-url-bar { display: flex; gap: 8px; flex-grow: 1; } .ssc-url-bar input { width: 100%; }
+
+/* Visual Editors */
+.ssc-kv-builder .kv-row { display: flex; gap: 8px; margin-bottom: 8px; } .ssc-kv-builder .kv-row input { flex: 1; }
+.ssc-shadow-layer { border: 1px solid var(--ssc-border); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+.ssc-grad-preview-bar { height: 40px; border-radius: 8px; border: 1px solid var(--ssc-border); cursor: pointer; }
+
+/*
+ * App-Like Experience for Supersede CSS Pages
+ */
+body[class*="page_supersede-css-jlg"] {
+    overflow: hidden;
+}
+body[class*="page_supersede-css-jlg"] #wpadminbar,
+body[class*="page_supersede-css-jlg"] #adminmenumain,
+body[class*="page_supersede-css-jlg"] #wpfooter,
+body[class*="page_supersede-css-jlg"] .update-nag,
+body[class*="page_supersede-css-jlg"] .notice,
+body[class*="page_supersede-css-jlg"] #screen-meta-links,
+body[class*="page_supersede-css-jlg"] #screen-meta {
+    display: none !important;
+}
+body[class*="page_supersede-css-jlg"] #wpcontent {
+    margin-left: 0;
+    padding-left: 0;
+}
+body[class*="page_supersede-css-jlg"] #wpbody {
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background-color: var(--ssc-bg);
+}
+body[class*="page_supersede-css-jlg"] #wpbody-content {
+    padding-bottom: 0;
+    height: 100%;
+}
+body[class*="page_supersede-css-jlg"] .ssc-shell {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+body[class*="page_supersede-css-jlg"] .ssc-layout {
+    flex-grow: 1;
+    overflow: hidden;
+}
+body[class*="page_supersede-css-jlg"] .ssc-main-content {
+    overflow-y: auto;
+    height: calc(100vh - 70px);
+    padding-right: 16px;
+}
