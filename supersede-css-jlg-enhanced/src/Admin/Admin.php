@@ -61,7 +61,7 @@ final class Admin
     }
 
     public function assets($hook): void {
-        $page = $_GET['page'] ?? '';
+        $page = isset($_GET['page']) ? sanitize_key($_GET['page']) : '';
         if (strpos($page, $this->slug) !== 0) return;
 
         // Activation de l'uploader média sur les pages concernées
