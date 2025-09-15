@@ -191,7 +191,8 @@ final class Routes {
     public function exportConfig(): \WP_REST_Response {
         global $wpdb;
         $options = [];
-        $results = $wpdb->get_results( "SELECT option_name, option_value FROM {$wpdb->options} WHERE option_name LIKE 'ssc_%'" );
+        $sql = $wpdb->prepare("SELECT option_name, option_value FROM {$wpdb->options} WHERE option_name LIKE %s", 'ssc_%');
+        $results = $wpdb->get_results($sql);
         foreach ($results as $result) {
             $options[$result->option_name] = maybe_unserialize($result->option_value);
         }
