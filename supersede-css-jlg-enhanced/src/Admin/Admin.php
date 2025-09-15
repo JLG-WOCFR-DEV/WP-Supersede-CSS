@@ -85,18 +85,33 @@ final class Admin
             wp_enqueue_script('ssc-sortable', SSC_PLUGIN_URL . 'assets/js/Sortable.min.js', [], null, true);
         }
 
-        // Tous les scripts des modules sont maintenant chargés
-        $scripts = [ 
-            'utilities', 'preset-designer', 'shadow-editor', 'gradient-editor', 'debug-center', 
-            'scope-builder', 'import-export', 'effects-avatar', 'grid-editor', 'tron-grid', 
-            'visual-effects', 'animation-studio', 'tokens', 'page-layout-builder',
-            'filter-editor', 'clip-path-editor', 'typography-editor'
+        // Scripts spécifiques aux sous-pages
+        $scripts_by_page = [
+            $this->slug.'-utilities'        => ['utilities'],
+            $this->slug.'-preset'           => ['preset-designer'],
+            $this->slug.'-shadow'           => ['shadow-editor'],
+            $this->slug.'-gradient'         => ['gradient-editor'],
+            $this->slug.'-debug-center'     => ['debug-center'],
+            $this->slug.'-scope'            => ['scope-builder'],
+            $this->slug.'-import'           => ['import-export'],
+            $this->slug.'-avatar'           => ['effects-avatar'],
+            $this->slug.'-grid'             => ['grid-editor'],
+            $this->slug.'-tron'             => ['tron-grid'],
+            $this->slug.'-effects'          => ['visual-effects'],
+            $this->slug.'-anim'             => ['animation-studio'],
+            $this->slug.'-tokens'           => ['tokens'],
+            $this->slug.'-layout-builder'   => ['page-layout-builder'],
+            $this->slug.'-filters'          => ['filter-editor'],
+            $this->slug.'-clip-path'        => ['clip-path-editor'],
+            $this->slug.'-typography'       => ['typography-editor'],
         ];
-        
-        foreach ($scripts as $handle) {
-            $path = 'assets/js/' . $handle . '.js';
-            if (is_file(SSC_PLUGIN_DIR . $path)) {
-                wp_enqueue_script('ssc-'.$handle, SSC_PLUGIN_URL.$path, ['jquery'], SSC_VERSION, true);
+
+        if (isset($scripts_by_page[$page])) {
+            foreach ($scripts_by_page[$page] as $handle) {
+                $path = 'assets/js/' . $handle . '.js';
+                if (is_file(SSC_PLUGIN_DIR . $path)) {
+                    wp_enqueue_script('ssc-'.$handle, SSC_PLUGIN_URL.$path, ['jquery'], SSC_VERSION, true);
+                }
             }
         }
 
