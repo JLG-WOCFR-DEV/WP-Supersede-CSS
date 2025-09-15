@@ -146,7 +146,12 @@ final class Routes {
     }
 
     public function saveAvatarGlowPresets(\WP_REST_Request $request): \WP_REST_Response {
-        $presets_json = $request->get_param('presets');
+        $presets_json = wp_unslash($request->get_param('presets'));
+
+        if (!is_string($presets_json)) {
+            return new \WP_REST_Response(['ok' => false, 'message' => 'Invalid JSON.'], 400);
+        }
+
         $presets = json_decode($presets_json, true);
 
         if (json_last_error() !== JSON_ERROR_NONE || !is_array($presets)) {
@@ -176,7 +181,12 @@ final class Routes {
     }
 
     public function savePresets(\WP_REST_Request $request): \WP_REST_Response {
-        $presets_json = $request->get_param('presets');
+        $presets_json = wp_unslash($request->get_param('presets'));
+
+        if (!is_string($presets_json)) {
+            return new \WP_REST_Response(['ok' => false, 'message' => 'Invalid JSON.'], 400);
+        }
+
         $presets = json_decode($presets_json, true);
 
         if (json_last_error() !== JSON_ERROR_NONE || !is_array($presets)) {
