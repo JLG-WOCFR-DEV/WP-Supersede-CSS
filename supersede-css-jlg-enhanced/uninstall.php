@@ -29,3 +29,4 @@ foreach ($ssc_options_to_delete as $option_name) {
         delete_option($option_name);
     }
 }
+

@@ -218,3 +218,4 @@ final class Routes {
         return new \WP_REST_Response(['css' => $css], 200);
     }
 }
+
