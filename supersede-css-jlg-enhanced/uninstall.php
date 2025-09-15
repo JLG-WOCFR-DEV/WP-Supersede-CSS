@@ -23,5 +23,9 @@ $ssc_options_to_delete = [
 
 // Boucle sur la liste et supprime chaque option
 foreach ($ssc_options_to_delete as $option_name) {
-    delete_option($option_name);
+    if (is_multisite()) {
+        delete_site_option($option_name);
+    } else {
+        delete_option($option_name);
+    }
 }
