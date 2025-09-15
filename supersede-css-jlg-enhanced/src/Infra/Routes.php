@@ -101,7 +101,7 @@ final class Routes {
             }
         }
 
-        update_option(sanitize_key($option_name), $css);
+        update_option(sanitize_key($option_name), $css, false);
         
         if (class_exists('\SSC\Infra\Logger')) {
             \SSC\Infra\Logger::add('css_saved', ['size' => strlen($css) . ' bytes', 'option' => $option_name]);
@@ -153,7 +153,7 @@ final class Routes {
             return new \WP_REST_Response(['ok' => false, 'message' => 'Invalid JSON.'], 400);
         }
 
-        update_option('ssc_avatar_glow_presets', $presets);
+        update_option('ssc_avatar_glow_presets', $presets, false);
         return new \WP_REST_Response(['ok' => true], 200);
     }
     
@@ -183,7 +183,7 @@ final class Routes {
             return new \WP_REST_Response(['ok' => false, 'message' => 'Invalid JSON.'], 400);
         }
 
-        update_option('ssc_presets', $presets);
+        update_option('ssc_presets', $presets, false);
         return new \WP_REST_Response(['ok' => true], 200);
     }
     
