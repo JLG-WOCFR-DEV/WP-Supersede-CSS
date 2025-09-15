@@ -54,3 +54,4 @@ add_action('plugins_loaded', function(){
 add_action('plugins_loaded', function() {
     load_plugin_textdomain('supersede-css-jlg', false, dirname(plugin_basename(__FILE__)) . '/languages');
 });
+

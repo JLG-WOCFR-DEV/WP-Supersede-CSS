@@ -37,3 +37,4 @@ class Logger {
         delete_option(self::OPT);
     }
 }
+
