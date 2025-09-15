@@ -191,9 +191,10 @@ final class Routes {
     public function exportConfig(): \WP_REST_Response {
         global $wpdb;
         $options = [];
+        $like_pattern = $wpdb->esc_like('ssc_') . '%';
         $sql = $wpdb->prepare(
             "SELECT option_name, option_value FROM {$wpdb->options} WHERE option_name LIKE %s",
-            \esc_like('ssc_') . '%'
+            $like_pattern
         );
         $results = $wpdb->get_results($sql);
         foreach ($results as $result) {
