@@ -19,25 +19,107 @@ final class Admin
     public function menu(): void {
         add_menu_page('Supersede CSS', 'Supersede CSS', $this->cap, $this->slug, [$this, 'renderDashboard'], 'dashicons-art', 58);
         
-        // Tous les modules sont maintenant correctement enregistrés
-        $this->submenu($this->slug.'-layout-builder', 'Maquettage de Page', '\SSC\Admin\Pages\PageLayoutBuilder');
-        $this->submenu($this->slug.'-utilities', 'Utilities', '\SSC\Admin\Pages\Utilities');
-        $this->submenu($this->slug.'-tokens', 'Tokens Manager', '\SSC\Admin\Pages\Tokens');
-        $this->submenu($this->slug.'-effects', 'Effets Visuels', '\SSC\Admin\Pages\VisualEffects');
-        $this->submenu($this->slug.'-filters', 'Filtres & Verre', '\SSC\Admin\Pages\FilterEditor');
-        $this->submenu($this->slug.'-clip-path', 'Découpe (Clip-Path)', '\SSC\Admin\Pages\ClipPathEditor');
-        $this->submenu($this->slug.'-typography', 'Typographie Fluide', '\SSC\Admin\Pages\TypographyEditor');
-        $this->submenu($this->slug.'-tron', 'Tron Grid', '\SSC\Admin\Pages\TronGrid');
-        $this->submenu($this->slug.'-avatar', 'Avatar Glow', '\SSC\Admin\Pages\AvatarGlow');
-        $this->submenu($this->slug.'-anim', 'Animation Studio', '\SSC\Admin\Pages\AnimationStudio');
-        $this->submenu($this->slug.'-grid', 'Grid Editor', '\SSC\Admin\Pages\GridEditor');
-        $this->submenu($this->slug.'-shadow', 'Shadow Editor', '\SSC\Admin\Pages\ShadowEditor');
-        $this->submenu($this->slug.'-gradient', 'Gradient Editor', '\SSC\Admin\Pages\GradientEditor');
-        $this->submenu($this->slug.'-scope', 'Scope Builder', '\SSC\Admin\Pages\ScopeBuilder');
-        $this->submenu($this->slug.'-preset', 'Preset Designer', '\SSC\Admin\Pages\PresetDesigner');
-        $this->submenu($this->slug.'-import', 'Import / Export', '\SSC\Admin\Pages\ImportExport');
-        $this->submenu($this->slug.'-css-viewer', 'Visualiseur CSS', '\SSC\Admin\Pages\CssViewer');
-        $this->submenu($this->slug.'-debug-center', 'Debug Center', '\SSC\Admin\Pages\DebugCenter');
+        // Tous les modules sont déclarés ici pour simplifier la maintenance.
+        $modules = [
+            [
+                'slug'   => 'layout-builder',
+                'label'  => 'Maquettage de Page',
+                'class'  => '\\SSC\\Admin\\Pages\\PageLayoutBuilder',
+            ],
+            [
+                'slug'   => 'utilities',
+                'label'  => 'Utilities',
+                'class'  => '\\SSC\\Admin\\Pages\\Utilities',
+            ],
+            [
+                'slug'   => 'tokens',
+                'label'  => 'Tokens Manager',
+                'class'  => '\\SSC\\Admin\\Pages\\Tokens',
+            ],
+            [
+                'slug'   => 'effects',
+                'label'  => 'Effets Visuels',
+                'class'  => '\\SSC\\Admin\\Pages\\VisualEffects',
+            ],
+            [
+                'slug'   => 'filters',
+                'label'  => 'Filtres & Verre',
+                'class'  => '\\SSC\\Admin\\Pages\\FilterEditor',
+            ],
+            [
+                'slug'   => 'clip-path',
+                'label'  => 'Découpe (Clip-Path)',
+                'class'  => '\\SSC\\Admin\\Pages\\ClipPathEditor',
+            ],
+            [
+                'slug'   => 'typography',
+                'label'  => 'Typographie Fluide',
+                'class'  => '\\SSC\\Admin\\Pages\\TypographyEditor',
+            ],
+            [
+                'slug'   => 'tron',
+                'label'  => 'Tron Grid',
+                'class'  => '\\SSC\\Admin\\Pages\\TronGrid',
+            ],
+            [
+                'slug'   => 'avatar',
+                'label'  => 'Avatar Glow',
+                'class'  => '\\SSC\\Admin\\Pages\\AvatarGlow',
+            ],
+            [
+                'slug'   => 'anim',
+                'label'  => 'Animation Studio',
+                'class'  => '\\SSC\\Admin\\Pages\\AnimationStudio',
+            ],
+            [
+                'slug'   => 'grid',
+                'label'  => 'Grid Editor',
+                'class'  => '\\SSC\\Admin\\Pages\\GridEditor',
+            ],
+            [
+                'slug'   => 'shadow',
+                'label'  => 'Shadow Editor',
+                'class'  => '\\SSC\\Admin\\Pages\\ShadowEditor',
+            ],
+            [
+                'slug'   => 'gradient',
+                'label'  => 'Gradient Editor',
+                'class'  => '\\SSC\\Admin\\Pages\\GradientEditor',
+            ],
+            [
+                'slug'   => 'scope',
+                'label'  => 'Scope Builder',
+                'class'  => '\\SSC\\Admin\\Pages\\ScopeBuilder',
+            ],
+            [
+                'slug'   => 'preset',
+                'label'  => 'Preset Designer',
+                'class'  => '\\SSC\\Admin\\Pages\\PresetDesigner',
+            ],
+            [
+                'slug'   => 'import',
+                'label'  => 'Import / Export',
+                'class'  => '\\SSC\\Admin\\Pages\\ImportExport',
+            ],
+            [
+                'slug'   => 'css-viewer',
+                'label'  => 'Visualiseur CSS',
+                'class'  => '\\SSC\\Admin\\Pages\\CssViewer',
+            ],
+            [
+                'slug'   => 'debug-center',
+                'label'  => 'Debug Center',
+                'class'  => '\\SSC\\Admin\\Pages\\DebugCenter',
+            ],
+        ];
+
+        foreach ($modules as $module) {
+            $this->submenu(
+                $this->slug . '-' . $module['slug'],
+                $module['label'],
+                $module['class']
+            );
+        }
     }
 
     private function submenu(string $slug, string $label, string $fqcn): void {
