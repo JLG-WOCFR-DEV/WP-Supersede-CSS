@@ -59,7 +59,7 @@ class Layout {
                     <?php endforeach; ?>
                 </nav></aside>
                 <main class="ssc-main-content">
-                    <?php echo $page_content; // N'échappez pas cette variable, car elle contient du HTML rendu ?>
+                    <?php echo wp_kses_post( $page_content ); ?>
                 </main>
             </div>
         </div>
