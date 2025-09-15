@@ -51,7 +51,7 @@ class Layout {
                         <div class="ssc-sidebar-group">
                             <h4 class="ssc-sidebar-heading"><?php echo esc_html($group_label); ?></h4>
                             <?php foreach ($items as $slug => $label): ?>
-                                <a href="<?php echo esc_url(admin_url('admin.php?page=' . $slug)); ?>" class="<?php echo $current_page_slug === $slug ? 'active' : ''; ?>">
+                                <a href="<?php echo esc_url(admin_url('admin.php?page=' . $slug)); ?>" class="<?php echo esc_attr( $current_page_slug === $slug ? 'active' : '' ); ?>">
                                     <?php echo esc_html($label); ?>
                                 </a>
                             <?php endforeach; ?>
