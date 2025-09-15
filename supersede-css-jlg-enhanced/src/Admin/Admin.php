@@ -65,7 +65,17 @@ final class Admin
         if (class_exists('\SSC\Admin\Layout')) { \SSC\Admin\Layout::render($page_content, $this->slug); } else { echo $page_content; }
     }
 
-    public function assets($hook): void {
+    /**
+     * Charge les scripts et styles de l'extension uniquement sur ses écrans d'administration.
+     *
+     * @param string $hook Suffixe de la page actuelle fourni par WordPress (admin_enqueue_scripts),
+     *                     utilisé pour ignorer les écrans n'appartenant pas à Supersede CSS.
+     */
+    public function assets(string $hook): void {
+        if (strpos($hook, $this->slug) === false) {
+            return;
+        }
+
         $page = isset($_GET['page']) ? sanitize_key($_GET['page']) : '';
         if (strpos($page, $this->slug) !== 0) return;
 
