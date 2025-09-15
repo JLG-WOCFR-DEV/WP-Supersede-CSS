@@ -42,11 +42,13 @@ add_action('plugins_loaded', function(){
         $css_main = get_option('ssc_active_css', '');
         $css_tokens = get_option('ssc_tokens_css', '');
         $css = $css_tokens . "\n" . $css_main;
+        // Filtre le CSS pour prévenir l'injection de balises malveillantes avant l'ajout inline.
+        $css_filtered = wp_strip_all_tags($css);
 
-        if (!empty(trim($css))) {
+        if (!empty(trim($css_filtered))) {
             wp_register_style('ssc-styles-handle', false);
             wp_enqueue_style('ssc-styles-handle');
-            wp_add_inline_style('ssc-styles-handle', '/* Supersede CSS */' . $css);
+            wp_add_inline_style('ssc-styles-handle', '/* Supersede CSS */' . $css_filtered);
         }
     }, 99);
 });
