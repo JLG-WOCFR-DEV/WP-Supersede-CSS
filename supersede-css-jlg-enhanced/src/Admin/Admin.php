@@ -5,8 +5,8 @@ if (!defined('ABSPATH')) { exit; }
 
 final class Admin
 {
-    private $slug = 'supersede-css-jlg';
-    private $cap  = 'manage_options';
+    private string $slug = 'supersede-css-jlg';
+    private string $cap  = 'manage_options';
 
     public function __construct() {
         add_action('admin_menu', [$this, 'menu']);

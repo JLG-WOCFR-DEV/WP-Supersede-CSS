@@ -3,6 +3,7 @@
  * Plugin Name: Supersede CSS JLG (Enhanced)
  * Description: Boîte à outils visuelle pour CSS avec presets, éditeurs live, tokens, et un centre de débogage amélioré.
  * Version: 10.0.5
+ * Requires PHP: 7.4
  * Author: JLG (Enhanced by AI)
  * Text Domain: supersede-css-jlg
  * Domain Path: /languages
