@@ -5,10 +5,13 @@ if (!defined('ABSPATH')) { exit; }
 
 final class Admin
 {
-    private string $slug = 'supersede-css-jlg';
-    private string $cap  = 'manage_options';
+    private string $slug;
+    private string $cap;
 
     public function __construct() {
+        $this->slug = 'supersede-css-jlg';
+        $this->cap  = 'manage_options';
+
         add_action('admin_menu', [$this, 'menu']);
         add_action('admin_enqueue_scripts', [$this, 'assets']);
     }
