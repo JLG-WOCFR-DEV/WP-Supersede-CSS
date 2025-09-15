@@ -49,6 +49,7 @@ final class Admin
                 if (defined('WP_DEBUG') && WP_DEBUG) { echo '<pre>' . esc_html($e->getMessage() . "\n" . $e->getTraceAsString()) . '</pre>'; }
             }
             $page_content = ob_get_clean();
+            $page_content = wp_kses_post( $page_content );
             if (class_exists('\SSC\Admin\Layout')) { \SSC\Admin\Layout::render($page_content, $slug); } else { echo $page_content; }
         });
     }
@@ -57,6 +58,7 @@ final class Admin
         ob_start();
         if (class_exists('\SSC\Admin\Pages\Dashboard')) { (new \SSC\Admin\Pages\Dashboard())->render(); }
         $page_content = ob_get_clean();
+            $page_content = wp_kses_post( $page_content );
         if (class_exists('\SSC\Admin\Layout')) { \SSC\Admin\Layout::render($page_content, $this->slug); } else { echo $page_content; }
     }
 
