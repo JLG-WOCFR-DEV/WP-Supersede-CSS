@@ -58,9 +58,17 @@ class Logger {
             $data = ['value' => $data];
         }
 
+        $sanitized = [];
+
         foreach ($data as $key => $value) {
+            if (!is_string($key)) {
+                $key = (string) $key;
+            }
+
+            $key = sanitize_key($key);
+
             if (is_array($value)) {
-                $data[$key] = self::sanitizeLogData($value);
+                $sanitized[$key] = self::sanitizeLogData($value);
                 continue;
             }
 
@@ -76,10 +84,10 @@ class Logger {
                 $value = wp_json_encode($value);
             }
 
-            $data[$key] = sanitize_text_field((string) $value);
+            $sanitized[$key] = sanitize_text_field((string) $value);
         }
 
-        return $data;
+        return $sanitized;
     }
 
     public static function all(): array {
