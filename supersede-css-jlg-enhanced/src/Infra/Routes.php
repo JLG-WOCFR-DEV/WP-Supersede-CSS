@@ -215,7 +215,10 @@ final class Routes {
     }
 
     // NOUVELLES FONCTIONS POUR L'EXPORT
-    public function exportConfig(): \WP_REST_Response {
+    /**
+     * @return \WP_REST_Response|\WP_Error
+     */
+    public function exportConfig() {
         global $wpdb;
         $options = [];
         $like_pattern = $wpdb->esc_like('ssc_') . '%';
@@ -224,6 +227,25 @@ final class Routes {
             $like_pattern
         );
         $results = $wpdb->get_results($sql);
+
+        if (empty($results)) {
+            $last_error = trim((string) $wpdb->last_error);
+
+            if ($results === null || $last_error !== '') {
+                if (class_exists('\\SSC\\Infra\\Logger')) {
+                    \SSC\Infra\Logger::add('export_config_db_error', ['message' => $last_error]);
+                }
+
+                return new \WP_Error(
+                    'ssc_export_config_db_error',
+                    __('Unable to export configuration due to a database error.', 'supersede-css-jlg'),
+                    ['status' => 500]
+                );
+            }
+
+            return new \WP_REST_Response([], 200);
+        }
+
         foreach ($results as $result) {
             $options[$result->option_name] = maybe_unserialize($result->option_value);
         }
