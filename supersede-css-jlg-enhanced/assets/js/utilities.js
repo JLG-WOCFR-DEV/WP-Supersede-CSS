@@ -13,10 +13,14 @@
         });
     }
 
+    function getEditorValue(view) {
+        return editors[view] ? editors[view].getValue() : '';
+    }
+
     function getFullCss() {
-        const desktopCss = editors.desktop ? editors.desktop.getValue() : '';
-        const tabletCss = editors.tablet ? editors.tablet.getValue() : '';
-        const mobileCss = editors.mobile ? editors.mobile.getValue() : '';
+        const desktopCss = getEditorValue('desktop');
+        const tabletCss = getEditorValue('tablet');
+        const mobileCss = getEditorValue('mobile');
 
         const tabletWrapped = tabletCss.trim() ? `@media (max-width: 782px) {\n${tabletCss}\n}` : '';
         const mobileWrapped = mobileCss.trim() ? `@media (max-width: 480px) {\n${mobileCss}\n}` : '';
@@ -69,10 +73,20 @@
         });
 
         $('#ssc-save-css').on('click', function() {
+            const desktopCss = getEditorValue('desktop');
+            const tabletCss = getEditorValue('tablet');
+            const mobileCss = getEditorValue('mobile');
             const fullCss = getFullCss();
             $.ajax({
                 url: SSC.rest.root + 'save-css', method: 'POST',
-                data: { css: fullCss, option_name: 'ssc_active_css', _wpnonce: SSC.rest.nonce },
+                data: {
+                    css: fullCss,
+                    css_desktop: desktopCss,
+                    css_tablet: tabletCss,
+                    css_mobile: mobileCss,
+                    option_name: 'ssc_active_css',
+                    _wpnonce: SSC.rest.nonce
+                },
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
             }).done(() => window.sscToast('CSS enregistré !'));
         });

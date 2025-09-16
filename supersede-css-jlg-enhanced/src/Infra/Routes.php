@@ -88,14 +88,43 @@ final class Routes {
             $option_name = 'ssc_active_css';
         }
 
-        if (!is_string($css_raw)) {
-            return new \WP_REST_Response(['ok' => false, 'message' => 'Invalid CSS.'], 400);
-        }
-
-        $css_raw = \wp_unslash($css_raw);
         $append = \rest_sanitize_boolean($request->get_param('append'));
 
-        $incoming_css = CssSanitizer::sanitize($css_raw);
+        $sanitized_segments = ['desktop' => '', 'tablet' => '', 'mobile' => ''];
+        $segment_payload = false;
+
+        if ($option_name === 'ssc_active_css') {
+            $segments_config = [
+                'desktop' => ['param' => 'css_desktop', 'option' => 'ssc_css_desktop'],
+                'tablet' => ['param' => 'css_tablet', 'option' => 'ssc_css_tablet'],
+                'mobile' => ['param' => 'css_mobile', 'option' => 'ssc_css_mobile'],
+            ];
+
+            foreach ($segments_config as $key => $config) {
+                $raw_value = $request->get_param($config['param']);
+                if ($raw_value !== null) {
+                    $segment_payload = true;
+                    $sanitized_value = $this->sanitizeCssSegment($raw_value);
+                    update_option($config['option'], $sanitized_value, false);
+                    $sanitized_segments[$key] = $sanitized_value;
+                } else {
+                    $existing_value = get_option($config['option'], '');
+                    $existing_value = is_string($existing_value) ? $existing_value : '';
+                    $sanitized_segments[$key] = CssSanitizer::sanitize($existing_value);
+                }
+            }
+        }
+
+        if ($segment_payload) {
+            $incoming_css = $this->combineResponsiveCss($sanitized_segments);
+            $append = false;
+        } else {
+            if (!is_string($css_raw)) {
+                return new \WP_REST_Response(['ok' => false, 'message' => 'Invalid CSS.'], 400);
+            }
+
+            $incoming_css = CssSanitizer::sanitize(\wp_unslash($css_raw));
+        }
 
         $existing_css = get_option($option_name, '');
         $existing_css = is_string($existing_css) ? $existing_css : '';
@@ -232,7 +261,7 @@ final class Routes {
             $last_error = trim((string) $wpdb->last_error);
 
             if ($results === null || $last_error !== '') {
-                if (class_exists('\\SSC\\Infra\\Logger')) {
+                if (class_exists('\SSC\Infra\Logger')) {
                     \SSC\Infra\Logger::add('export_config_db_error', ['message' => $last_error]);
                 }
 
@@ -282,6 +311,44 @@ final class Routes {
             $css = '/* Aucun CSS actif trouvé. */';
         }
         return new \WP_REST_Response(['css' => $css], 200);
+    }
+
+    private function sanitizeCssSegment($value): string
+    {
+        if (!is_string($value)) {
+            return '';
+        }
+
+        $value = \wp_unslash($value);
+
+        return CssSanitizer::sanitize($value);
+    }
+
+    private function combineResponsiveCss(array $segments): string
+    {
+        $desktop = $segments['desktop'] ?? '';
+        $tablet = $segments['tablet'] ?? '';
+        $mobile = $segments['mobile'] ?? '';
+
+        $parts = [];
+
+        if ($desktop !== '') {
+            $parts[] = $desktop;
+        }
+
+        if (trim($tablet) !== '') {
+            $parts[] = "@media (max-width: 782px) {\n{$tablet}\n}";
+        }
+
+        if (trim($mobile) !== '') {
+            $parts[] = "@media (max-width: 480px) {\n{$mobile}\n}";
+        }
+
+        $combined = implode("\n\n", array_filter($parts, static function (string $part): bool {
+            return $part !== '';
+        }));
+
+        return $combined === '' ? '' : CssSanitizer::sanitize($combined);
     }
 
     /**
