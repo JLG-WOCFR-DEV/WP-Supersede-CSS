@@ -85,7 +85,7 @@
         });
         $('#ssc-shadow-apply').on('click', () => {
             const css = $('#ssc-shadow-css').text();
-             $.ajax({ url: SSC.rest.root + 'save-css', method: 'POST', data: { css, append: true }, beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
+             $.ajax({ url: SSC.rest.root + 'save-css', method: 'POST', data: { css, append: true, _wpnonce: SSC.rest.nonce }, beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
              }).done(() => window.sscToast('Ombre appliquée !'));
         });
 

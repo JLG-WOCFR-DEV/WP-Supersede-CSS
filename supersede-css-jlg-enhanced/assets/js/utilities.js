@@ -72,7 +72,7 @@
             const fullCss = getFullCss();
             $.ajax({
                 url: SSC.rest.root + 'save-css', method: 'POST',
-                data: { css: fullCss, option_name: 'ssc_active_css' },
+                data: { css: fullCss, option_name: 'ssc_active_css', _wpnonce: SSC.rest.nonce },
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
             }).done(() => window.sscToast('CSS enregistré !'));
         });

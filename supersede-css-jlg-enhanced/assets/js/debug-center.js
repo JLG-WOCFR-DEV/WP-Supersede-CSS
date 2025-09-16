@@ -12,6 +12,7 @@
             $.ajax({
                 url: SSC.rest.root + 'health',
                 method: 'GET',
+                data: { _wpnonce: SSC.rest.nonce },
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
             }).done(response => {
                 resultPane.text(JSON.stringify(response, null, 2));
@@ -34,6 +35,7 @@
             $.ajax({
                 url: SSC.rest.root + 'clear-log',
                 method: 'POST',
+                data: { _wpnonce: SSC.rest.nonce },
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
             }).done(() => {
                 window.sscToast('Journal effacé ! La page va se recharger.');
@@ -56,6 +58,7 @@
             $.ajax({
                 url: SSC.rest.root + 'reset-all-css',
                 method: 'POST',
+                data: { _wpnonce: SSC.rest.nonce },
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
             }).done(() => {
                 window.sscToast('Tout le CSS a été réinitialisé !');

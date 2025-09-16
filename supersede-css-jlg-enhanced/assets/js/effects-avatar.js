@@ -10,6 +10,7 @@
         $.ajax({
             url: SSC.rest.root + 'avatar-glow-presets',
             method: 'GET',
+            data: { _wpnonce: SSC.rest.nonce },
             beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
         }).done(response => {
             presets = response || {};
@@ -27,7 +28,7 @@
         return $.ajax({
             url: SSC.rest.root + 'avatar-glow-presets',
             method: 'POST',
-            data: { presets: JSON.stringify(presets) },
+            data: { presets: JSON.stringify(presets), _wpnonce: SSC.rest.nonce },
             beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
         });
     }
@@ -199,7 +200,7 @@ ${p.className}::before {
 ${$('#ssc-glow-css-output').text()}`;
 
              $.ajax({
-                url: SSC.rest.root + 'save-css', method: 'POST', data: { css: cssToApply, append: true },
+                url: SSC.rest.root + 'save-css', method: 'POST', data: { css: cssToApply, append: true, _wpnonce: SSC.rest.nonce },
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
             }).done(() => window.sscToast('Le style du preset a été appliqué sur le site !'));
         });
