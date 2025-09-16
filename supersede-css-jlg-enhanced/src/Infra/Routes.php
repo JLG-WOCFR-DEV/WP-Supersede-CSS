@@ -268,7 +268,7 @@ final class Routes {
     public function authorizeRequest(\WP_REST_Request $request) {
         $nonce = $request->get_param('_wpnonce');
 
-        if (!is_string($nonce) || !wp_verify_nonce($nonce, 'wp_rest')) {
+        if (!is_string($nonce)) {
             return new \WP_Error(
                 'rest_forbidden',
                 __('Invalid nonce.', 'supersede-css-jlg'),
@@ -276,7 +276,23 @@ final class Routes {
             );
         }
 
-        return current_user_can('manage_options');
+        if (!wp_verify_nonce($request->get_param('_wpnonce'), 'wp_rest')) {
+            return new \WP_Error(
+                'rest_forbidden',
+                __('Invalid nonce.', 'supersede-css-jlg'),
+                ['status' => 403]
+            );
+        }
+
+        if (!current_user_can('manage_options')) {
+            return new \WP_Error(
+                'rest_forbidden',
+                __('You are not allowed to access this endpoint.', 'supersede-css-jlg'),
+                ['status' => 403]
+            );
+        }
+
+        return true;
     }
 
 }
