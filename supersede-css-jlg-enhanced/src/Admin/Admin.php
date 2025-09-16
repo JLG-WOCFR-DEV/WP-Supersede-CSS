@@ -177,7 +177,7 @@ final class Admin
 
         // SortableJS for Drag & Drop
         if ($page === $this->slug.'-shadow') {
-            wp_enqueue_script('ssc-sortable', SSC_PLUGIN_URL . 'assets/js/Sortable.min.js', [], null, true);
+            wp_enqueue_script('ssc-sortable', SSC_PLUGIN_URL . 'assets/js/Sortable.min.js', [], SSC_VERSION, true);
         }
 
         // Scripts spécifiques aux sous-pages
