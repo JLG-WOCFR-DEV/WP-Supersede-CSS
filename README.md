@@ -7,7 +7,7 @@ Supersede CSS JLG (Enhanced) is a visual toolkit for building CSS effects in Wor
 
 ## Installation
 
-1. Ensure your site runs **WordPress 5.8 or later** and **PHP 7.4+**. No additional dependencies are required.
+1. Ensure your site runs **WordPress 5.8 or later** and **PHP 8.0+**. No additional dependencies are required.
 2. Download or clone this repository.
 3. Upload the `supersede-css-jlg-enhanced` folder to `wp-content/plugins/`.
 4. In the WordPress admin, navigate to **Plugins → Supersede CSS JLG (Enhanced)** and click **Activate**.
