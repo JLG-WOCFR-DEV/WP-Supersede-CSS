@@ -265,7 +265,7 @@ final class Routes {
     /**
      * @return bool|\WP_Error
      */
-    public function authorizeRequest(\WP_REST_Request $request) {
+    public function authorizeRequest(\WP_REST_Request $request): bool|\WP_Error {
         $nonce = $request->get_param('_wpnonce');
 
         if (!is_string($nonce)) {
