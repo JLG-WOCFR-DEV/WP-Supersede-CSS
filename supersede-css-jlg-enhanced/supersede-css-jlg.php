@@ -10,6 +10,8 @@
  */
 if (!defined('ABSPATH')) { exit; }
 
+use SSC\Support\CssSanitizer;
+
 define('SSC_VERSION','10.0.5');
 define('SSC_PLUGIN_FILE', __FILE__);
 define('SSC_PLUGIN_DIR', plugin_dir_path(__FILE__));
@@ -41,11 +43,13 @@ add_action('plugins_loaded', function(){
     add_action('wp_enqueue_scripts', function(){
         $css_main = get_option('ssc_active_css', '');
         $css_tokens = get_option('ssc_tokens_css', '');
-        $css = $css_tokens . "\n" . $css_main;
-        // Filtre le CSS pour prévenir l'injection de balises malveillantes avant l'ajout inline.
-        $css_filtered = wp_strip_all_tags($css);
+        $css_main = is_string($css_main) ? $css_main : '';
+        $css_tokens = is_string($css_tokens) ? $css_tokens : '';
+        $css_combined = $css_tokens . "\n" . $css_main;
+        // Filtre le CSS en s'appuyant sur wp_kses() et safe_style_css() pour neutraliser les injections.
+        $css_filtered = CssSanitizer::sanitize($css_combined);
 
-        if (!empty(trim($css_filtered))) {
+        if ($css_filtered !== '') {
             wp_register_style('ssc-styles-handle', false);
             wp_enqueue_style('ssc-styles-handle');
             wp_add_inline_style('ssc-styles-handle', '/* Supersede CSS */' . $css_filtered);

@@ -7,6 +7,12 @@ Description: Boîte à outils visuelle pour CSS avec presets, éditeurs live, to
 == Description ==
 Cette version a été entièrement refactorisée pour améliorer la stabilité, l'expérience utilisateur et les performances. Elle intègre de nouveaux modules créatifs et simplifie les interfaces complexes.
 
+== Sécurité ==
+* Toutes les écritures de CSS passent désormais par `SSC\Support\CssSanitizer` qui retire les balises HTML avec `wp_kses()` avant d'analyser chaque déclaration avec `safe_style_css()` via `safecss_filter_attr()`.
+* Les fonctions identifient et neutralisent les protocoles dangereux (`javascript:`, `vbscript:`) à l'aide de `wp_kses_bad_protocol()` tout en conservant les URL légitimes et les valeurs attendues.
+* Les propriétés personnalisées (`--var`) et autres déclarations modernes sont sauvegardées après un nettoyage ciblé afin d'éviter de casser des styles valides.
+* Les jeux de presets (scope, propriétés) et les effets Avatar Glow sont normalisés (textes, sélecteurs, couleurs, URLs) avant persistance afin d'éviter les injections sans perdre la configuration enregistrée.
+
 == Changelog ==
 = 10.0.0 =
 * REFONTE MAJEURE : Correction de bugs critiques de namespace, amélioration des contrastes et de l'ergonomie.

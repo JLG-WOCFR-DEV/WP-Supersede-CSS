@@ -1,6 +1,8 @@
 <?php declare(strict_types=1);
 namespace SSC\Infra;
 
+use SSC\Support\CssSanitizer;
+
 if (!defined('ABSPATH')) { exit; }
 
 final class Routes {
@@ -77,7 +79,7 @@ final class Routes {
     }
 
     public function saveCss(\WP_REST_Request $request): \WP_REST_Response {
-        $css = $request->get_param('css');
+        $css_raw = $request->get_param('css');
         $option_name = $request->get_param('option_name') ?: 'ssc_active_css';
         // Enforce whitelist for option_name to avoid clobbering unintended options.
         $allowed_options = ['ssc_active_css','ssc_tokens_css'];
@@ -85,28 +87,36 @@ final class Routes {
         if (!in_array($option_name, $allowed_options, true)) {
             $option_name = 'ssc_active_css';
         }
-        
-        if (!is_string($css)) {
+
+        if (!is_string($css_raw)) {
             return new \WP_REST_Response(['ok' => false, 'message' => 'Invalid CSS.'], 400);
         }
-        
-        $append = $request->get_param('append');
+
+        $css_raw = \wp_unslash($css_raw);
+        $append = \rest_sanitize_boolean($request->get_param('append'));
+
+        $incoming_css = CssSanitizer::sanitize($css_raw);
+
+        $existing_css = get_option($option_name, '');
+        $existing_css = is_string($existing_css) ? $existing_css : '';
+        $existing_css = CssSanitizer::sanitize($existing_css);
 
         if ($append) {
-            $existing_css = get_option($option_name, '');
-            if (strpos($existing_css, $css) === false) {
-                 $css = $existing_css . "\n\n" . $css;
+            if ($incoming_css !== '' && strpos($existing_css, $incoming_css) === false) {
+                $css_to_store = trim($existing_css . "\n\n" . $incoming_css);
             } else {
-                $css = $existing_css;
+                $css_to_store = $existing_css;
             }
+        } else {
+            $css_to_store = $incoming_css;
         }
 
-        update_option(sanitize_key($option_name), $css, false);
-        
+        update_option($option_name, $css_to_store, false);
+        update_option($option_name, $css_to_store, false);
+
         if (class_exists('\SSC\Infra\Logger')) {
-            \SSC\Infra\Logger::add('css_saved', ['size' => strlen($css) . ' bytes', 'option' => $option_name]);
+            \SSC\Infra\Logger::add('css_saved', ['size' => strlen($css_to_store) . ' bytes', 'option' => $option_name]);
         }
-        
         return new \WP_REST_Response(['ok' => true], 200);
     }
 
@@ -142,6 +152,8 @@ final class Routes {
     
     public function getAvatarGlowPresets(): \WP_REST_Response {
         $presets = get_option('ssc_avatar_glow_presets', []);
+        $presets = is_array($presets) ? $presets : [];
+        $presets = CssSanitizer::sanitizeAvatarGlowPresets($presets);
         return new \WP_REST_Response($presets, 200);
     }
 
@@ -158,10 +170,12 @@ final class Routes {
             return new \WP_REST_Response(['ok' => false, 'message' => 'Invalid JSON.'], 400);
         }
 
+        $presets = CssSanitizer::sanitizeAvatarGlowPresets($presets);
+
         update_option('ssc_avatar_glow_presets', $presets, false);
         return new \WP_REST_Response(['ok' => true], 200);
     }
-    
+
     public function resetAllCss(): \WP_REST_Response {
         delete_option('ssc_active_css');
         delete_option('ssc_tokens_css');
@@ -177,6 +191,8 @@ final class Routes {
 
     public function getPresets(): \WP_REST_Response {
         $presets = get_option('ssc_presets', []);
+        $presets = is_array($presets) ? $presets : [];
+        $presets = CssSanitizer::sanitizePresetCollection($presets);
         return new \WP_REST_Response($presets, 200);
     }
 
@@ -193,10 +209,12 @@ final class Routes {
             return new \WP_REST_Response(['ok' => false, 'message' => 'Invalid JSON.'], 400);
         }
 
+        $presets = CssSanitizer::sanitizePresetCollection($presets);
+
         update_option('ssc_presets', $presets, false);
         return new \WP_REST_Response(['ok' => true], 200);
     }
-    
+
     // NOUVELLES FONCTIONS POUR L'EXPORT
     public function exportConfig(): \WP_REST_Response {
         global $wpdb;
@@ -215,7 +233,13 @@ final class Routes {
 
     public function exportCss(): \WP_REST_Response {
         $css = get_option('ssc_active_css', '/* Aucun CSS actif trouvé. */');
+        $css = is_string($css) ? $css : '';
+        $css = CssSanitizer::sanitize($css);
+        if ($css === '') {
+            $css = '/* Aucun CSS actif trouvé. */';
+        }
         return new \WP_REST_Response(['css' => $css], 200);
     }
+
 }
 
