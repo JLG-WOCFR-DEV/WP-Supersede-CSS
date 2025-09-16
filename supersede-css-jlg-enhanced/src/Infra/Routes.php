@@ -240,8 +240,20 @@ final class Routes {
         return new \WP_REST_Response(['css' => $css], 200);
     }
 
-    public function authorizeRequest(\WP_REST_Request $request): bool {
-        check_ajax_referer('wp_rest', '_wpnonce');
+    /**
+     * @return bool|\WP_Error
+     */
+    public function authorizeRequest(\WP_REST_Request $request) {
+        $nonce = $request->get_param('_wpnonce');
+
+        if (!is_string($nonce) || !wp_verify_nonce($nonce, 'wp_rest')) {
+            return new \WP_Error(
+                'rest_forbidden',
+                __('Invalid nonce.', 'supersede-css-jlg'),
+                ['status' => 403]
+            );
+        }
+
         return current_user_can('manage_options');
     }
 
