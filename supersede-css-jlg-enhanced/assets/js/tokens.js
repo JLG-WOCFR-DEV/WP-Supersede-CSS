@@ -107,7 +107,7 @@
             $.ajax({
                 url: SSC.rest.root + 'save-css',
                 method: 'POST',
-                data: { css: css, option_name: 'ssc_tokens_css', append: false },
+                data: { css: css, option_name: 'ssc_tokens_css', append: false, _wpnonce: SSC.rest.nonce },
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
             }).done(() => window.sscToast('Tokens appliqués'));
         });

@@ -96,7 +96,7 @@
         $('#ssc-bg-type, #starColor, #starCount, #gradientSpeed').on('input change', generateBackgroundCSS);
         $('#ssc-bg-apply').on('click', () => {
              const css = $('#ssc-bg-css').text();
-             $.ajax({ url: SSC.rest.root + 'save-css', method: 'POST', data: { css, append: true }, beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
+             $.ajax({ url: SSC.rest.root + 'save-css', method: 'POST', data: { css, append: true, _wpnonce: SSC.rest.nonce }, beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
              }).done(() => window.sscToast('Fond animé appliqué !'));
         });
         
@@ -197,7 +197,7 @@
         $('#ssc-ecg-preset, #ssc-ecg-color, #ssc-ecg-top, #ssc-ecg-logo-size, #ssc-ecg-z-index').on('input', generateECGCSS);
         $('#ssc-ecg-apply').on('click', () => {
              const css = $('#ssc-ecg-css').text();
-             $.ajax({ url: SSC.rest.root + 'save-css', method: 'POST', data: { css, append: true }, beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
+             $.ajax({ url: SSC.rest.root + 'save-css', method: 'POST', data: { css, append: true, _wpnonce: SSC.rest.nonce }, beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
              }).done(() => window.sscToast('Effet ECG appliqué !'));
         });
         generateECGCSS();

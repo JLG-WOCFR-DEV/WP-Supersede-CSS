@@ -7,6 +7,7 @@
         $.ajax({
             url: SSC.rest.root + 'presets',
             method: 'GET',
+            data: { _wpnonce: SSC.rest.nonce },
             beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
         }).done(response => {
             presets = response || {};
@@ -20,7 +21,7 @@
         return $.ajax({
             url: SSC.rest.root + 'presets',
             method: 'POST',
-            data: { presets: JSON.stringify(presets) },
+            data: { presets: JSON.stringify(presets), _wpnonce: SSC.rest.nonce },
             beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
         });
     }
@@ -171,7 +172,7 @@
             $.ajax({
                 url: SSC.rest.root + 'save-css',
                 method: 'POST',
-                data: { css, append: true },
+                data: { css, append: true, _wpnonce: SSC.rest.nonce },
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
             }).done(() => window.sscToast(`Preset "${preset.name}" appliqué sur le site !`));
         });

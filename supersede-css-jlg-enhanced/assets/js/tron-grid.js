@@ -86,7 +86,7 @@
             $.ajax({
                 url: SSC.rest.root + 'save-css',
                 method: 'POST',
-                data: { css: css, append: true },
+                data: { css: css, append: true, _wpnonce: SSC.rest.nonce },
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
             }).done(() => window.sscToast('Grille animée appliquée !'));
         });

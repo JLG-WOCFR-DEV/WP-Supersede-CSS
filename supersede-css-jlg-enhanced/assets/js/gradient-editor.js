@@ -92,7 +92,7 @@
         $('#ssc-grad-copy').on('click', () => navigator.clipboard.writeText($('#ssc-grad-css').text()).then(() => window.sscToast('CSS copié !')));
         $('#ssc-grad-apply').on('click', () => {
              const css = $('#ssc-grad-css').text();
-             $.ajax({ url: SSC.rest.root + 'save-css', method: 'POST', data: { css, append: true }, beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
+             $.ajax({ url: SSC.rest.root + 'save-css', method: 'POST', data: { css, append: true, _wpnonce: SSC.rest.nonce }, beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
              }).done(() => window.sscToast('Dégradé appliqué !'));
         });
 

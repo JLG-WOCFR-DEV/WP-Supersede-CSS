@@ -17,50 +17,50 @@ final class Routes {
     public function register(): void {
         register_rest_route('ssc/v1', '/save-css', [
             'methods' => 'POST',
-            'permission_callback' => function() { return current_user_can('manage_options'); },
+            'permission_callback' => [$this, 'authorizeRequest'],
             'callback' => [$this, 'saveCss'],
         ]);
 
         register_rest_route('ssc/v1', '/health', [
             'methods' => 'GET',
-            'permission_callback' => function() { return current_user_can('manage_options'); },
+            'permission_callback' => [$this, 'authorizeRequest'],
             'callback' => [$this, 'healthCheck'],
         ]);
 
         register_rest_route('ssc/v1', '/clear-log', [
             'methods' => 'POST',
-            'permission_callback' => function() { return current_user_can('manage_options'); },
+            'permission_callback' => [$this, 'authorizeRequest'],
             'callback' => [$this, 'clearLog'],
         ]);
 
         register_rest_route('ssc/v1', '/avatar-glow-presets', [
             [
                 'methods' => 'GET',
-                'permission_callback' => function() { return current_user_can('manage_options'); },
+                'permission_callback' => [$this, 'authorizeRequest'],
                 'callback' => [$this, 'getAvatarGlowPresets'],
             ],
             [
                 'methods' => 'POST',
-                'permission_callback' => function() { return current_user_can('manage_options'); },
+                'permission_callback' => [$this, 'authorizeRequest'],
                 'callback' => [$this, 'saveAvatarGlowPresets'],
             ]
         ]);
-        
+
         register_rest_route('ssc/v1', '/reset-all-css', [
             'methods' => 'POST',
-            'permission_callback' => function() { return current_user_can('manage_options'); },
+            'permission_callback' => [$this, 'authorizeRequest'],
             'callback' => [$this, 'resetAllCss'],
         ]);
 
         register_rest_route('ssc/v1', '/presets', [
             [
                 'methods' => 'GET',
-                'permission_callback' => function() { return current_user_can('manage_options'); },
+                'permission_callback' => [$this, 'authorizeRequest'],
                 'callback' => [$this, 'getPresets'],
             ],
             [
                 'methods' => 'POST',
-                'permission_callback' => function() { return current_user_can('manage_options'); },
+                'permission_callback' => [$this, 'authorizeRequest'],
                 'callback' => [$this, 'savePresets'],
             ]
         ]);
@@ -68,12 +68,12 @@ final class Routes {
         // NOUVEAUX ENDPOINTS POUR L'EXPORT
         register_rest_route('ssc/v1', '/export-config', [
             'methods' => 'GET',
-            'permission_callback' => function() { return current_user_can('manage_options'); },
+            'permission_callback' => [$this, 'authorizeRequest'],
             'callback' => [$this, 'exportConfig'],
         ]);
         register_rest_route('ssc/v1', '/export-css', [
             'methods' => 'GET',
-            'permission_callback' => function() { return current_user_can('manage_options'); },
+            'permission_callback' => [$this, 'authorizeRequest'],
             'callback' => [$this, 'exportCss'],
         ]);
     }
@@ -238,6 +238,11 @@ final class Routes {
             $css = '/* Aucun CSS actif trouvé. */';
         }
         return new \WP_REST_Response(['css' => $css], 200);
+    }
+
+    public function authorizeRequest(\WP_REST_Request $request): bool {
+        check_ajax_referer('wp_rest', '_wpnonce');
+        return current_user_can('manage_options');
     }
 
 }

@@ -23,6 +23,7 @@
             $.ajax({
                 url: SSC.rest.root + 'export-config',
                 method: 'GET',
+                data: { _wpnonce: SSC.rest.nonce },
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
             }).done(response => {
                 const jsonContent = JSON.stringify(response, null, 2);
@@ -43,6 +44,7 @@
             $.ajax({
                 url: SSC.rest.root + 'export-css',
                 method: 'GET',
+                data: { _wpnonce: SSC.rest.nonce },
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
             }).done(response => {
                 downloadFile('supersede-styles.css', response.css, 'text/css');
