@@ -93,7 +93,17 @@
 
         const pickerToggle = $('#ssc-element-picker-toggle');
         const previewFrame = $('#ssc-preview-frame');
+        const urlField = $('#ssc-preview-url');
         let lastHovered;
+        let lastValidPreviewUrl = previewFrame.attr('src') || '';
+
+        function notifyInvalidUrl(message) {
+            if (typeof window.sscToast === 'function') {
+                window.sscToast(message);
+            } else {
+                alert(message);
+            }
+        }
 
         pickerToggle.on('click', function() {
             pickerActive = !pickerActive;
@@ -142,7 +152,48 @@
             } catch(e) { console.warn("Impossible d'accéder au contenu de l'iframe. Assurez-vous que l'URL chargée est sur le même domaine que votre page d'administration WordPress."); }
         });
         
-        $('#ssc-preview-load').on('click', () => $('#ssc-preview-frame').attr('src', $('#ssc-preview-url').val())).trigger('click');
+        $('#ssc-preview-load').on('click', function(e) {
+            e.preventDefault();
+            const rawValue = (urlField.val() || '').trim();
+
+            if (!rawValue) {
+                if (!e.isTrigger) {
+                    notifyInvalidUrl('Veuillez saisir une URL valide pour l\'aperçu.');
+                    if (lastValidPreviewUrl) {
+                        urlField.val(lastValidPreviewUrl);
+                    }
+                }
+                return;
+            }
+
+            let parsedUrl;
+            try {
+                parsedUrl = new URL(rawValue, window.location.origin);
+            } catch (error) {
+                if (!e.isTrigger) {
+                    notifyInvalidUrl('URL invalide. Veuillez saisir une adresse commençant par http:// ou https://');
+                    if (lastValidPreviewUrl) {
+                        urlField.val(lastValidPreviewUrl);
+                    }
+                }
+                return;
+            }
+
+            if (!/^https?:$/i.test(parsedUrl.protocol)) {
+                if (!e.isTrigger) {
+                    notifyInvalidUrl('Seules les URL http et https sont autorisées.');
+                    if (lastValidPreviewUrl) {
+                        urlField.val(lastValidPreviewUrl);
+                    }
+                }
+                return;
+            }
+
+            const normalizedUrl = parsedUrl.href;
+            previewFrame.attr('src', normalizedUrl);
+            urlField.val(normalizedUrl);
+            lastValidPreviewUrl = normalizedUrl;
+        }).trigger('click');
         $('.ssc-responsive-toggles button').on('click', function() {
              $(this).addClass('button-primary').siblings().removeClass('button-primary');
              const widths = { desktop: '100%', tablet: '768px', mobile: '375px' };
