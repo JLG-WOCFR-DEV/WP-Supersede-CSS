@@ -158,7 +158,8 @@ final class Admin
             return;
         }
 
-        $page = isset($_GET['page']) ? sanitize_key($_GET['page']) : '';
+        $page_input = filter_input(INPUT_GET, 'page', FILTER_SANITIZE_STRING);
+        $page = is_string($page_input) ? sanitize_key($page_input) : '';
         if (strpos($page, $this->slug) !== 0) return;
 
         // Activation de l'uploader média sur les pages concernées
