@@ -122,9 +122,13 @@ final class CssSanitizer
                 $raw = trim($raw, "\"'");
             }
 
-            $sanitized = trim(\wp_kses_bad_protocol($raw, \wp_allowed_protocols()));
-            if ($sanitized === '' || \preg_match('/^(?:javascript|vbscript)/i', $sanitized)) {
-                return '';
+            if (self::isSafeDataUri($raw)) {
+                $sanitized = $raw;
+            } else {
+                $sanitized = trim(\wp_kses_bad_protocol($raw, \wp_allowed_protocols()));
+                if ($sanitized === '' || \preg_match('/^(?:javascript|vbscript)/i', $sanitized)) {
+                    return '';
+                }
             }
 
             if ($quote === '') {
@@ -133,6 +137,46 @@ final class CssSanitizer
 
             return 'url(' . $quote . $sanitized . $quote . ')';
         }, $css);
+    }
+
+    private static function isSafeDataUri(string $value): bool
+    {
+        if ($value === '') {
+            return false;
+        }
+
+        if (!\preg_match('#^data:([a-z0-9.+-]+/[a-z0-9.+-]+)#i', $value, $matches)) {
+            return false;
+        }
+
+        $mime = strtolower($matches[1]);
+        if (str_starts_with($mime, 'image/')) {
+            return true;
+        }
+
+        if (str_starts_with($mime, 'font/')) {
+            return true;
+        }
+
+        if (!str_starts_with($mime, 'application/')) {
+            return false;
+        }
+
+        $allowed = [
+            'application/font',
+            'application/font-ttf',
+            'application/font-woff',
+            'application/font-woff2',
+            'application/font-sfnt',
+            'application/x-font-ttf',
+            'application/x-font-truetype',
+            'application/x-font-opentype',
+            'application/x-font-woff',
+            'application/x-font-woff2',
+            'application/vnd.ms-fontobject',
+        ];
+
+        return in_array($mime, $allowed, true);
     }
 
     public static function sanitizePresetCollection(array $presets): array
