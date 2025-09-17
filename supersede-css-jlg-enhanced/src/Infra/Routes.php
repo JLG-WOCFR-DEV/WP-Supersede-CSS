@@ -279,17 +279,18 @@ final class Routes {
             $options[$result->option_name] = maybe_unserialize($result->option_value);
         }
 
-        foreach ($options as $name => $value) {
-            if (is_array($value)) {
-                array_walk_recursive($value, static function (&$item): void {
-                    if (is_string($item)) {
-                        $item = wp_kses_post($item);
-                    }
-                });
-
-                $options[$name] = $value;
+        foreach ($options as $name => &$value) {
+            if (!is_array($value)) {
+                continue;
             }
+
+            array_walk_recursive($value, static function (&$item): void {
+                if (is_string($item)) {
+                    $item = wp_kses_post($item);
+                }
+            });
         }
+        unset($value);
         return new \WP_REST_Response($options, 200);
     }
 
