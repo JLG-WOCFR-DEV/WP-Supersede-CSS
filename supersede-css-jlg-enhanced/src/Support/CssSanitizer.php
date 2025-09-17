@@ -29,7 +29,7 @@ final class CssSanitizer
 
     private static function sanitizeDeclarations(string $declarations): string
     {
-        $parts = \preg_split('/;(?![^()]*\))/m', $declarations);
+        $parts = self::splitDeclarations($declarations);
         if (empty($parts)) {
             return '';
         }
@@ -75,6 +75,72 @@ final class CssSanitizer
         }
 
         return implode('; ', $sanitizedParts);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function splitDeclarations(string $declarations): array
+    {
+        $length = strlen($declarations);
+        if ($length === 0) {
+            return [];
+        }
+
+        $parts = [];
+        $buffer = '';
+        $parenDepth = 0;
+        $inSingleQuote = false;
+        $inDoubleQuote = false;
+        $escaped = false;
+
+        for ($i = 0; $i < $length; $i++) {
+            $char = $declarations[$i];
+
+            if ($escaped) {
+                $buffer .= $char;
+                $escaped = false;
+                continue;
+            }
+
+            if ($char === '\\') {
+                $buffer .= $char;
+                $escaped = true;
+                continue;
+            }
+
+            if ($char === "'" && !$inDoubleQuote) {
+                $inSingleQuote = !$inSingleQuote;
+                $buffer .= $char;
+                continue;
+            }
+
+            if ($char === '"' && !$inSingleQuote) {
+                $inDoubleQuote = !$inDoubleQuote;
+                $buffer .= $char;
+                continue;
+            }
+
+            if (!$inSingleQuote && !$inDoubleQuote) {
+                if ($char === '(') {
+                    $parenDepth++;
+                } elseif ($char === ')' && $parenDepth > 0) {
+                    $parenDepth--;
+                } elseif ($char === ';' && $parenDepth === 0) {
+                    $parts[] = $buffer;
+                    $buffer = '';
+                    continue;
+                }
+            }
+
+            $buffer .= $char;
+        }
+
+        if ($buffer !== '') {
+            $parts[] = $buffer;
+        }
+
+        return $parts;
     }
 
     private static function isSafePropertyName(string $property): bool
