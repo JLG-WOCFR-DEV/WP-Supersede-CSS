@@ -280,11 +280,6 @@ final class Routes {
         }
 
         foreach ($options as $name => $value) {
-            if (is_string($value)) {
-                $options[$name] = sanitize_text_field($value);
-                continue;
-            }
-
             if (is_array($value)) {
                 array_walk_recursive($value, static function (&$item): void {
                     if (is_string($item)) {
@@ -293,11 +288,6 @@ final class Routes {
                 });
 
                 $options[$name] = $value;
-                continue;
-            }
-
-            if (is_scalar($value)) {
-                $options[$name] = sanitize_text_field((string) $value);
             }
         }
         return new \WP_REST_Response($options, 200);
