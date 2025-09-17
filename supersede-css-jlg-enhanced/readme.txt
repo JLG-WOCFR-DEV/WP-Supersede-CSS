@@ -13,6 +13,7 @@ Cette version a été entièrement refactorisée pour améliorer la stabilité, 
 * Les fonctions identifient et neutralisent les protocoles dangereux (`javascript:`, `vbscript:`) à l'aide de `wp_kses_bad_protocol()` tout en conservant les URL légitimes et les valeurs attendues.
 * Les propriétés personnalisées (`--var`) et autres déclarations modernes sont sauvegardées après un nettoyage ciblé afin d'éviter de casser des styles valides.
 * Les jeux de presets (scope, propriétés) et les effets Avatar Glow sont normalisés (textes, sélecteurs, couleurs, URLs) avant persistance afin d'éviter les injections sans perdre la configuration enregistrée.
+* Scénario manuel : ajouter un bloc CSS contenant `background-image: url("data:image/svg+xml;base64,PHN2Zy4uLg==");` puis un autre avec `background-image: url("javascript:alert(1)");`. Après sauvegarde, vérifier que la première propriété est intacte tandis que la seconde est supprimée du CSS généré dans l'interface.
 
 == Changelog ==
 = 10.0.0 =
