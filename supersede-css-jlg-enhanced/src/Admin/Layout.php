@@ -4,6 +4,129 @@ namespace SSC\Admin;
 if (!defined('ABSPATH')) { exit; }
 
 class Layout {
+    /**
+     * Returns the list of allowed HTML tags for admin page rendering.
+     */
+    public static function allowed_tags(): array {
+        $allowed = wp_kses_allowed_html('post');
+
+        foreach ($allowed as $tag => $attributes) {
+            if (!is_array($attributes)) {
+                continue;
+            }
+
+            $attributes['style']  = true;
+            $attributes['data-*'] = true;
+
+            $allowed[$tag] = $attributes;
+        }
+
+        $allowed['style'] = [
+            'id'     => true,
+            'class'  => true,
+            'media'  => true,
+            'scoped' => true,
+            'title'  => true,
+            'type'   => true,
+        ];
+
+        $allowed['iframe'] = [
+            'allow'             => true,
+            'allowfullscreen'   => true,
+            'class'             => true,
+            'height'            => true,
+            'loading'           => true,
+            'name'              => true,
+            'referrerpolicy'    => true,
+            'sandbox'           => true,
+            'src'               => true,
+            'title'             => true,
+            'width'             => true,
+            'aria-describedby'  => true,
+            'aria-label'        => true,
+            'aria-labelledby'   => true,
+            'data-*'            => true,
+        ];
+
+        $allowed['canvas'] = [
+            'class'   => true,
+            'height'  => true,
+            'id'      => true,
+            'style'   => true,
+            'width'   => true,
+            'data-*'  => true,
+        ];
+
+        $svg_tags = array_unique([
+            'svg', 'g', 'defs', 'symbol', 'pattern', 'mask', 'clippath', 'use', 'path', 'circle', 'ellipse',
+            'line', 'polyline', 'polygon', 'rect', 'lineargradient', 'radialgradient', 'stop', 'filter',
+            'fegaussianblur', 'feoffset', 'feblend', 'fecolormatrix', 'fecomponenttransfer', 'fefunca',
+            'fefuncb', 'fefuncg', 'fefuncr', 'fecomposite', 'feimage', 'femerge', 'femergenode', 'fespotlight',
+            'feturbulence', 'feconvolvematrix', 'text', 'tspan', 'foreignobject', 'animate', 'animatemotion',
+            'animatetransform',
+        ]);
+
+        $svg_attributes = [
+            'aria-hidden'           => true,
+            'class'                 => true,
+            'clip-path'             => true,
+            'cliprule'              => true,
+            'd'                     => true,
+            'data-*'                => true,
+            'fill'                  => true,
+            'filterunits'           => true,
+            'focusable'             => true,
+            'gradienttransform'     => true,
+            'gradientunits'         => true,
+            'height'                => true,
+            'href'                  => true,
+            'id'                    => true,
+            'in'                    => true,
+            'in2'                   => true,
+            'marker-end'            => true,
+            'marker-mid'            => true,
+            'marker-start'          => true,
+            'maskcontentunits'      => true,
+            'maskunits'             => true,
+            'offset'                => true,
+            'opacity'               => true,
+            'patterncontentunits'   => true,
+            'patternunits'          => true,
+            'points'                => true,
+            'preserveaspectratio'   => true,
+            'r'                     => true,
+            'rx'                    => true,
+            'ry'                    => true,
+            'stroke'                => true,
+            'stroke-dasharray'      => true,
+            'stroke-dashoffset'     => true,
+            'stroke-linecap'        => true,
+            'stroke-linejoin'       => true,
+            'stroke-miterlimit'     => true,
+            'stroke-width'          => true,
+            'style'                 => true,
+            'transform'             => true,
+            'viewbox'               => true,
+            'width'                 => true,
+            'x'                     => true,
+            'x1'                    => true,
+            'x2'                    => true,
+            'xlink:href'            => true,
+            'xml:space'             => true,
+            'xmlns'                 => true,
+            'xmlns:xlink'           => true,
+            'y'                     => true,
+            'y1'                    => true,
+            'y2'                    => true,
+        ];
+
+        foreach ($svg_tags as $tag) {
+            $allowed[$tag] = $svg_attributes;
+        }
+
+        return $allowed;
+    }
+
     public static function render(string $page_content, string $current_page_slug): void {
         
         $menu_items = [
@@ -59,7 +182,7 @@ class Layout {
                     <?php endforeach; ?>
                 </nav></aside>
                 <main class="ssc-main-content">
-                    <?php echo wp_kses_post( $page_content ); ?>
+                    <?php echo wp_kses( $page_content, self::allowed_tags() ); ?>
                 </main>
             </div>
         </div>
