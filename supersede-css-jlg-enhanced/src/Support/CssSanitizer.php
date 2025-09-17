@@ -13,7 +13,7 @@ final class CssSanitizer
             return '';
         }
 
-        $css = \wp_kses($css, []);
+        $css = self::stripHtmlTags($css);
         $css = self::sanitizeImports($css);
         $css = self::sanitizeUrls($css);
 
@@ -84,7 +84,7 @@ final class CssSanitizer
 
     private static function sanitizeCustomPropertyValue(string $value): string
     {
-        $value = \wp_kses($value, []);
+        $value = self::stripHtmlTags($value);
         $value = self::sanitizeUrls($value);
         $value = (string) \preg_replace('/expression\s*\([^)]*\)/i', '', $value);
         $value = (string) \preg_replace('/behavior\s*:[^;]+;?/i', '', $value);
@@ -231,6 +231,79 @@ final class CssSanitizer
         ];
 
         return in_array($mime, $allowed, true);
+    }
+
+    private static function stripHtmlTags(string $css): string
+    {
+        if ($css === '') {
+            return '';
+        }
+
+        $placeholders = [];
+        $masked = self::maskQuotedSegments($css, $placeholders);
+
+        $clean = \wp_kses($masked, []);
+
+        if (!empty($placeholders)) {
+            $clean = strtr($clean, $placeholders);
+        }
+
+        return $clean;
+    }
+
+    private static function maskQuotedSegments(string $css, array &$placeholders): string
+    {
+        $length = strlen($css);
+        if ($length === 0) {
+            return '';
+        }
+
+        $buffer = '';
+        $index = 0;
+
+        while ($index < $length) {
+            $char = $css[$index];
+
+            if ($char === '"' || $char === "'") {
+                $quote = $char;
+                $index++;
+                $segment = $quote;
+
+                while ($index < $length) {
+                    $segment .= $css[$index];
+
+                    if ($css[$index] === '\\' && ($index + 1) < $length) {
+                        $index++;
+                        $segment .= $css[$index];
+                        $index++;
+                        continue;
+                    }
+
+                    if ($css[$index] === $quote) {
+                        $index++;
+                        break;
+                    }
+
+                    $index++;
+                }
+
+                if ($segment === $quote) {
+                    $buffer .= $segment;
+                    continue;
+                }
+
+                $placeholder = '__SSC_CSS_TOKEN_' . count($placeholders) . '__';
+                $placeholders[$placeholder] = $segment;
+                $buffer .= $placeholder;
+
+                continue;
+            }
+
+            $buffer .= $char;
+            $index++;
+        }
+
+        return $buffer;
     }
 
     public static function sanitizePresetCollection(array $presets): array
