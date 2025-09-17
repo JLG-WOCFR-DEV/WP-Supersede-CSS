@@ -94,21 +94,75 @@ final class CssSanitizer
 
     private static function sanitizeImports(string $css): string
     {
-        return (string) \preg_replace_callback('/@import\s+(?:url\()?(?P<quote>["\']?)([^"\')\s]+)(?P=quote)\)?[^;]*;?/i', static function(array $matches): string {
-            $rawUrl = trim($matches[2]);
+        return (string) \preg_replace_callback('/@import\s+([^;]+);?/i', static function(array $matches): string {
+            $body = trim($matches[1]);
+            if ($body === '') {
+                return '';
+            }
+
+            $quote = '';
+            $rawUrl = '';
+            $qualifiers = '';
+
+            if (stripos($body, 'url(') === 0) {
+                if (!\preg_match('/^url\((?P<content>.*?)\)(?P<qualifiers>.*)$/i', $body, $parts)) {
+                    return '';
+                }
+
+                $urlContent = trim($parts['content']);
+                $qualifiers = $parts['qualifiers'] ?? '';
+
+                if ($urlContent !== '' && (substr($urlContent, 0, 1) === '"' || substr($urlContent, 0, 1) === "'")) {
+                    $quote = substr($urlContent, 0, 1);
+                    $urlContent = trim($urlContent, "\"'");
+                }
+
+                $rawUrl = $urlContent;
+            } else {
+                $parts = \preg_split('/\s+/', $body, 2);
+                if (empty($parts)) {
+                    return '';
+                }
+
+                $urlPart = trim($parts[0]);
+                if ($urlPart === '') {
+                    return '';
+                }
+
+                if (substr($urlPart, 0, 1) === '"' || substr($urlPart, 0, 1) === "'") {
+                    $quote = substr($urlPart, 0, 1);
+                    $urlPart = trim($urlPart, "\"'");
+                }
+
+                $rawUrl = $urlPart;
+                $qualifiers = $parts[1] ?? '';
+            }
+
+            $rawUrl = trim($rawUrl);
             if ($rawUrl === '') {
                 return '';
             }
 
-            $sanitized = trim(\wp_kses_bad_protocol($rawUrl, \wp_allowed_protocols()));
-            if ($sanitized === '' || \preg_match('/^(?:javascript|vbscript)/i', $sanitized)) {
+            $sanitizedUrl = trim(\wp_kses_bad_protocol($rawUrl, \wp_allowed_protocols()));
+            if ($sanitizedUrl === '' || \preg_match('/^(?:javascript|vbscript)/i', $sanitizedUrl)) {
                 return '';
             }
 
-            $quote = $matches['quote'];
-            $url = $quote !== '' ? $quote . $sanitized . $quote : $sanitized;
+            $url = $quote !== '' ? $quote . $sanitizedUrl . $quote : $sanitizedUrl;
 
-            return '@import url(' . $url . ');';
+            $qualifiers = is_string($qualifiers) ? trim($qualifiers) : '';
+            if ($qualifiers !== '') {
+                $qualifiers = \wp_kses($qualifiers, []);
+                $qualifiers = (string) \preg_replace('/[{};]/', '', $qualifiers);
+                $qualifiers = trim($qualifiers);
+            }
+
+            $result = '@import url(' . $url . ')';
+            if ($qualifiers !== '') {
+                $result .= ' ' . $qualifiers;
+            }
+
+            return $result . ';';
         }, $css);
     }
 
