@@ -22,7 +22,7 @@
 
     function updatePreview() {
         const vpWidth = $('#ssc-typo-vp-slider').val();
-        $('#ssc-typo-vp-val').text(vpWidth + 'px');
+        $('#ssc-typo-vp-value').text(vpWidth + 'px');
 
         const minFS = parseFloat($('#ssc-typo-min-fs').val());
         const maxFS = parseFloat($('#ssc-typo-max-fs').val());
