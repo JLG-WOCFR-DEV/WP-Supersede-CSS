@@ -53,12 +53,19 @@
         }
         styleTag.text(css);
         
-        const previewBox = $('#ssc-anim-preview-box');
-        // Relancer l'animation en clonant l'élément
-        const newBox = previewBox.clone(true);
-        previewBox.before(newBox);
-        $("." + previewBox.attr("class") + ":last").remove();
-        newBox.addClass('ssc-animated ' + preset.name);
+        let previewBox = $('#ssc-anim-preview-box');
+        const animationClasses = Object.values(presets).map(preset => preset.name);
+        const preservedClasses = (previewBox.attr('class') || '')
+            .split(/\s+/)
+            .filter(cls => cls && cls !== 'ssc-animated' && !animationClasses.includes(cls));
+
+        const newBox = previewBox.clone(false);
+        newBox.attr('id', 'ssc-anim-preview-box');
+        newBox.attr('class', preservedClasses.join(' '));
+
+        previewBox.replaceWith(newBox);
+        previewBox = $('#ssc-anim-preview-box');
+        previewBox.addClass('ssc-animated ' + preset.name);
     }
 
     $(document).ready(function() {
