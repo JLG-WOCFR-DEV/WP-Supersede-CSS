@@ -17,9 +17,16 @@ final class CssSanitizer
         $css = self::sanitizeImports($css);
         $css = self::sanitizeUrls($css);
 
-        $css = (string) \preg_replace_callback('/\{([^{}]*)\}/m', static function(array $matches): string {
-            $sanitized = self::sanitizeDeclarations($matches[1]);
-            return $sanitized === '' ? '' : '{' . $sanitized . '}';
+        $css = (string) \preg_replace_callback('/(?P<prefix>@property\s+[^{}]+)?\{(?P<body>[^{}]*)\}/m', static function(array $matches): string {
+            $prefix = $matches['prefix'] ?? '';
+            $isPropertyContext = $prefix !== '';
+            $sanitized = self::sanitizeDeclarations($matches['body'], $isPropertyContext);
+
+            if ($sanitized === '') {
+                return '';
+            }
+
+            return $prefix . '{' . $sanitized . '}';
         }, $css);
 
         $css = (string) \preg_replace('/[^{}]+\{\s*\}/m', '', $css);
@@ -27,7 +34,7 @@ final class CssSanitizer
         return trim($css);
     }
 
-    private static function sanitizeDeclarations(string $declarations): string
+    private static function sanitizeDeclarations(string $declarations, bool $isPropertyContext = false): string
     {
         $parts = self::splitDeclarations($declarations);
         if (empty($parts)) {
@@ -56,6 +63,16 @@ final class CssSanitizer
                 continue;
             }
 
+            if ($isPropertyContext && self::isAllowedPropertyDefinitionProperty($property)) {
+                $normalized = self::sanitizePropertyDefinitionValue($property, $value);
+                if ($normalized === '') {
+                    continue;
+                }
+
+                $sanitizedParts[] = $property . ':' . $normalized;
+                continue;
+            }
+
             $declaration = $property . ':' . $value . ';';
             $sanitized = trim(\safecss_filter_attr($declaration));
             if ($sanitized === '') {
@@ -75,6 +92,64 @@ final class CssSanitizer
         }
 
         return implode('; ', $sanitizedParts);
+    }
+
+    private static function isAllowedPropertyDefinitionProperty(string $property): bool
+    {
+        return in_array($property, ['syntax', 'initial-value', 'inherits'], true);
+    }
+
+    private static function sanitizePropertyDefinitionValue(string $property, string $value): string
+    {
+        $value = trim($value);
+
+        switch ($property) {
+            case 'syntax':
+                $value = self::stripHtmlTags($value);
+                $value = self::sanitizeUrls($value);
+
+                if ($value === '') {
+                    return '';
+                }
+
+                $quote = $value[0];
+                if ($quote !== '"' && $quote !== "'") {
+                    return '';
+                }
+
+                if (substr($value, -1) !== $quote) {
+                    return '';
+                }
+
+                $inner = substr($value, 1, -1);
+                if ($inner === '') {
+                    return '';
+                }
+
+                if (strpbrk($inner, "\"'{};\\") !== false) {
+                    return '';
+                }
+
+                if (\preg_match('/[\x00-\x1F\x7F]/', $inner)) {
+                    return '';
+                }
+
+                return $quote . $inner . $quote;
+
+            case 'initial-value':
+                $normalized = self::sanitizeCustomPropertyValue($value);
+                return $normalized;
+
+            case 'inherits':
+                $lowerValue = strtolower($value);
+                if ($lowerValue === 'true' || $lowerValue === 'false') {
+                    return $lowerValue;
+                }
+
+                return '';
+        }
+
+        return '';
     }
 
     /**
