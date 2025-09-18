@@ -17,9 +17,15 @@ final class CssSanitizer
         $css = self::sanitizeImports($css);
         $css = self::sanitizeUrls($css);
 
-        $css = (string) \preg_replace_callback('/\{([^{}]*)\}/m', static function(array $matches): string {
-            $sanitized = self::sanitizeDeclarations($matches[1]);
-            return $sanitized === '' ? '' : '{' . $sanitized . '}';
+        $css = (string) \preg_replace_callback('/(?P<selectors>[^{}]+)\{(?P<declarations>[^{}]*)\}/m', static function(array $matches): string {
+            $selectors = $matches['selectors'];
+            $sanitized = self::sanitizeDeclarations($matches['declarations'], $selectors);
+
+            if ($sanitized === '') {
+                return '';
+            }
+
+            return $selectors . '{' . $sanitized . '}';
         }, $css);
 
         $css = (string) \preg_replace('/[^{}]+\{\s*\}/m', '', $css);
@@ -27,7 +33,7 @@ final class CssSanitizer
         return trim($css);
     }
 
-    private static function sanitizeDeclarations(string $declarations): string
+    private static function sanitizeDeclarations(string $declarations, string $selector = ''): string
     {
         $parts = self::splitDeclarations($declarations);
         if (empty($parts)) {
@@ -35,6 +41,7 @@ final class CssSanitizer
         }
 
         $sanitizedParts = [];
+        $isPropertyRule = self::isPropertyRuleSelector($selector);
         foreach ($parts as $part) {
             $part = trim($part);
             if ($part === '') {
@@ -65,6 +72,17 @@ final class CssSanitizer
                         continue;
                     }
                     $sanitizedParts[] = $property . ':' . $customValue;
+                    continue;
+                }
+
+                if ($isPropertyRule) {
+                    $descriptor = self::sanitizePropertyDescriptor($property, $value);
+                    if ($descriptor === null) {
+                        continue;
+                    }
+
+                    [$normalizedProperty, $normalizedValue] = $descriptor;
+                    $sanitizedParts[] = $normalizedProperty . ':' . $normalizedValue;
                 }
                 continue;
             }
@@ -75,6 +93,102 @@ final class CssSanitizer
         }
 
         return implode('; ', $sanitizedParts);
+    }
+
+    private static function isPropertyRuleSelector(string $selector): bool
+    {
+        if ($selector === '') {
+            return false;
+        }
+
+        $normalized = \preg_replace('/\/\*.*?\*\//s', ' ', $selector);
+        $normalized = trim($normalized);
+
+        return (bool) \preg_match('/^@property\s+--[A-Za-z0-9_-]+\s*$/', $normalized);
+    }
+
+    /**
+     * @return array{0:string,1:string}|null
+     */
+    private static function sanitizePropertyDescriptor(string $property, string $value): ?array
+    {
+        $property = strtolower($property);
+
+        if ($property === 'syntax') {
+            $normalized = self::sanitizePropertySyntax($value);
+            if ($normalized === '') {
+                return null;
+            }
+
+            return ['syntax', $normalized];
+        }
+
+        if ($property === 'initial-value') {
+            $normalized = self::sanitizeCustomPropertyValue($value);
+            if ($normalized === '') {
+                return null;
+            }
+
+            return ['initial-value', $normalized];
+        }
+
+        if ($property === 'inherits') {
+            $normalized = self::sanitizePropertyInherits($value);
+            if ($normalized === '') {
+                return null;
+            }
+
+            return ['inherits', $normalized];
+        }
+
+        return null;
+    }
+
+    private static function sanitizePropertySyntax(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return '';
+        }
+
+        $quote = substr($value, 0, 1);
+        if ($quote !== '"' && $quote !== "'") {
+            return '';
+        }
+
+        if (substr($value, -1) !== $quote) {
+            return '';
+        }
+
+        $content = substr($value, 1, -1);
+        if ($content === false) {
+            return '';
+        }
+
+        $content = trim($content);
+        if ($content === '') {
+            return '';
+        }
+
+        if (!\preg_match('/^[A-Za-z0-9_<>\\s|#*,.?+\-]+$/', $content)) {
+            return '';
+        }
+
+        return $quote . $content . $quote;
+    }
+
+    private static function sanitizePropertyInherits(string $value): string
+    {
+        $value = strtolower(trim($value));
+        if ($value === 'true') {
+            return 'true';
+        }
+
+        if ($value === 'false') {
+            return 'false';
+        }
+
+        return '';
     }
 
     /**
