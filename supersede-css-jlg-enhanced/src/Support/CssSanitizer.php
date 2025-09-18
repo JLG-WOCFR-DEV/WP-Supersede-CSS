@@ -309,29 +309,111 @@ final class CssSanitizer
 
     private static function sanitizeUrls(string $css): string
     {
-        return (string) \preg_replace_callback('/url\((.*?)\)/i', static function(array $matches): string {
-            $raw = trim($matches[1]);
-            $quote = '';
-            if ($raw !== '' && (substr($raw, 0, 1) === '"' || substr($raw, 0, 1) === "'")) {
-                $quote = substr($raw, 0, 1);
+        if ($css === '') {
+            return '';
+        }
+
+        $length = strlen($css);
+        $result = '';
+        $offset = 0;
+
+        while (($position = stripos($css, 'url(', $offset)) !== false) {
+            $result .= substr($css, $offset, $position - $offset);
+
+            $cursor = $position + 4;
+            $inSingleQuote = false;
+            $inDoubleQuote = false;
+            $escaped = false;
+
+            while ($cursor < $length) {
+                $character = $css[$cursor];
+
+                if ($escaped) {
+                    $escaped = false;
+                    $cursor++;
+                    continue;
+                }
+
+                if ($character === '\\') {
+                    $escaped = true;
+                    $cursor++;
+                    continue;
+                }
+
+                if ($character === "'" && !$inDoubleQuote) {
+                    $inSingleQuote = !$inSingleQuote;
+                    $cursor++;
+                    continue;
+                }
+
+                if ($character === '"' && !$inSingleQuote) {
+                    $inDoubleQuote = !$inDoubleQuote;
+                    $cursor++;
+                    continue;
+                }
+
+                if (!$inSingleQuote && !$inDoubleQuote && $character === ')') {
+                    break;
+                }
+
+                $cursor++;
+            }
+
+            if ($cursor >= $length) {
+                $result .= substr($css, $position);
+                $offset = $length;
+                break;
+            }
+
+            $content = substr($css, $position + 4, $cursor - ($position + 4));
+            $sanitizedToken = self::sanitizeUrlToken($content);
+
+            if ($sanitizedToken !== '') {
+                $result .= $sanitizedToken;
+            }
+
+            $offset = $cursor + 1;
+        }
+
+        if ($offset < $length) {
+            $result .= substr($css, $offset);
+        }
+
+        return $result;
+    }
+
+    private static function sanitizeUrlToken(string $content): string
+    {
+        $raw = trim($content);
+        if ($raw === '') {
+            return '';
+        }
+
+        $quote = '';
+        $firstCharacter = $raw[0];
+        if ($firstCharacter === '"' || $firstCharacter === "'") {
+            $quote = $firstCharacter;
+            if (substr($raw, -1) === $quote) {
+                $raw = substr($raw, 1, -1);
+            } else {
                 $raw = trim($raw, "\"'");
             }
+        }
 
-            if (self::isSafeDataUri($raw)) {
-                $sanitized = $raw;
-            } else {
-                $sanitized = trim(\wp_kses_bad_protocol($raw, \wp_allowed_protocols()));
-                if ($sanitized === '' || \preg_match('/^(?:javascript|vbscript)/i', $sanitized)) {
-                    return '';
-                }
+        if (self::isSafeDataUri($raw)) {
+            $sanitized = $raw;
+        } else {
+            $sanitized = trim(\wp_kses_bad_protocol($raw, \wp_allowed_protocols()));
+            if ($sanitized === '' || \preg_match('/^(?:javascript|vbscript)/i', $sanitized)) {
+                return '';
             }
+        }
 
-            if ($quote === '') {
-                $quote = '"';
-            }
+        if ($quote === '') {
+            $quote = '"';
+        }
 
-            return 'url(' . $quote . $sanitized . $quote . ')';
-        }, $css);
+        return 'url(' . $quote . $sanitized . $quote . ')';
     }
 
     private static function isSafeDataUri(string $value): bool
