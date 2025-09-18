@@ -17,17 +17,29 @@ final class CssSanitizer
         $css = self::sanitizeImports($css);
         $css = self::sanitizeUrls($css);
 
-        $css = (string) \preg_replace_callback('/\{([^{}]*)\}/m', static function(array $matches): string {
-            $sanitized = self::sanitizeDeclarations($matches[1]);
-            return $sanitized === '' ? '' : '{' . $sanitized . '}';
-        }, $css);
+        $css = (string) \preg_replace_callback(
+            '/(?:(?P<prefix>@property\s+[^{}]+)(?P<spacing>\s*))?\{(?P<body>[^{}]*)\}/m',
+            static function(array $matches): string {
+                $isAtProperty = isset($matches['prefix']) && $matches['prefix'] !== '';
+                $sanitized = self::sanitizeDeclarations($matches['body'], $isAtProperty ? 'at-property' : '');
+                if ($sanitized === '') {
+                    return '';
+                }
+
+                $prefix = $matches['prefix'] ?? '';
+                $spacing = $matches['spacing'] ?? '';
+
+                return ($prefix !== '' ? $prefix . $spacing : '') . '{' . $sanitized . '}';
+            },
+            $css
+        );
 
         $css = (string) \preg_replace('/[^{}]+\{\s*\}/m', '', $css);
 
         return trim($css);
     }
 
-    private static function sanitizeDeclarations(string $declarations): string
+    private static function sanitizeDeclarations(string $declarations, string $context = ''): string
     {
         $parts = self::splitDeclarations($declarations);
         if (empty($parts)) {
@@ -53,6 +65,16 @@ final class CssSanitizer
             }
 
             if (!self::isSafePropertyName($property)) {
+                continue;
+            }
+
+            if ($context === 'at-property' && self::isAtPropertyDescriptor($property)) {
+                $descriptorValue = self::sanitizeAtPropertyDescriptor($property, $value);
+                if ($descriptorValue === '') {
+                    continue;
+                }
+
+                $sanitizedParts[] = $property . ':' . $descriptorValue;
                 continue;
             }
 
@@ -154,6 +176,73 @@ final class CssSanitizer
         $value = self::sanitizeUrls($value);
         $value = (string) \preg_replace('/expression\s*\([^)]*\)/i', '', $value);
         $value = (string) \preg_replace('/behavior\s*:[^;]+;?/i', '', $value);
+
+        return trim($value);
+    }
+
+    private static function isAtPropertyDescriptor(string $property): bool
+    {
+        return in_array($property, ['syntax', 'initial-value', 'inherits'], true);
+    }
+
+    private static function sanitizeAtPropertyDescriptor(string $property, string $value): string
+    {
+        switch ($property) {
+            case 'syntax':
+                return self::sanitizeAtPropertySyntaxValue($value);
+
+            case 'initial-value':
+                return self::sanitizeCustomPropertyValue($value);
+
+            case 'inherits':
+                return self::sanitizeAtPropertyInheritsValue($value);
+        }
+
+        return '';
+    }
+
+    private static function sanitizeAtPropertySyntaxValue(string $value): string
+    {
+        $quote = '';
+        $innerValue = self::trimAndUnquote($value, $quote);
+        if ($innerValue === '') {
+            return '';
+        }
+
+        if (!\preg_match('/^[A-Za-z0-9_<>()\[\]\-\s|&*+#?,.%\/!]+$/', $innerValue)) {
+            return '';
+        }
+
+        $innerValue = (string) \preg_replace('/\s+/', ' ', $innerValue);
+
+        if ($quote !== '') {
+            return $quote . $innerValue . $quote;
+        }
+
+        return $innerValue;
+    }
+
+    private static function sanitizeAtPropertyInheritsValue(string $value): string
+    {
+        $quote = null;
+        $normalized = strtolower(self::trimAndUnquote($value, $quote));
+
+        if ($normalized === 'true' || $normalized === 'false') {
+            return $normalized;
+        }
+
+        return '';
+    }
+
+    private static function trimAndUnquote(string $value, ?string &$quoteChar = null): string
+    {
+        $value = trim($value);
+        $quoteChar = '';
+
+        if ($value !== '' && ($value[0] === '"' || $value[0] === "'") && substr($value, -1) === $value[0]) {
+            $quoteChar = $value[0];
+            $value = substr($value, 1, -1);
+        }
 
         return trim($value);
     }
