@@ -109,26 +109,47 @@
         $('#ssc-bg-controls-stars').toggle(type === 'stars');
         $('#ssc-bg-controls-gradient').toggle(type === 'gradient');
         let css = '', preview = $('#ssc-bg-preview');
-        preview.empty().removeAttr('style').css('animation', ''); // Réinitialiser l'animation
+        preview.empty().removeAttr('style').css('animation', '').removeClass('ssc-bg-stars ssc-bg-gradient'); // Réinitialiser l'animation
 
         if (type === 'stars') {
             const color = $('#starColor').val();
             const count = parseInt($('#starCount').val(), 10);
-            css = `/* L'effet d'étoiles animées est complexe. Le code généré est principalement pour la démonstration. */`;
-            preview.css({ background: '#000', overflow: 'hidden', position: 'relative' });
+            const keyframes = `@keyframes ssc-stars-anim { from { transform: translateY(0); } to { transform: translateY(-2000px); } }`;
+            const animationDuration = 50;
             let boxShadows = [];
             for (let i = 0; i < count; i++) {
                 boxShadows.push(`${Math.random() * 2000}px ${Math.random() * 2000}px ${color}`);
             }
-            const starsDiv = $('<div style="width:1px; height:1px; background:transparent;"></div>');
-            starsDiv.css('box-shadow', boxShadows.join(','));
-            starsDiv.css('animation', 'ssc-stars-anim 50s linear infinite');
-            preview.append(starsDiv);
+            css = `${keyframes}
+.ssc-bg-stars {
+  background: #000000;
+  position: relative;
+  overflow: hidden;
+}
+.ssc-bg-stars::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  background: transparent;
+  box-shadow: ${boxShadows.join(', ')};
+  animation: ssc-stars-anim ${animationDuration}s linear infinite;
+}
+`;
+
+            // Injecter le CSS généré pour l'aperçu
+            $('style#ssc-stars-preview-style').remove();
+            $(`<style id="ssc-stars-preview-style">${css}</style>`).appendTo('head');
+
+            preview.addClass('ssc-bg-stars');
 
         } else if (type === 'gradient') {
+            $('style#ssc-stars-preview-style').remove();
             const speed = $('#gradientSpeed').val();
             const keyframes = `@keyframes ssc-gradient-anim { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }`;
-            
+
             // Injecter les keyframes pour que l'aperçu fonctionne
             $('style#ssc-gradient-anim-style').remove();
             $(`<style id="ssc-gradient-anim-style">${keyframes}</style>`).appendTo('head');
