@@ -427,6 +427,10 @@ final class CssSanitizer
             if ($sanitized === '' || \preg_match('/^(?:javascript|vbscript)/i', $sanitized)) {
                 return '';
             }
+
+            if (str_starts_with(strtolower($sanitized), 'data:')) {
+                return '';
+            }
         }
 
         if ($quote === '') {
@@ -447,7 +451,15 @@ final class CssSanitizer
         }
 
         $mime = strtolower($matches[1]);
-        if (str_starts_with($mime, 'image/')) {
+
+        $allowedImageTypes = [
+            'image/png',
+            'image/jpeg',
+            'image/gif',
+            'image/webp',
+        ];
+
+        if (in_array($mime, $allowedImageTypes, true)) {
             return true;
         }
 

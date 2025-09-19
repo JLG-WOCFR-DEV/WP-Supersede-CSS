@@ -43,6 +43,14 @@ $tests = [
         'input' => 'div { background: url("javascript:alert(1)"); }',
         'expected' => '',
     ],
+    'safe image data URI is preserved' => [
+        'input' => 'div { background-image: url("data:image/png;base64,AAAA"); }',
+        'expected' => 'div {background-image:url("data:image/png;base64,AAAA")}',
+    ],
+    'svg data URI is stripped' => [
+        'input' => 'div { background-image: url("data:image/svg+xml,<svg></svg>"); }',
+        'expected' => '',
+    ],
 ];
 
 foreach ($tests as $label => $test) {
