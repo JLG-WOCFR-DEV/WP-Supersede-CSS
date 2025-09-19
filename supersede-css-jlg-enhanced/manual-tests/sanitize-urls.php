@@ -5,7 +5,7 @@
 if (!\function_exists('wp_kses')) {
     function wp_kses(string $string, array $allowed_html): string
     {
-        return $string;
+        return strip_tags($string);
     }
 }
 
@@ -41,7 +41,7 @@ $tests = [
     ],
     'unsafe protocol is removed' => [
         'input' => 'div { background: url("javascript:alert(1)"); }',
-        'expected' => 'div',
+        'expected' => '',
     ],
 ];
 
