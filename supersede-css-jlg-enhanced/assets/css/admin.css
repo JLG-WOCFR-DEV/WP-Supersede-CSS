@@ -16,6 +16,14 @@
     color: var(--ssc-muted);
 }
 
+#ssc-import-msg.ssc-success {
+    color: #15803d;
+}
+
+#ssc-import-msg.ssc-error {
+    color: #b91c1c;
+}
+
 .ssc-two { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
 @media (max-width: 782px) { .ssc-two { grid-template-columns: 1fr; } }
 .ssc-pane, .ssc-panel { background:var(--ssc-card); border:1px solid var(--ssc-border); border-radius:12px; padding:16px; }

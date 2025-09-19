@@ -6,6 +6,22 @@ use SSC\Support\CssSanitizer;
 if (!defined('ABSPATH')) { exit; }
 
 final class Routes {
+    private const IMPORT_HANDLERS = [
+        'ssc_active_css' => 'sanitizeImportCss',
+        'ssc_tokens_css' => 'sanitizeImportCss',
+        'ssc_css_desktop' => 'sanitizeImportCss',
+        'ssc_css_tablet' => 'sanitizeImportCss',
+        'ssc_css_mobile' => 'sanitizeImportCss',
+        'ssc_presets' => 'sanitizeImportPresets',
+        'ssc_avatar_glow_presets' => 'sanitizeImportAvatarGlowPresets',
+        'ssc_admin_log' => 'sanitizeImportAdminLog',
+        'ssc_settings' => 'sanitizeImportArray',
+        'ssc_modules_enabled' => 'sanitizeImportArray',
+        'ssc_optimization_settings' => 'sanitizeImportArray',
+        'ssc_secret' => 'sanitizeImportString',
+        'ssc_safe_mode' => 'sanitizeImportBoolean',
+    ];
+
     public function __construct() {
         add_action('rest_api_init', [$this, 'register']);
     }
@@ -75,6 +91,12 @@ final class Routes {
             'methods' => 'GET',
             'permission_callback' => [$this, 'authorizeRequest'],
             'callback' => [$this, 'exportCss'],
+        ]);
+
+        register_rest_route('ssc/v1', '/import-config', [
+            'methods' => 'POST',
+            'permission_callback' => [$this, 'authorizeRequest'],
+            'callback' => [$this, 'importConfig'],
         ]);
     }
 
@@ -302,6 +324,266 @@ final class Routes {
             $css = '/* Aucun CSS actif trouvé. */';
         }
         return new \WP_REST_Response(['css' => $css], 200);
+    }
+
+    public function importConfig(\WP_REST_Request $request): \WP_REST_Response {
+        $json = $request->get_json_params();
+
+        if (!is_array($json)) {
+            return new \WP_REST_Response([
+                'ok' => false,
+                'message' => __('Invalid JSON payload.', 'supersede-css-jlg'),
+                'applied' => [],
+                'skipped' => [],
+            ], 400);
+        }
+
+        $options = $json['options'] ?? $json;
+
+        if (!is_array($options)) {
+            return new \WP_REST_Response([
+                'ok' => false,
+                'message' => __('Invalid import format.', 'supersede-css-jlg'),
+                'applied' => [],
+                'skipped' => [],
+            ], 400);
+        }
+
+        $result = $this->applyImportedOptions($options);
+
+        if (empty($result['applied'])) {
+            return new \WP_REST_Response([
+                'ok' => false,
+                'message' => __('No valid Supersede CSS options were found in this import.', 'supersede-css-jlg'),
+                'applied' => $result['applied'],
+                'skipped' => $result['skipped'],
+            ], 400);
+        }
+
+        if (class_exists(__NAMESPACE__ . '\\Logger')) {
+            Logger::add('config_imported', [
+                'applied' => (string) count($result['applied']),
+                'skipped' => (string) count($result['skipped']),
+            ]);
+        }
+
+        return new \WP_REST_Response([
+            'ok' => true,
+            'applied' => $result['applied'],
+            'skipped' => $result['skipped'],
+        ], 200);
+    }
+
+    /**
+     * @param array<mixed> $options
+     * @return array{applied: list<string>, skipped: list<string>}
+     */
+    private function applyImportedOptions(array $options): array
+    {
+        $applied = [];
+        $skipped = [];
+
+        foreach ($options as $name => $value) {
+            if (!is_string($name)) {
+                $skipped[] = (string) $name;
+                continue;
+            }
+
+            $optionName = sanitize_key($name);
+            if ($optionName === '' || strncmp($optionName, 'ssc_', 4) !== 0) {
+                $skipped[] = $optionName === '' ? $name : $optionName;
+                continue;
+            }
+
+            if (!isset(self::IMPORT_HANDLERS[$optionName])) {
+                $skipped[] = $optionName;
+                continue;
+            }
+
+            $handler = self::IMPORT_HANDLERS[$optionName];
+            $sanitizedValue = $this->$handler($value);
+
+            if ($sanitizedValue === null) {
+                $skipped[] = $optionName;
+                continue;
+            }
+
+            update_option($optionName, $sanitizedValue, false);
+            $applied[] = $optionName;
+        }
+
+        return [
+            'applied' => $applied,
+            'skipped' => $skipped,
+        ];
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function sanitizeImportCss($value): ?string
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+
+        return CssSanitizer::sanitize($value);
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function sanitizeImportPresets($value): ?array
+    {
+        if (!is_array($value)) {
+            return null;
+        }
+
+        return CssSanitizer::sanitizePresetCollection($value);
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function sanitizeImportAvatarGlowPresets($value): ?array
+    {
+        if (!is_array($value)) {
+            return null;
+        }
+
+        return CssSanitizer::sanitizeAvatarGlowPresets($value);
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function sanitizeImportArray($value): ?array
+    {
+        if (!is_array($value)) {
+            return null;
+        }
+
+        $sanitized = [];
+
+        foreach ($value as $key => $item) {
+            $sanitizedKey = is_string($key) ? sanitize_key($key) : (string) $key;
+            if ($sanitizedKey === '') {
+                $sanitizedKey = 'key_' . md5((string) $key);
+            }
+
+            if (is_array($item)) {
+                $nested = $this->sanitizeImportArray($item);
+                if ($nested === null) {
+                    continue;
+                }
+                $sanitized[$sanitizedKey] = $nested;
+                continue;
+            }
+
+            if (is_bool($item)) {
+                $sanitized[$sanitizedKey] = $item;
+                continue;
+            }
+
+            if (is_int($item) || is_float($item)) {
+                $sanitized[$sanitizedKey] = $item + 0;
+                continue;
+            }
+
+            if ($item === null) {
+                $sanitized[$sanitizedKey] = '';
+                continue;
+            }
+
+            if (is_string($item)) {
+                $sanitized[$sanitizedKey] = sanitize_text_field($item);
+                continue;
+            }
+
+            $sanitized[$sanitizedKey] = sanitize_text_field((string) $item);
+        }
+
+        return $sanitized;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function sanitizeImportString($value): ?string
+    {
+        if (is_string($value)) {
+            return sanitize_text_field($value);
+        }
+
+        if (is_scalar($value)) {
+            return sanitize_text_field((string) $value);
+        }
+
+        return null;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function sanitizeImportBoolean($value): ?bool
+    {
+        if ($value === null) {
+            return false;
+        }
+
+        return (bool) \rest_sanitize_boolean($value);
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function sanitizeImportAdminLog($value): ?array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $sanitized = [];
+
+        foreach ($value as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+
+            $timestamp = isset($entry['t']) ? sanitize_text_field((string) $entry['t']) : '';
+            $user = isset($entry['user']) ? sanitize_text_field((string) $entry['user']) : 'anon';
+            $action = isset($entry['action']) ? sanitize_text_field((string) $entry['action']) : '';
+            $data = isset($entry['data']) ? $this->sanitizeImportArray($entry['data']) : [];
+
+            if ($action === '') {
+                continue;
+            }
+
+            if ($timestamp === '') {
+                $timestamp = gmdate('c');
+            }
+
+            if ($user === '') {
+                $user = 'anon';
+            }
+
+            if (!is_array($data)) {
+                $data = [];
+            }
+
+            $sanitized[] = [
+                't' => $timestamp,
+                'user' => $user,
+                'action' => $action,
+                'data' => $data,
+            ];
+        }
+
+        if (count($sanitized) > Logger::MAX) {
+            $sanitized = array_slice($sanitized, 0, Logger::MAX);
+        }
+
+        return $sanitized;
     }
 
     private function sanitizeCssSegment($value): string

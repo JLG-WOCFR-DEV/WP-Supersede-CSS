@@ -55,10 +55,89 @@
                 btn.text('Exporter CSS (.css)').prop('disabled', false);
             });
         });
-        
-        // --- IMPORTATION (Logique de base) ---
-        $('#ssc-import-btn').on('click', function() {
-            alert("La fonctionnalité d'importation est en cours de développement.");
+
+        // --- IMPORTATION ---
+        const importInput = $('#ssc-import-file');
+        const importBtn = $('#ssc-import-btn');
+        const importMsg = $('#ssc-import-msg');
+
+        function setImportMessage(type, message) {
+            importMsg.removeClass('ssc-success ssc-error');
+            if (!message) {
+                importMsg.text('');
+                return;
+            }
+
+            if (type === 'success') {
+                importMsg.addClass('ssc-success');
+            } else if (type === 'error') {
+                importMsg.addClass('ssc-error');
+            }
+
+            importMsg.text(message);
+        }
+
+        function handleImportError(message) {
+            setImportMessage('error', message);
+            if (typeof window.sscToast === 'function') {
+                window.sscToast(message);
+            }
+        }
+
+        importBtn.on('click', function() {
+            const file = importInput[0]?.files?.[0];
+            if (!file) {
+                handleImportError('Veuillez sélectionner un fichier JSON à importer.');
+                return;
+            }
+
+            const reader = new FileReader();
+            importBtn.text('Importation...').prop('disabled', true);
+            setImportMessage('', '');
+
+            reader.onerror = () => {
+                handleImportError("Impossible de lire le fichier sélectionné.");
+                importBtn.text('Importer').prop('disabled', false);
+            };
+
+            reader.onload = () => {
+                let parsed;
+                try {
+                    parsed = JSON.parse(reader.result);
+                } catch (error) {
+                    handleImportError('Le fichier importé ne contient pas un JSON valide.');
+                    importBtn.text('Importer').prop('disabled', false);
+                    return;
+                }
+
+                $.ajax({
+                    url: SSC.rest.root + 'import-config',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ options: parsed, _wpnonce: SSC.rest.nonce }),
+                    beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
+                }).done(response => {
+                    const applied = Array.isArray(response.applied) ? response.applied.length : 0;
+                    const skipped = Array.isArray(response.skipped) ? response.skipped.length : 0;
+                    const message = skipped > 0
+                        ? `Import terminé : ${applied} option(s) appliquée(s), ${skipped} ignorée(s).`
+                        : `Import terminé : ${applied} option(s) appliquée(s).`;
+
+                    setImportMessage('success', message);
+                    if (typeof window.sscToast === 'function') {
+                        window.sscToast('Configuration importée !');
+                    }
+                    importInput.val('');
+                }).fail(jqXHR => {
+                    const errorMessage = jqXHR?.responseJSON?.message
+                        || "Erreur lors de l'importation de la configuration.";
+                    handleImportError(errorMessage);
+                }).always(() => {
+                    importBtn.text('Importer').prop('disabled', false);
+                });
+            };
+
+            reader.readAsText(file);
         });
     });
 })(jQuery);
