@@ -76,6 +76,11 @@ final class Routes {
             'permission_callback' => [$this, 'authorizeRequest'],
             'callback' => [$this, 'exportCss'],
         ]);
+        register_rest_route('ssc/v1', '/import-config', [
+            'methods' => 'POST',
+            'permission_callback' => [$this, 'authorizeRequest'],
+            'callback' => [$this, 'importConfig'],
+        ]);
     }
 
     public function saveCss(\WP_REST_Request $request): \WP_REST_Response {
@@ -304,6 +309,96 @@ final class Routes {
         return new \WP_REST_Response(['css' => $css], 200);
     }
 
+    public function importConfig(\WP_REST_Request $request): \WP_REST_Response {
+        $payload_raw = $request->get_param('payload');
+
+        if (!is_string($payload_raw)) {
+            return new \WP_REST_Response([
+                'ok' => false,
+                'message' => __('Invalid payload for import.', 'supersede-css-jlg'),
+            ], 400);
+        }
+
+        $payload = json_decode(wp_unslash($payload_raw), true);
+
+        if (!is_array($payload) || json_last_error() !== JSON_ERROR_NONE) {
+            return new \WP_REST_Response([
+                'ok' => false,
+                'message' => __('Provided file is not a valid Supersede CSS export.', 'supersede-css-jlg'),
+            ], 400);
+        }
+
+        $updated = [];
+
+        $segments = [
+            'desktop' => null,
+            'tablet' => null,
+            'mobile' => null,
+        ];
+        $segmentsTouched = false;
+
+        foreach ($segments as $segment => $_) {
+            $optionName = 'ssc_css_' . $segment;
+            if (array_key_exists($optionName, $payload)) {
+                $segmentsTouched = true;
+                $segments[$segment] = $this->sanitizeImportedCssValue($payload[$optionName]);
+                update_option($optionName, $segments[$segment], false);
+                $updated[] = $optionName;
+            } else {
+                $segments[$segment] = get_option($optionName, '');
+                $segments[$segment] = is_string($segments[$segment]) ? CssSanitizer::sanitize($segments[$segment]) : '';
+            }
+        }
+
+        if ($segmentsTouched) {
+            $combined = $this->combineResponsiveCss($segments);
+            update_option('ssc_active_css', $combined, false);
+            $updated[] = 'ssc_active_css';
+        } elseif (array_key_exists('ssc_active_css', $payload)) {
+            $activeCss = $this->sanitizeImportedCssValue($payload['ssc_active_css']);
+            update_option('ssc_active_css', $activeCss, false);
+            $updated[] = 'ssc_active_css';
+        }
+
+        if (array_key_exists('ssc_tokens_css', $payload)) {
+            $tokensCss = $this->sanitizeImportedCssValue($payload['ssc_tokens_css']);
+            update_option('ssc_tokens_css', $tokensCss, false);
+            $updated[] = 'ssc_tokens_css';
+        }
+
+        if (array_key_exists('ssc_presets', $payload)) {
+            $presets = is_array($payload['ssc_presets']) ? $payload['ssc_presets'] : [];
+            $presets = CssSanitizer::sanitizePresetCollection($presets);
+            update_option('ssc_presets', $presets, false);
+            $updated[] = 'ssc_presets';
+        }
+
+        if (array_key_exists('ssc_avatar_glow_presets', $payload)) {
+            $avatarPresets = is_array($payload['ssc_avatar_glow_presets']) ? $payload['ssc_avatar_glow_presets'] : [];
+            $avatarPresets = CssSanitizer::sanitizeAvatarGlowPresets($avatarPresets);
+            update_option('ssc_avatar_glow_presets', $avatarPresets, false);
+            $updated[] = 'ssc_avatar_glow_presets';
+        }
+
+        $updated = array_values(array_unique($updated));
+
+        if (empty($updated)) {
+            return new \WP_REST_Response([
+                'ok' => false,
+                'message' => __('No known Supersede CSS options were found in the provided file.', 'supersede-css-jlg'),
+            ], 422);
+        }
+
+        if (class_exists('\\SSC\\Infra\\Logger')) {
+            \SSC\Infra\Logger::add('config_imported', ['updated' => $updated]);
+        }
+
+        return new \WP_REST_Response([
+            'ok' => true,
+            'updated' => $updated,
+        ], 200);
+    }
+
     private function sanitizeCssSegment($value): string
     {
         if (!is_string($value)) {
@@ -340,6 +435,19 @@ final class Routes {
         }));
 
         return $combined === '' ? '' : CssSanitizer::sanitize($combined);
+    }
+
+    private function sanitizeImportedCssValue($value): string
+    {
+        if (!is_string($value)) {
+            if (is_scalar($value)) {
+                $value = (string) $value;
+            } else {
+                return '';
+            }
+        }
+
+        return CssSanitizer::sanitize($value);
     }
 
     /**

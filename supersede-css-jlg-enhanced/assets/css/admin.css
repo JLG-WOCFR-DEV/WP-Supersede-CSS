@@ -16,6 +16,16 @@
     color: var(--ssc-muted);
 }
 
+.ssc-notice-success {
+    color: var(--ssc-accent);
+    font-weight: 600;
+}
+
+.ssc-notice-error {
+    color: #b91c1c;
+    font-weight: 600;
+}
+
 .ssc-two { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
 @media (max-width: 782px) { .ssc-two { grid-template-columns: 1fr; } }
 .ssc-pane, .ssc-panel { background:var(--ssc-card); border:1px solid var(--ssc-border); border-radius:12px; padding:16px; }
