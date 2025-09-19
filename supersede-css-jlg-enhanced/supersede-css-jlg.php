@@ -46,7 +46,7 @@ add_action('plugins_loaded', function(){
         $css_main = is_string($css_main) ? $css_main : '';
         $css_tokens = is_string($css_tokens) ? $css_tokens : '';
         $css_combined = $css_tokens . "\n" . $css_main;
-        // Filtre le CSS en s'appuyant sur wp_kses() et safe_style_css() pour neutraliser les injections.
+        // Filtre le CSS via CssSanitizer qui combine wp_kses(), validation des URLs et une liste blanche de propriétés modernes.
         $css_filtered = CssSanitizer::sanitize($css_combined);
 
         if ($css_filtered !== '') {
