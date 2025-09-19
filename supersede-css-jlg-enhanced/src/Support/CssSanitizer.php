@@ -17,21 +17,198 @@ final class CssSanitizer
         $css = self::sanitizeImports($css);
         $css = self::sanitizeUrls($css);
 
-        $css = (string) \preg_replace_callback('/(?P<prefix>@property\s+[^{}]+)?\{(?P<body>[^{}]*)\}/m', static function(array $matches): string {
-            $prefix = $matches['prefix'] ?? '';
-            $isPropertyContext = $prefix !== '';
-            $sanitized = self::sanitizeDeclarations($matches['body'], $isPropertyContext);
+        $length = strlen($css);
+        if ($length > 0) {
+            $result = '';
+            $cursor = 0;
+            $index = 0;
+            $inSingleQuote = false;
+            $inDoubleQuote = false;
+            $inComment = false;
+            $escaped = false;
 
-            if ($sanitized === '') {
-                return $prefix === '' ? '{}' : '';
+            while ($index < $length) {
+                $character = $css[$index];
+
+                if ($inComment) {
+                    if ($character === '*' && $index + 1 < $length && $css[$index + 1] === '/') {
+                        $inComment = false;
+                        $index += 2;
+                        continue;
+                    }
+
+                    $index++;
+                    continue;
+                }
+
+                if (!$inSingleQuote && !$inDoubleQuote && $character === '/' && $index + 1 < $length && $css[$index + 1] === '*') {
+                    $inComment = true;
+                    $index += 2;
+                    continue;
+                }
+
+                if ($escaped) {
+                    $escaped = false;
+                    $index++;
+                    continue;
+                }
+
+                if ($character === '\\') {
+                    $escaped = true;
+                    $index++;
+                    continue;
+                }
+
+                if ($character === "'" && !$inDoubleQuote) {
+                    $inSingleQuote = !$inSingleQuote;
+                    $index++;
+                    continue;
+                }
+
+                if ($character === '"' && !$inSingleQuote) {
+                    $inDoubleQuote = !$inDoubleQuote;
+                    $index++;
+                    continue;
+                }
+
+                if (!$inSingleQuote && !$inDoubleQuote && $character === '{') {
+                    $prefix = substr($css, $cursor, $index - $cursor);
+
+                    $nextCursor = $cursor;
+                    $sanitizedBlock = self::sanitizeStructuralBlock($css, $index, $prefix, $nextCursor);
+
+                    if ($sanitizedBlock === null) {
+                        $result .= substr($css, $cursor);
+                        $cursor = $length;
+                        $index = $length;
+                        break;
+                    }
+
+                    $result .= $sanitizedBlock;
+                    $cursor = $nextCursor;
+                    $index = $nextCursor;
+                    $inSingleQuote = false;
+                    $inDoubleQuote = false;
+                    $escaped = false;
+                    continue;
+                }
+
+                $index++;
             }
 
-            return $prefix . '{' . $sanitized . '}';
-        }, $css);
+            if ($cursor < $length) {
+                $result .= substr($css, $cursor);
+            }
 
-        $css = (string) \preg_replace('/[^{}]+\{\s*\}/m', '', $css);
+            $css = $result;
+        }
+
+        $css = (string) \preg_replace('/[^{}]+(?<!["\'])\{\s*\}/m', '', $css);
 
         return trim($css);
+    }
+
+    private static function sanitizeStructuralBlock(string $css, int $openingBracePosition, string $prefix, int &$nextCursor): ?string
+    {
+        $length = strlen($css);
+        $bodyStart = $openingBracePosition + 1;
+        $depth = 1;
+        $index = $bodyStart;
+        $inSingleQuote = false;
+        $inDoubleQuote = false;
+        $inComment = false;
+        $escaped = false;
+
+        while ($index < $length) {
+            $character = $css[$index];
+
+            if ($inComment) {
+                if ($character === '*' && $index + 1 < $length && $css[$index + 1] === '/') {
+                    $inComment = false;
+                    $index += 2;
+                    continue;
+                }
+
+                $index++;
+                continue;
+            }
+
+            if (!$inSingleQuote && !$inDoubleQuote && $character === '/' && $index + 1 < $length && $css[$index + 1] === '*') {
+                $inComment = true;
+                $index += 2;
+                continue;
+            }
+
+            if ($escaped) {
+                $escaped = false;
+                $index++;
+                continue;
+            }
+
+            if ($character === '\\') {
+                $escaped = true;
+                $index++;
+                continue;
+            }
+
+            if ($character === "'" && !$inDoubleQuote) {
+                $inSingleQuote = !$inSingleQuote;
+                $index++;
+                continue;
+            }
+
+            if ($character === '"' && !$inSingleQuote) {
+                $inDoubleQuote = !$inDoubleQuote;
+                $index++;
+                continue;
+            }
+
+            if (!$inSingleQuote && !$inDoubleQuote) {
+                if ($character === '{') {
+                    $depth++;
+                    $index++;
+                    continue;
+                }
+
+                if ($character === '}') {
+                    $depth--;
+                    if ($depth === 0) {
+                        $body = substr($css, $bodyStart, $index - $bodyStart);
+
+                        $beforeProperty = $prefix;
+                        $propertyPrefix = '';
+                        $isPropertyContext = false;
+
+                        if ($prefix !== '' && \preg_match('/@property\s+[^{}]*$/', $prefix, $propertyMatch, PREG_OFFSET_CAPTURE)) {
+                            $isPropertyContext = true;
+                            $propertyPrefix = $propertyMatch[0][0];
+                            $beforeProperty = substr($prefix, 0, $propertyMatch[0][1]);
+                        }
+
+                        $sanitized = self::sanitizeDeclarations($body, $isPropertyContext);
+
+                        $nextCursor = $index + 1;
+
+                        if ($sanitized === '') {
+                            if ($isPropertyContext) {
+                                return $beforeProperty;
+                            }
+
+                            return $prefix . '{}';
+                        }
+
+                        return $beforeProperty . ($isPropertyContext ? $propertyPrefix : '') . '{' . $sanitized . '}';
+                    }
+
+                    $index++;
+                    continue;
+                }
+            }
+
+            $index++;
+        }
+
+        return null;
     }
 
     private static function sanitizeDeclarations(string $declarations, bool $isPropertyContext = false): string
