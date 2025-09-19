@@ -630,7 +630,11 @@ final class Routes {
     public function authorizeRequest(\WP_REST_Request $request): bool|\WP_Error {
         $nonce = $request->get_param('_wpnonce');
 
-        if (!is_string($nonce)) {
+        if (!is_string($nonce) || $nonce === '') {
+            $nonce = $request->get_header('x-wp-nonce');
+        }
+
+        if (!is_string($nonce) || $nonce === '') {
             return new \WP_Error(
                 'rest_forbidden',
                 __('Invalid nonce.', 'supersede-css-jlg'),
@@ -638,7 +642,9 @@ final class Routes {
             );
         }
 
-        if (!wp_verify_nonce($request->get_param('_wpnonce'), 'wp_rest')) {
+        $nonce = (string) wp_unslash($nonce);
+
+        if (!wp_verify_nonce($nonce, 'wp_rest')) {
             return new \WP_Error(
                 'rest_forbidden',
                 __('Invalid nonce.', 'supersede-css-jlg'),
