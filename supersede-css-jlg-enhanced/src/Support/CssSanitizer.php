@@ -23,7 +23,7 @@ final class CssSanitizer
             $sanitized = self::sanitizeDeclarations($matches['body'], $isPropertyContext);
 
             if ($sanitized === '') {
-                return '';
+                return $prefix === '' ? '{}' : '';
             }
 
             return $prefix . '{' . $sanitized . '}';
@@ -73,25 +73,45 @@ final class CssSanitizer
                 continue;
             }
 
-            $declaration = $property . ':' . $value . ';';
-            $sanitized = trim(\safecss_filter_attr($declaration));
-            if ($sanitized === '') {
-                if (strpos($property, '--') === 0) {
-                    $customValue = self::sanitizeCustomPropertyValue($value);
-                    if ($customValue === '') {
-                        continue;
-                    }
-                    $sanitizedParts[] = $property . ':' . $customValue;
+            if (strpos($property, '--') === 0) {
+                $customValue = self::sanitizeCustomPropertyValue($value);
+                if ($customValue === '') {
+                    continue;
                 }
+
+                $sanitizedParts[] = $property . ':' . $customValue;
                 continue;
             }
 
-            $sanitized = rtrim($sanitized, ';');
-            $sanitized = self::sanitizeUrls($sanitized);
-            $sanitizedParts[] = $sanitized;
+            if (!self::isAllowedStandardProperty($property)) {
+                continue;
+            }
+
+            $normalizedValue = self::sanitizeStandardPropertyValue($property, $value);
+            if ($normalizedValue === '') {
+                continue;
+            }
+
+            $sanitizedParts[] = $property . ':' . $normalizedValue;
         }
 
         return implode('; ', $sanitizedParts);
+    }
+
+    private static function isAllowedStandardProperty(string $property): bool
+    {
+        $normalized = strtolower($property);
+        if (isset(self::ALLOWED_PROPERTIES[$normalized])) {
+            return true;
+        }
+
+        foreach (self::ALLOWED_PROPERTY_PREFIXES as $prefix) {
+            if (str_starts_with($normalized, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static function isAllowedPropertyDefinitionProperty(string $property): bool
@@ -585,34 +605,436 @@ final class CssSanitizer
             return null;
         }
 
-        $sanitized = trim(\safecss_filter_attr($property . ':' . $value . ';'));
-        if ($sanitized === '') {
-            if (strpos($property, '--') === 0) {
-                $customValue = self::sanitizeCustomPropertyValue($value);
-                if ($customValue === '') {
-                    return null;
-                }
-
-                return [$property, $customValue];
+        if (strpos($property, '--') === 0) {
+            $customValue = self::sanitizeCustomPropertyValue($value);
+            if ($customValue === '') {
+                return null;
             }
 
+            return [$property, $customValue];
+        }
+
+        if (!self::isAllowedStandardProperty($property)) {
             return null;
         }
 
-        $sanitized = rtrim($sanitized, ';');
-        $parts = explode(':', $sanitized, 2);
-        if (count($parts) !== 2) {
+        $normalizedValue = self::sanitizeStandardPropertyValue($property, $value);
+        if ($normalizedValue === '') {
             return null;
         }
 
-        $propName = trim($parts[0]);
-        $propValue = trim($parts[1]);
-        if ($propName === '' || $propValue === '') {
-            return null;
-        }
-
-        return [$propName, $propValue];
+        return [$property, $normalizedValue];
     }
+
+    private static function sanitizeStandardPropertyValue(string $property, string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return '';
+        }
+
+        $value = self::stripHtmlTags($value);
+        $value = self::sanitizeUrls($value);
+        $value = (string) \preg_replace('/expression\s*\([^)]*\)/i', '', $value);
+        $value = (string) \preg_replace('/behaviou?r\s*:[^;]+;?/i', '', $value);
+        $value = (string) \preg_replace('/-moz-binding\s*:[^;]+;?/i', '', $value);
+
+        $value = trim($value);
+        $value = rtrim($value, ';');
+
+        if ($value === '') {
+            return '';
+        }
+
+        if (\preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $value)) {
+            return '';
+        }
+
+        return $value;
+    }
+
+    private const ALLOWED_PROPERTIES = [
+        'accent-color' => true,
+        'align-content' => true,
+        'align-items' => true,
+        'align-self' => true,
+        'animation' => true,
+        'animation-composition' => true,
+        'animation-delay' => true,
+        'animation-direction' => true,
+        'animation-duration' => true,
+        'animation-fill-mode' => true,
+        'animation-iteration-count' => true,
+        'animation-name' => true,
+        'animation-play-state' => true,
+        'animation-range' => true,
+        'animation-range-end' => true,
+        'animation-range-start' => true,
+        'animation-timing-function' => true,
+        'backdrop-filter' => true,
+        'backface-visibility' => true,
+        'aspect-ratio' => true,
+        'background' => true,
+        'background-attachment' => true,
+        'background-blend-mode' => true,
+        'background-clip' => true,
+        'background-color' => true,
+        'background-image' => true,
+        'background-origin' => true,
+        'background-position' => true,
+        'background-position-x' => true,
+        'background-position-y' => true,
+        'background-repeat' => true,
+        'background-size' => true,
+        'block-size' => true,
+        'border' => true,
+        'border-block' => true,
+        'border-block-color' => true,
+        'border-block-end' => true,
+        'border-block-end-color' => true,
+        'border-block-end-style' => true,
+        'border-block-end-width' => true,
+        'border-block-start' => true,
+        'border-block-start-color' => true,
+        'border-block-start-style' => true,
+        'border-block-start-width' => true,
+        'border-block-style' => true,
+        'border-block-width' => true,
+        'border-bottom' => true,
+        'border-bottom-color' => true,
+        'border-bottom-left-radius' => true,
+        'border-bottom-right-radius' => true,
+        'border-bottom-style' => true,
+        'border-bottom-width' => true,
+        'border-collapse' => true,
+        'border-color' => true,
+        'border-end-end-radius' => true,
+        'border-end-start-radius' => true,
+        'border-image' => true,
+        'border-image-outset' => true,
+        'border-image-repeat' => true,
+        'border-image-slice' => true,
+        'border-image-source' => true,
+        'border-image-width' => true,
+        'border-inline' => true,
+        'border-inline-color' => true,
+        'border-inline-end' => true,
+        'border-inline-end-color' => true,
+        'border-inline-end-style' => true,
+        'border-inline-end-width' => true,
+        'border-inline-start' => true,
+        'border-inline-start-color' => true,
+        'border-inline-start-style' => true,
+        'border-inline-start-width' => true,
+        'border-inline-style' => true,
+        'border-inline-width' => true,
+        'border-left' => true,
+        'border-left-color' => true,
+        'border-left-style' => true,
+        'border-left-width' => true,
+        'border-radius' => true,
+        'border-right' => true,
+        'border-right-color' => true,
+        'border-right-style' => true,
+        'border-right-width' => true,
+        'border-spacing' => true,
+        'border-start-end-radius' => true,
+        'border-start-start-radius' => true,
+        'border-style' => true,
+        'border-top' => true,
+        'border-top-color' => true,
+        'border-top-left-radius' => true,
+        'border-top-right-radius' => true,
+        'border-top-style' => true,
+        'border-top-width' => true,
+        'border-width' => true,
+        'bottom' => true,
+        'box-shadow' => true,
+        'box-sizing' => true,
+        'break-after' => true,
+        'break-before' => true,
+        'break-inside' => true,
+        'caption-side' => true,
+        'caret-color' => true,
+        'clear' => true,
+        'clip' => true,
+        'clip-path' => true,
+        'color' => true,
+        'color-scheme' => true,
+        'column-count' => true,
+        'column-fill' => true,
+        'column-gap' => true,
+        'column-rule' => true,
+        'column-rule-color' => true,
+        'column-rule-style' => true,
+        'column-rule-width' => true,
+        'column-span' => true,
+        'column-width' => true,
+        'columns' => true,
+        'contain' => true,
+        'contain-intrinsic-block-size' => true,
+        'contain-intrinsic-height' => true,
+        'contain-intrinsic-inline-size' => true,
+        'contain-intrinsic-size' => true,
+        'contain-intrinsic-width' => true,
+        'content' => true,
+        'counter-increment' => true,
+        'counter-reset' => true,
+        'counter-set' => true,
+        'cursor' => true,
+        'direction' => true,
+        'display' => true,
+        'filter' => true,
+        'flex' => true,
+        'flex-basis' => true,
+        'flex-direction' => true,
+        'flex-flow' => true,
+        'flex-grow' => true,
+        'flex-shrink' => true,
+        'flex-wrap' => true,
+        'float' => true,
+        'font' => true,
+        'font-family' => true,
+        'font-feature-settings' => true,
+        'font-language-override' => true,
+        'font-kerning' => true,
+        'font-optical-sizing' => true,
+        'font-size' => true,
+        'font-size-adjust' => true,
+        'font-stretch' => true,
+        'font-style' => true,
+        'font-synthesis' => true,
+        'font-variant' => true,
+        'font-variant-caps' => true,
+        'font-variant-east-asian' => true,
+        'font-variant-ligatures' => true,
+        'font-variant-numeric' => true,
+        'font-variation-settings' => true,
+        'font-weight' => true,
+        'forced-color-adjust' => true,
+        'gap' => true,
+        'grid-gap' => true,
+        'grid' => true,
+        'grid-area' => true,
+        'grid-auto-columns' => true,
+        'grid-auto-flow' => true,
+        'grid-auto-rows' => true,
+        'grid-column' => true,
+        'grid-column-end' => true,
+        'grid-column-gap' => true,
+        'grid-column-start' => true,
+        'grid-row' => true,
+        'grid-row-end' => true,
+        'grid-row-gap' => true,
+        'grid-row-start' => true,
+        'grid-template' => true,
+        'grid-template-areas' => true,
+        'grid-template-columns' => true,
+        'grid-template-rows' => true,
+        'height' => true,
+        'hyphens' => true,
+        'image-rendering' => true,
+        'inline-size' => true,
+        'inset' => true,
+        'inset-block' => true,
+        'inset-block-end' => true,
+        'inset-block-start' => true,
+        'inset-inline' => true,
+        'inset-inline-end' => true,
+        'inset-inline-start' => true,
+        'isolation' => true,
+        'justify-content' => true,
+        'justify-items' => true,
+        'justify-self' => true,
+        'left' => true,
+        'letter-spacing' => true,
+        'line-break' => true,
+        'line-clamp' => true,
+        'line-height' => true,
+        'list-style' => true,
+        'list-style-image' => true,
+        'list-style-position' => true,
+        'list-style-type' => true,
+        'margin' => true,
+        'margin-block' => true,
+        'margin-block-end' => true,
+        'margin-block-start' => true,
+        'margin-bottom' => true,
+        'margin-inline' => true,
+        'margin-inline-end' => true,
+        'margin-inline-start' => true,
+        'margin-left' => true,
+        'margin-right' => true,
+        'margin-top' => true,
+        'mask' => true,
+        'mask-border' => true,
+        'mask-border-mode' => true,
+        'mask-border-outset' => true,
+        'mask-border-repeat' => true,
+        'mask-border-slice' => true,
+        'mask-border-source' => true,
+        'mask-border-width' => true,
+        'mask-clip' => true,
+        'mask-composite' => true,
+        'mask-image' => true,
+        'mask-mode' => true,
+        'mask-origin' => true,
+        'mask-position' => true,
+        'mask-repeat' => true,
+        'mask-size' => true,
+        'mask-type' => true,
+        'max-block-size' => true,
+        'max-height' => true,
+        'max-inline-size' => true,
+        'max-width' => true,
+        'min-block-size' => true,
+        'min-height' => true,
+        'min-inline-size' => true,
+        'min-width' => true,
+        'mix-blend-mode' => true,
+        'object-fit' => true,
+        'object-position' => true,
+        'opacity' => true,
+        'order' => true,
+        'overflow-anchor' => true,
+        'outline' => true,
+        'outline-color' => true,
+        'outline-offset' => true,
+        'outline-style' => true,
+        'outline-width' => true,
+        'overflow' => true,
+        'overflow-wrap' => true,
+        'overflow-x' => true,
+        'overflow-y' => true,
+        'overscroll-behavior' => true,
+        'overscroll-behavior-block' => true,
+        'overscroll-behavior-inline' => true,
+        'overscroll-behavior-x' => true,
+        'overscroll-behavior-y' => true,
+        'padding' => true,
+        'padding-block' => true,
+        'padding-block-end' => true,
+        'padding-block-start' => true,
+        'padding-bottom' => true,
+        'padding-inline' => true,
+        'padding-inline-end' => true,
+        'padding-inline-start' => true,
+        'padding-left' => true,
+        'padding-right' => true,
+        'padding-top' => true,
+        'perspective' => true,
+        'perspective-origin' => true,
+        'place-content' => true,
+        'place-items' => true,
+        'place-self' => true,
+        'pointer-events' => true,
+        'position' => true,
+        'resize' => true,
+        'right' => true,
+        'row-gap' => true,
+        'scale' => true,
+        'scroll-behavior' => true,
+        'scroll-margin' => true,
+        'scroll-margin-block' => true,
+        'scroll-margin-block-end' => true,
+        'scroll-margin-block-start' => true,
+        'scroll-margin-bottom' => true,
+        'scroll-margin-inline' => true,
+        'scroll-margin-inline-end' => true,
+        'scroll-margin-inline-start' => true,
+        'scroll-margin-left' => true,
+        'scroll-margin-right' => true,
+        'scroll-margin-top' => true,
+        'scroll-padding' => true,
+        'scroll-padding-block' => true,
+        'scroll-padding-block-end' => true,
+        'scroll-padding-block-start' => true,
+        'scroll-padding-bottom' => true,
+        'scroll-padding-inline' => true,
+        'scroll-padding-inline-end' => true,
+        'scroll-padding-inline-start' => true,
+        'scroll-padding-left' => true,
+        'scroll-padding-right' => true,
+        'scroll-padding-top' => true,
+        'scroll-snap-align' => true,
+        'scroll-snap-stop' => true,
+        'scroll-snap-type' => true,
+        'scrollbar-color' => true,
+        'scrollbar-width' => true,
+        'shape-image-threshold' => true,
+        'shape-margin' => true,
+        'shape-outside' => true,
+        'shape-rendering' => true,
+        'tab-size' => true,
+        'table-layout' => true,
+        'text-align' => true,
+        'text-align-last' => true,
+        'text-decoration' => true,
+        'text-decoration-color' => true,
+        'text-decoration-line' => true,
+        'text-decoration-style' => true,
+        'text-decoration-thickness' => true,
+        'text-indent' => true,
+        'text-justify' => true,
+        'text-overflow' => true,
+        'text-underline-offset' => true,
+        'text-underline-position' => true,
+        'text-decoration-skip-ink' => true,
+        'text-emphasis' => true,
+        'text-emphasis-color' => true,
+        'text-emphasis-position' => true,
+        'text-emphasis-style' => true,
+        'text-shadow' => true,
+        'text-transform' => true,
+        'top' => true,
+        'touch-action' => true,
+        'transform' => true,
+        'transform-origin' => true,
+        'transform-style' => true,
+        'translate' => true,
+        'rotate' => true,
+        'scale' => true,
+        'skew' => true,
+        'skew-x' => true,
+        'skew-y' => true,
+        'transition' => true,
+        'transition-delay' => true,
+        'transition-duration' => true,
+        'transition-property' => true,
+        'transition-timing-function' => true,
+        'unicode-bidi' => true,
+        'vertical-align' => true,
+        'visibility' => true,
+        'user-select' => true,
+        'white-space' => true,
+        'will-change' => true,
+        'word-break' => true,
+        'word-spacing' => true,
+        'word-wrap' => true,
+        'writing-mode' => true,
+        'z-index' => true,
+    ];
+
+    private const ALLOWED_PROPERTY_PREFIXES = [
+        'grid-template-',
+        'grid-auto-',
+        'grid-column-',
+        'grid-row-',
+        'inset-',
+        'margin-',
+        'padding-',
+        'background-',
+        'border-',
+        'animation-',
+        'transition-',
+        'scroll-margin-',
+        'scroll-padding-',
+        'mask-',
+        'contain-intrinsic-',
+        'font-variation-',
+        'text-emphasis-',
+        'scrollbar-',
+    ];
 
     public static function sanitizeAvatarGlowPresets(array $presets): array
     {
