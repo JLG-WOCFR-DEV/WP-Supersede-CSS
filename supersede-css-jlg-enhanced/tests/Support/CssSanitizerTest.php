@@ -27,6 +27,29 @@ if (!function_exists('wp_allowed_protocols')) {
     }
 }
 
+if (!function_exists('sanitize_key')) {
+    function sanitize_key($key)
+    {
+        $key = strtolower((string) $key);
+
+        return preg_replace('/[^a-z0-9_]/', '', $key);
+    }
+}
+
+if (!function_exists('sanitize_text_field')) {
+    function sanitize_text_field($value)
+    {
+        return trim(strip_tags((string) $value));
+    }
+}
+
+if (!function_exists('absint')) {
+    function absint($value)
+    {
+        return abs((int) $value);
+    }
+}
+
 require_once __DIR__ . '/../../src/Support/CssSanitizer.php';
 
 function assertSameResult(string $expected, string $actual, string $message): void
@@ -112,5 +135,37 @@ assertSameResult(
 );
 
 assertNotContains('behavior', $sanitizedKeyframes, '@keyframes nested declarations should strip disallowed properties.');
+
+$presetWithBraceSelector = CssSanitizer::sanitizePresetCollection([
+    'dangerous' => [
+        'name' => 'Danger',
+        'scope' => '.foo { color: red; }',
+        'props' => [
+            'color' => 'red',
+        ],
+    ],
+]);
+
+assertSameResult(
+    '',
+    $presetWithBraceSelector['dangerous']['scope'],
+    'Selectors containing braces should be rejected during preset sanitation.'
+);
+
+$presetWithDirectiveSelector = CssSanitizer::sanitizePresetCollection([
+    [
+        'name' => 'Directive',
+        'scope' => '@media (min-width: 600px)',
+        'props' => [
+            'color' => 'blue',
+        ],
+    ],
+]);
+
+assertSameResult(
+    '',
+    $presetWithDirectiveSelector['preset_0']['scope'],
+    'Selectors using directives should be rejected during preset sanitation.'
+);
 
 echo "All CssSanitizer tests passed." . PHP_EOL;

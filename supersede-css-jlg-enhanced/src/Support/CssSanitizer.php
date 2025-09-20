@@ -889,8 +889,17 @@ final class CssSanitizer
     {
         $selector = \wp_kses($selector, []);
         $selector = (string) \preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $selector);
+        $selector = trim($selector);
 
-        return trim($selector);
+        if ($selector === '') {
+            return '';
+        }
+
+        if (\preg_match('/[{};@]/u', $selector)) {
+            return '';
+        }
+
+        return $selector;
     }
 
     private static function sanitizeDeclarationPair(string $property, string $value): ?array
