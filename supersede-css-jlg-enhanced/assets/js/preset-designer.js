@@ -111,10 +111,15 @@
 
         // Enregistrer un preset (nouveau ou modifié)
         $('#ssc-save-preset').on('click', function() {
-            const name = $('#ssc-preset-name').val();
-            const scope = $('#ssc-preset-scope').val();
+            const name = $('#ssc-preset-name').val().trim();
+            const scope = $('#ssc-preset-scope').val().trim();
             if (!name || !scope) {
                 alert('Le nom et le sélecteur sont obligatoires.');
+                return;
+            }
+
+            if (/[{};@]/.test(scope)) {
+                alert('Le sélecteur est invalide.');
                 return;
             }
 
