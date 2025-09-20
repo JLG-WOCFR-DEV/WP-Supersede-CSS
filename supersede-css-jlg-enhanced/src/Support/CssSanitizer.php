@@ -185,19 +185,33 @@ final class CssSanitizer
                             $beforeProperty = substr($prefix, 0, $propertyMatch[0][1]);
                         }
 
-                        $sanitized = self::sanitizeDeclarations($body, $isPropertyContext);
-
                         $nextCursor = $index + 1;
 
-                        if ($sanitized === '') {
-                            if ($isPropertyContext) {
+                        if ($isPropertyContext) {
+                            $sanitized = self::sanitizeDeclarations($body, true);
+
+                            if ($sanitized === '') {
                                 return $beforeProperty;
                             }
 
+                            return $beforeProperty . $propertyPrefix . '{' . $sanitized . '}';
+                        }
+
+                        $hasNestedBlocks = self::containsNestedBlocks($body);
+                        $atRuleName = self::detectAtRuleName($prefix);
+                        $requiresNestedTraversal = $hasNestedBlocks || ($atRuleName !== null && self::isNestedAtRule($atRuleName));
+
+                        if ($requiresNestedTraversal) {
+                            $sanitized = self::sanitizeNestedRuleBody($body);
+                        } else {
+                            $sanitized = self::sanitizeDeclarations($body, false);
+                        }
+
+                        if ($sanitized === '') {
                             return $prefix . '{}';
                         }
 
-                        return $beforeProperty . ($isPropertyContext ? $propertyPrefix : '') . '{' . $sanitized . '}';
+                        return $prefix . '{' . $sanitized . '}';
                     }
 
                     $index++;
@@ -209,6 +223,97 @@ final class CssSanitizer
         }
 
         return null;
+    }
+
+    private static function containsNestedBlocks(string $body): bool
+    {
+        $length = strlen($body);
+        if ($length === 0) {
+            return false;
+        }
+
+        $inSingleQuote = false;
+        $inDoubleQuote = false;
+        $inComment = false;
+        $escaped = false;
+
+        for ($i = 0; $i < $length; $i++) {
+            $character = $body[$i];
+
+            if ($inComment) {
+                if ($character === '*' && $i + 1 < $length && $body[$i + 1] === '/') {
+                    $inComment = false;
+                    $i++;
+                }
+
+                continue;
+            }
+
+            if ($escaped) {
+                $escaped = false;
+                continue;
+            }
+
+            if ($character === '\\') {
+                $escaped = true;
+                continue;
+            }
+
+            if ($character === '/' && $i + 1 < $length && $body[$i + 1] === '*') {
+                $inComment = true;
+                $i++;
+                continue;
+            }
+
+            if ($character === "'" && !$inDoubleQuote) {
+                $inSingleQuote = !$inSingleQuote;
+                continue;
+            }
+
+            if ($character === '"' && !$inSingleQuote) {
+                $inDoubleQuote = !$inDoubleQuote;
+                continue;
+            }
+
+            if (!$inSingleQuote && !$inDoubleQuote && $character === '{') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static function detectAtRuleName(string $prefix): ?string
+    {
+        if ($prefix === '') {
+            return null;
+        }
+
+        if (!\preg_match('/@([a-z-]+)\b[^@]*$/i', $prefix, $matches)) {
+            return null;
+        }
+
+        return strtolower($matches[1]);
+    }
+
+    private static function isNestedAtRule(string $atRule): bool
+    {
+        if ($atRule === 'media' || $atRule === 'supports') {
+            return true;
+        }
+
+        if ($atRule === 'keyframes' || str_ends_with($atRule, 'keyframes')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static function sanitizeNestedRuleBody(string $body): string
+    {
+        $sanitized = self::sanitize($body);
+
+        return $sanitized;
     }
 
     private static function sanitizeDeclarations(string $declarations, bool $isPropertyContext = false): string

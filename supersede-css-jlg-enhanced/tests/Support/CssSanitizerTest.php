@@ -80,4 +80,37 @@ assertSameResult(
 
 assertNotContains('javascript', $sanitizedFontFace, 'Dangerous javascript URLs should be stripped from font-face declarations.');
 
+$mediaCss = '@media screen and (min-width: 600px) { .foo { color: red; behavior: url(http://evil); } }';
+$sanitizedMedia = CssSanitizer::sanitize($mediaCss);
+
+assertSameResult(
+    '@media screen and (min-width: 600px) {.foo {color:red}}',
+    $sanitizedMedia,
+    '@media blocks should survive sanitation with their nested declarations cleaned.'
+);
+
+assertNotContains('behavior', $sanitizedMedia, '@media nested declarations should not retain disallowed properties.');
+
+$supportsCss = '@supports (display: grid) { .grid { display: grid; behavior: url(https://evil); } }';
+$sanitizedSupports = CssSanitizer::sanitize($supportsCss);
+
+assertSameResult(
+    '@supports (display: grid) {.grid {display:grid}}',
+    $sanitizedSupports,
+    '@supports blocks should retain nested rules after sanitation.'
+);
+
+assertNotContains('behavior', $sanitizedSupports, '@supports nested declarations should remove disallowed properties.');
+
+$keyframesCss = '@keyframes spin { from { transform: rotate(0deg); behavior: url(https://evil); } 50% { transform: rotate(180deg); } to { transform: rotate(360deg); } }';
+$sanitizedKeyframes = CssSanitizer::sanitize($keyframesCss);
+
+assertSameResult(
+    '@keyframes spin {from {transform:rotate(0deg)} 50% {transform:rotate(180deg)} to {transform:rotate(360deg)}}',
+    $sanitizedKeyframes,
+    '@keyframes blocks should keep their keyframe selectors and sanitized declarations.'
+);
+
+assertNotContains('behavior', $sanitizedKeyframes, '@keyframes nested declarations should strip disallowed properties.');
+
 echo "All CssSanitizer tests passed." . PHP_EOL;
