@@ -540,7 +540,7 @@ final class Routes {
     private function sanitizeImportAdminLog($value): ?array
     {
         if (!is_array($value)) {
-            return [];
+            return null;
         }
 
         $sanitized = [];
@@ -577,6 +577,10 @@ final class Routes {
                 'action' => $action,
                 'data' => $data,
             ];
+        }
+
+        if ($sanitized === []) {
+            return null;
         }
 
         if (count($sanitized) > Logger::MAX) {
