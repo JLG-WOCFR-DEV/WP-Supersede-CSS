@@ -618,63 +618,123 @@ final class CssSanitizer
         $length = strlen($css);
         $result = '';
         $offset = 0;
+        $index = 0;
+        $inSingleQuote = false;
+        $inDoubleQuote = false;
+        $inComment = false;
+        $escaped = false;
 
-        while (($position = stripos($css, 'url(', $offset)) !== false) {
-            $result .= substr($css, $offset, $position - $offset);
+        while ($index < $length) {
+            $character = $css[$index];
 
-            $cursor = $position + 4;
-            $inSingleQuote = false;
-            $inDoubleQuote = false;
-            $escaped = false;
-
-            while ($cursor < $length) {
-                $character = $css[$cursor];
-
-                if ($escaped) {
-                    $escaped = false;
-                    $cursor++;
+            if ($inComment) {
+                if ($character === '*' && $index + 1 < $length && $css[$index + 1] === '/') {
+                    $inComment = false;
+                    $index += 2;
                     continue;
                 }
 
-                if ($character === '\\') {
-                    $escaped = true;
+                $index++;
+                continue;
+            }
+
+            if (!$inSingleQuote && !$inDoubleQuote && $character === '/' && $index + 1 < $length && $css[$index + 1] === '*') {
+                $inComment = true;
+                $index += 2;
+                continue;
+            }
+
+            if ($escaped) {
+                $escaped = false;
+                $index++;
+                continue;
+            }
+
+            if ($character === '\\') {
+                $escaped = true;
+                $index++;
+                continue;
+            }
+
+            if ($character === "'" && !$inDoubleQuote) {
+                $inSingleQuote = !$inSingleQuote;
+                $index++;
+                continue;
+            }
+
+            if ($character === '"' && !$inSingleQuote) {
+                $inDoubleQuote = !$inDoubleQuote;
+                $index++;
+                continue;
+            }
+
+            if (
+                !$inSingleQuote
+                && !$inDoubleQuote
+                && $length - $index >= 4
+                && strncasecmp(substr($css, $index, 4), 'url(', 4) === 0
+            ) {
+                $result .= substr($css, $offset, $index - $offset);
+
+                $cursor = $index + 4;
+                $tokenInSingleQuote = false;
+                $tokenInDoubleQuote = false;
+                $tokenEscaped = false;
+
+                while ($cursor < $length) {
+                    $tokenCharacter = $css[$cursor];
+
+                    if ($tokenEscaped) {
+                        $tokenEscaped = false;
+                        $cursor++;
+                        continue;
+                    }
+
+                    if ($tokenCharacter === '\\') {
+                        $tokenEscaped = true;
+                        $cursor++;
+                        continue;
+                    }
+
+                    if ($tokenCharacter === "'" && !$tokenInDoubleQuote) {
+                        $tokenInSingleQuote = !$tokenInSingleQuote;
+                        $cursor++;
+                        continue;
+                    }
+
+                    if ($tokenCharacter === '"' && !$tokenInSingleQuote) {
+                        $tokenInDoubleQuote = !$tokenInDoubleQuote;
+                        $cursor++;
+                        continue;
+                    }
+
+                    if (!$tokenInSingleQuote && !$tokenInDoubleQuote && $tokenCharacter === ')') {
+                        break;
+                    }
+
                     $cursor++;
-                    continue;
                 }
 
-                if ($character === "'" && !$inDoubleQuote) {
-                    $inSingleQuote = !$inSingleQuote;
-                    $cursor++;
-                    continue;
-                }
-
-                if ($character === '"' && !$inSingleQuote) {
-                    $inDoubleQuote = !$inDoubleQuote;
-                    $cursor++;
-                    continue;
-                }
-
-                if (!$inSingleQuote && !$inDoubleQuote && $character === ')') {
+                if ($cursor >= $length) {
+                    $result .= substr($css, $index);
+                    $offset = $length;
                     break;
                 }
 
-                $cursor++;
+                $content = substr($css, $index + 4, $cursor - ($index + 4));
+                $sanitizedToken = self::sanitizeUrlToken($content);
+
+                if ($sanitizedToken !== '') {
+                    $result .= $sanitizedToken;
+                }
+
+                $offset = $cursor + 1;
+                $index = $offset;
+                $escaped = false;
+                continue;
             }
 
-            if ($cursor >= $length) {
-                $result .= substr($css, $position);
-                $offset = $length;
-                break;
-            }
-
-            $content = substr($css, $position + 4, $cursor - ($position + 4));
-            $sanitizedToken = self::sanitizeUrlToken($content);
-
-            if ($sanitizedToken !== '') {
-                $result .= $sanitizedToken;
-            }
-
-            $offset = $cursor + 1;
+            $index++;
         }
 
         if ($offset < $length) {
