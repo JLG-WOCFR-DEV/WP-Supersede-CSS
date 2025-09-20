@@ -137,6 +137,13 @@ assertSameResult(
 
 assertNotContains('behavior', $sanitizedKeyframes, '@keyframes nested declarations should strip disallowed properties.');
 
+$quotedExploit = '.foo { content: "</style><script>alert(1)</script>"; color: blue; } .bar { color: __SSC_CSS_TOKEN_0__; }';
+$sanitizedExploit = CssSanitizer::sanitize($quotedExploit);
+
+assertNotContains('</style>', $sanitizedExploit, 'Sanitized CSS should not reintroduce closing style tags.');
+assertNotContains('<script', $sanitizedExploit, 'Sanitized CSS should not reintroduce script tags.');
+assertNotContains('__SSC_CSS_TOKEN_', $sanitizedExploit, 'Sanitized CSS should not leak sanitizer placeholders.');
+
 $presetWithBraceSelector = CssSanitizer::sanitizePresetCollection([
     'dangerous' => [
         'name' => 'Danger',
@@ -201,6 +208,21 @@ assertSameResult(
     'background:)',
     $sanitizeUrls->invoke(null, 'background: url(javascript:alert(1))'),
     'Dangerous url() tokens should keep being stripped.'
+);
+
+assertNotContains(
+    '__SSC_CSS_TOKEN_',
+    $sanitizeUrls->invoke(null, '__SSC_CSS_TOKEN_0__'),
+    'URL sanitizer should not expose sanitizer placeholder markers.'
+);
+
+$sanitizeImports = $reflection->getMethod('sanitizeImports');
+$sanitizeImports->setAccessible(true);
+
+assertNotContains(
+    '__SSC_CSS_TOKEN_',
+    $sanitizeImports->invoke(null, '@import url(https://example.com); __SSC_CSS_TOKEN_1__'),
+    'Import sanitizer should strip unknown sanitizer markers.'
 );
 
 echo "All CssSanitizer tests passed." . PHP_EOL;
