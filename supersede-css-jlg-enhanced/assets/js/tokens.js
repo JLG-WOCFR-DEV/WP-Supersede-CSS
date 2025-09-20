@@ -46,13 +46,38 @@
 
         tokens.forEach((token, index) => {
             const isColor = token.value.startsWith('#') || token.value.startsWith('rgb') || token.value.startsWith('hsl');
-            const row = $(`
-                <div class="ssc-kv-builder" style="margin-bottom:8px; display:flex; gap:8px; align-items-center;">
-                    <input type="text" class="token-name regular-text" value="${token.name}" placeholder="--nom-du-token">
-                    <input type="${isColor ? 'color' : 'text'}" class="token-value" value="${token.value}" style="${isColor ? 'height:36px;padding:2px;min-width:40px;' : ''}">
-                    <button class="button button-link-delete" data-index="${index}">Supprimer</button>
-                </div>
-            `);
+
+            const row = $('<div>', { class: 'ssc-kv-builder' }).css({
+                'margin-bottom': '8px',
+                display: 'flex',
+                gap: '8px',
+                'align-items': 'center'
+            });
+
+            const nameInput = $('<input>', {
+                type: 'text',
+                class: 'token-name regular-text',
+                placeholder: '--nom-du-token'
+            }).val(token.name);
+
+            const valueInput = $('<input>', {
+                class: 'token-value'
+            }).attr('type', isColor ? 'color' : 'text').val(token.value);
+
+            if (isColor) {
+                valueInput.css({
+                    height: '36px',
+                    padding: '2px',
+                    'min-width': '40px'
+                });
+            }
+
+            const deleteButton = $('<button>', {
+                class: 'button button-link-delete',
+                'data-index': index
+            }).text('Supprimer');
+
+            row.append(nameInput, valueInput, deleteButton);
             builder.append(row);
         });
     }
