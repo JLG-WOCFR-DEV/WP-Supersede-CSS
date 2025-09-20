@@ -726,6 +726,9 @@ final class CssSanitizer
 
                 if ($sanitizedToken !== '') {
                     $result .= $sanitizedToken;
+                } else {
+                    $result = rtrim($result);
+                    $result = preg_replace('/,\s*$/', '', $result);
                 }
 
                 $offset = $cursor + 1;

@@ -96,12 +96,13 @@ $fontFaceCss = "@font-face { font-family: 'Custom'; src: url('https://example.co
 $sanitizedFontFace = CssSanitizer::sanitize($fontFaceCss);
 
 assertSameResult(
-    "@font-face {font-family:'Custom'; src:url('https://example.com/font.woff2') format('woff2'), url('data:font/woff2;base64,AAAA'),; font-display:swap; unicode-range:U+000-5FF}",
+    "@font-face {font-family:'Custom'; src:url('https://example.com/font.woff2') format('woff2'), url('data:font/woff2;base64,AAAA'); font-display:swap; unicode-range:U+000-5FF}",
     $sanitizedFontFace,
     'Font-face declarations should keep src/font-display/unicode-range values while preserving safe URLs.'
 );
 
 assertNotContains('javascript', $sanitizedFontFace, 'Dangerous javascript URLs should be stripped from font-face declarations.');
+assertNotContains(',;', $sanitizedFontFace, 'Sanitized font-face declarations should not contain trailing comma-semicolon sequences.');
 
 $mediaCss = '@media screen and (min-width: 600px) { .foo { color: red; behavior: url(http://evil); } }';
 $sanitizedMedia = CssSanitizer::sanitize($mediaCss);
@@ -197,7 +198,7 @@ assertSameResult(
 );
 
 assertSameResult(
-    'background: )',
+    'background:)',
     $sanitizeUrls->invoke(null, 'background: url(javascript:alert(1))'),
     'Dangerous url() tokens should keep being stripped.'
 );
