@@ -638,17 +638,19 @@ final class Routes {
             $nonce = $request->get_header('x-wp-nonce');
         }
 
-        if (!is_string($nonce) || $nonce === '') {
-            return new \WP_Error(
-                'rest_forbidden',
-                __('Invalid nonce.', 'supersede-css-jlg'),
-                ['status' => 403]
-            );
-        }
+        $nonceProvided = is_string($nonce) && $nonce !== '';
 
-        $nonce = (string) wp_unslash($nonce);
+        if ($nonceProvided) {
+            $nonce = (string) wp_unslash($nonce);
 
-        if (!wp_verify_nonce($nonce, 'wp_rest')) {
+            if (!wp_verify_nonce($nonce, 'wp_rest')) {
+                return new \WP_Error(
+                    'rest_forbidden',
+                    __('Invalid nonce.', 'supersede-css-jlg'),
+                    ['status' => 403]
+                );
+            }
+        } elseif (!$this->requestHasNonCookieAuthentication($request)) {
             return new \WP_Error(
                 'rest_forbidden',
                 __('Invalid nonce.', 'supersede-css-jlg'),
@@ -665,6 +667,21 @@ final class Routes {
         }
 
         return true;
+    }
+
+    private function requestHasNonCookieAuthentication(\WP_REST_Request $request): bool
+    {
+        $authorizationHeader = $request->get_header('authorization');
+
+        if (is_string($authorizationHeader) && $authorizationHeader !== '') {
+            return true;
+        }
+
+        if (function_exists('apply_filters')) {
+            return (bool) apply_filters('ssc_request_has_non_cookie_auth', false, $request);
+        }
+
+        return false;
     }
 
 }
