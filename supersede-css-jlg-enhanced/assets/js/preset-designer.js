@@ -85,13 +85,31 @@
 
     // Créer une nouvelle ligne de propriété CSS
     function createPropRow(key = '', value = '') {
-        return $(`
-            <div class="kv-row" style="display:flex; gap:8px; margin-bottom:8px;">
-                <input type="text" class="prop-key regular-text" placeholder="propriété (ex: background-color)" value="${key}">
-                <input type="text" class="prop-val regular-text" placeholder="valeur (ex: #ff0000)" value="${value}">
-                <button type="button" class="button button-link-delete remove-prop-btn">X</button>
-            </div>
-        `);
+        const row = $('<div>')
+            .addClass('kv-row')
+            .css({ display: 'flex', gap: '8px', marginBottom: '8px' });
+
+        const keyInput = $('<input>', {
+            type: 'text',
+            class: 'prop-key regular-text',
+            placeholder: 'propriété (ex: background-color)'
+        }).val(key);
+
+        const valueInput = $('<input>', {
+            type: 'text',
+            class: 'prop-val regular-text',
+            placeholder: 'valeur (ex: #ff0000)'
+        }).val(value);
+
+        const removeButton = $('<button>', {
+            type: 'button',
+            class: 'button button-link-delete remove-prop-btn',
+            text: 'X'
+        });
+
+        row.append(keyInput, valueInput, removeButton);
+
+        return row;
     }
 
     $(document).ready(function() {
