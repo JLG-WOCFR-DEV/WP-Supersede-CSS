@@ -6,6 +6,8 @@ if (!defined('ABSPATH')) { exit; }
 
 final class CssSanitizer
 {
+    private const PLACEHOLDER_PREFIX = '__SSC_CSS_TOKEN_';
+
     public static function sanitize(string $css): string
     {
         $css = trim($css);
@@ -104,6 +106,7 @@ final class CssSanitizer
         }
 
         $css = (string) \preg_replace('/[^{}]+(?<!["\'])\{\s*\}/m', '', $css);
+        $css = self::removeSanitizerTokens($css);
 
         return trim($css);
     }
@@ -537,7 +540,7 @@ final class CssSanitizer
 
     private static function sanitizeImports(string $css): string
     {
-        return (string) \preg_replace_callback('/@import\s+([^;]+);?/i', static function(array $matches): string {
+        $clean = (string) \preg_replace_callback('/@import\s+([^;]+);?/i', static function(array $matches): string {
             $body = trim($matches[1]);
             if ($body === '') {
                 return '';
@@ -607,6 +610,8 @@ final class CssSanitizer
 
             return $result . ';';
         }, $css);
+
+        return self::removeSanitizerTokens($clean);
     }
 
     private static function sanitizeUrls(string $css): string
@@ -744,7 +749,7 @@ final class CssSanitizer
             $result .= substr($css, $offset);
         }
 
-        return $result;
+        return self::removeSanitizerTokens($result);
     }
 
     private static function sanitizeUrlToken(string $content): string
@@ -840,18 +845,19 @@ final class CssSanitizer
         }
 
         $placeholders = [];
-        $masked = self::maskQuotedSegments($css, $placeholders);
+        $tokenPrefix = self::generatePlaceholderPrefix($css);
+        $masked = self::maskQuotedSegments($css, $placeholders, $tokenPrefix);
 
         $clean = \wp_kses($masked, []);
 
         if (!empty($placeholders)) {
-            $clean = strtr($clean, $placeholders);
+            $clean = self::restoreQuotedSegments($clean, $placeholders, $tokenPrefix);
         }
 
-        return $clean;
+        return self::removeSanitizerTokens($clean);
     }
 
-    private static function maskQuotedSegments(string $css, array &$placeholders): string
+    private static function maskQuotedSegments(string $css, array &$placeholders, string $tokenPrefix): string
     {
         $length = strlen($css);
         if ($length === 0) {
@@ -892,8 +898,8 @@ final class CssSanitizer
                     continue;
                 }
 
-                $placeholder = '__SSC_CSS_TOKEN_' . count($placeholders) . '__';
-                $placeholders[$placeholder] = $segment;
+                $placeholder = $tokenPrefix . count($placeholders) . '__';
+                $placeholders[$placeholder] = \wp_kses($segment, []);
                 $buffer .= $placeholder;
 
                 continue;
@@ -904,6 +910,68 @@ final class CssSanitizer
         }
 
         return $buffer;
+    }
+
+    private static function restoreQuotedSegments(string $css, array $placeholders, string $tokenPrefix): string
+    {
+        $restored = $css;
+
+        if ($restored === '') {
+            return '';
+        }
+
+        $toRestore = [];
+        foreach ($placeholders as $token => $segment) {
+            if (str_contains($restored, $token)) {
+                $toRestore[$token] = $segment;
+            }
+        }
+
+        if (!empty($toRestore)) {
+            $restored = strtr($restored, $toRestore);
+        }
+
+        if (str_contains($restored, $tokenPrefix)) {
+            $restored = \preg_replace('/' . \preg_quote($tokenPrefix, '/') . '\d+__/', '', $restored);
+        }
+
+        return $restored;
+    }
+
+    private static function generatePlaceholderPrefix(string $css): string
+    {
+        $attempts = 0;
+        do {
+            $nonce = self::createPlaceholderNonce();
+            $prefix = self::PLACEHOLDER_PREFIX . $nonce . '_';
+            $attempts++;
+        } while (str_contains($css, $prefix) && $attempts < 5);
+
+        if (str_contains($css, $prefix)) {
+            $prefix = self::PLACEHOLDER_PREFIX . strtoupper(md5($css)) . '_';
+        }
+
+        return $prefix;
+    }
+
+    private static function createPlaceholderNonce(): string
+    {
+        try {
+            $bytes = random_bytes(8);
+        } catch (\Throwable $exception) {
+            $bytes = md5((string) microtime(true), true);
+        }
+
+        return strtoupper(bin2hex($bytes));
+    }
+
+    private static function removeSanitizerTokens(string $css): string
+    {
+        if ($css === '') {
+            return '';
+        }
+
+        return (string) \preg_replace('/' . \preg_quote(self::PLACEHOLDER_PREFIX, '/') . '[A-Z0-9_]*__/', '', $css);
     }
 
     public static function sanitizePresetCollection(array $presets): array
