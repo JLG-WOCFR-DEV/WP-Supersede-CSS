@@ -168,4 +168,38 @@ assertSameResult(
     'Selectors using directives should be rejected during preset sanitation.'
 );
 
+$reflection = new ReflectionClass(CssSanitizer::class);
+$sanitizeUrls = $reflection->getMethod('sanitizeUrls');
+$sanitizeUrls->setAccessible(true);
+
+assertSameResult(
+    'content: "url(foo)"',
+    $sanitizeUrls->invoke(null, 'content: "url(foo)"'),
+    'Quoted string literals containing url(...) should be preserved during URL sanitization.'
+);
+
+assertSameResult(
+    "content: 'url(bar)'",
+    $sanitizeUrls->invoke(null, "content: 'url(bar)'"),
+    'Single-quoted literals that mention url(...) should remain unchanged.'
+);
+
+assertSameResult(
+    '/* url(foo) inside comment */',
+    $sanitizeUrls->invoke(null, '/* url(foo) inside comment */'),
+    'Comments containing url(...) should not trigger URL normalization.'
+);
+
+assertSameResult(
+    'background: url("https://example.com/image.png")',
+    $sanitizeUrls->invoke(null, 'background: url(https://example.com/image.png)'),
+    'Actual url() tokens should continue to be normalized to safe values.'
+);
+
+assertSameResult(
+    'background: )',
+    $sanitizeUrls->invoke(null, 'background: url(javascript:alert(1))'),
+    'Dangerous url() tokens should keep being stripped.'
+);
+
 echo "All CssSanitizer tests passed." . PHP_EOL;
