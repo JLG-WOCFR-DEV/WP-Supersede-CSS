@@ -1,0 +1,175 @@
+<?php declare(strict_types=1);
+
+use SSC\Infra\Routes;
+
+if (!defined('ABSPATH')) {
+    define('ABSPATH', __DIR__);
+}
+
+if (!function_exists('add_action')) {
+    function add_action($hook, $callback): void {}
+}
+
+if (!function_exists('register_rest_route')) {
+    function register_rest_route(...$args): void {}
+}
+
+if (!function_exists('sanitize_key')) {
+    function sanitize_key($key)
+    {
+        $key = strtolower((string) $key);
+
+        return preg_replace('/[^a-z0-9_]/', '', $key);
+    }
+}
+
+if (!function_exists('sanitize_text_field')) {
+    function sanitize_text_field($value)
+    {
+        return trim(strip_tags((string) $value));
+    }
+}
+
+if (!function_exists('wp_kses')) {
+    function wp_kses(string $string, array $allowed_html = []): string
+    {
+        return strip_tags($string);
+    }
+}
+
+if (!function_exists('wp_kses_bad_protocol')) {
+    function wp_kses_bad_protocol(string $string, array $allowed_protocols): string
+    {
+        return $string;
+    }
+}
+
+if (!function_exists('wp_allowed_protocols')) {
+    function wp_allowed_protocols(): array
+    {
+        return ['http', 'https'];
+    }
+}
+
+if (!function_exists('absint')) {
+    function absint($value)
+    {
+        return abs((int) $value);
+    }
+}
+
+if (!function_exists('rest_sanitize_boolean')) {
+    function rest_sanitize_boolean($value)
+    {
+        $sanitized = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+        return $sanitized ?? ($value ? true : false);
+    }
+}
+
+if (!function_exists('wp_unslash')) {
+    function wp_unslash($value)
+    {
+        return $value;
+    }
+}
+
+if (!class_exists('WP_REST_Request')) {
+    class WP_REST_Request {
+        /** @var array<string, mixed> */
+        private array $params;
+
+        public function __construct(array $params = [])
+        {
+            $this->params = $params;
+        }
+
+        public function get_param(string $key)
+        {
+            return $this->params[$key] ?? null;
+        }
+    }
+}
+
+if (!class_exists('WP_REST_Response')) {
+    class WP_REST_Response {
+        /** @var mixed */
+        private $data;
+
+        private int $status;
+
+        public function __construct($data = null, int $status = 200)
+        {
+            $this->data = $data;
+            $this->status = $status;
+        }
+
+        public function get_status(): int
+        {
+            return $this->status;
+        }
+
+        public function get_data()
+        {
+            return $this->data;
+        }
+    }
+}
+
+/** @var array<string, mixed> $ssc_options_store */
+$ssc_options_store = [];
+
+global $ssc_options_store;
+
+if (!function_exists('get_option')) {
+    function get_option($name, $default = false)
+    {
+        global $ssc_options_store;
+
+        return $ssc_options_store[$name] ?? $default;
+    }
+}
+
+if (!function_exists('update_option')) {
+    function update_option($name, $value, $autoload = false)
+    {
+        global $ssc_options_store;
+
+        $ssc_options_store[$name] = $value;
+
+        return true;
+    }
+}
+
+require_once __DIR__ . '/../../src/Support/CssSanitizer.php';
+require_once __DIR__ . '/../../src/Infra/Routes.php';
+
+$routesReflection = new ReflectionClass(Routes::class);
+$routes = $routesReflection->newInstanceWithoutConstructor();
+
+$request = new WP_REST_Request([
+    'option_name' => ['unexpected'],
+    'css' => 'body { color: red; }',
+]);
+
+$response = $routes->saveCss($request);
+
+if (!$response instanceof WP_REST_Response) {
+    fwrite(STDERR, 'Expected WP_REST_Response when saving CSS.' . PHP_EOL);
+    exit(1);
+}
+
+if ($response->get_status() !== 200) {
+    fwrite(STDERR, 'Expected response status 200 when option_name is not a string.' . PHP_EOL);
+    exit(1);
+}
+
+if (!array_key_exists('ssc_active_css', $ssc_options_store)) {
+    fwrite(STDERR, 'Expected CSS to be saved under the default option name.' . PHP_EOL);
+    exit(1);
+}
+
+if (array_key_exists('ssc_tokens_css', $ssc_options_store)) {
+    fwrite(STDERR, 'Unexpected CSS stored under ssc_tokens_css.' . PHP_EOL);
+    exit(1);
+}

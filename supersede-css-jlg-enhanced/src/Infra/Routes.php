@@ -103,9 +103,13 @@ final class Routes {
     public function saveCss(\WP_REST_Request $request): \WP_REST_Response {
         $css_raw = $request->get_param('css');
         $option_name = $request->get_param('option_name') ?: 'ssc_active_css';
+        if (!is_string($option_name)) {
+            $option_name = 'ssc_active_css';
+        } else {
+            $option_name = sanitize_key($option_name);
+        }
         // Enforce whitelist for option_name to avoid clobbering unintended options.
         $allowed_options = ['ssc_active_css','ssc_tokens_css'];
-        $option_name = sanitize_key($option_name);
         if (!in_array($option_name, $allowed_options, true)) {
             $option_name = 'ssc_active_css';
         }
