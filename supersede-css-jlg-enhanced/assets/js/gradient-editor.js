@@ -89,7 +89,12 @@
         });
 
         // Action buttons
-        $('#ssc-grad-copy').on('click', () => navigator.clipboard.writeText($('#ssc-grad-css').text()).then(() => window.sscToast('CSS copié !')));
+        $('#ssc-grad-copy').on('click', () => {
+            window.sscCopyToClipboard($('#ssc-grad-css').text(), {
+                successMessage: 'CSS copié !',
+                errorMessage: 'Impossible de copier le CSS du dégradé.'
+            }).catch(() => {});
+        });
         $('#ssc-grad-apply').on('click', () => {
              const css = $('#ssc-grad-css').text();
              $.ajax({ url: SSC.rest.root + 'save-css', method: 'POST', data: { css, append: true, _wpnonce: SSC.rest.nonce }, beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)

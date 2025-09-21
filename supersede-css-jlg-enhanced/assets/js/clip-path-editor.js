@@ -23,8 +23,10 @@
         $('#ssc-clip-preview-size').on('input', updatePreviewSize);
 
         $('#ssc-clip-copy').on('click', () => {
-            navigator.clipboard.writeText($('#ssc-clip-css').text());
-            window.sscToast('CSS du clip-path copié !');
+            window.sscCopyToClipboard($('#ssc-clip-css').text(), {
+                successMessage: 'CSS du clip-path copié !',
+                errorMessage: 'Impossible de copier le CSS du clip-path.'
+            }).catch(() => {});
         });
 
         applyClipPath();

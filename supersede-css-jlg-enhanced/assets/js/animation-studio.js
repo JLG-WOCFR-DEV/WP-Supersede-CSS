@@ -74,8 +74,10 @@
         $('#ssc-anim-preset, #ssc-anim-duration').on('input', generateAnimationCSS);
 
         $('#ssc-anim-copy').on('click', () => {
-            navigator.clipboard.writeText($('#ssc-anim-css').text());
-            window.sscToast('CSS de l\'animation copié !');
+            window.sscCopyToClipboard($('#ssc-anim-css').text(), {
+                successMessage: 'CSS de l\'animation copié !',
+                errorMessage: 'Impossible de copier le CSS de l\'animation.'
+            }).catch(() => {});
         });
 
         $('#ssc-anim-apply').on('click', () => {

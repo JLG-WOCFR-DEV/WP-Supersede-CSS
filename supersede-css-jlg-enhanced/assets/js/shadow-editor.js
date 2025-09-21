@@ -80,8 +80,10 @@
 
         // Action buttons
         $('#ssc-shadow-copy').on('click', () => {
-            navigator.clipboard.writeText($('#ssc-shadow-css').text());
-            window.sscToast('CSS copié !');
+            window.sscCopyToClipboard($('#ssc-shadow-css').text(), {
+                successMessage: 'CSS copié !',
+                errorMessage: 'Impossible de copier le CSS de l\'ombre.'
+            }).catch(() => {});
         });
         $('#ssc-shadow-apply').on('click', () => {
             const css = $('#ssc-shadow-css').text();

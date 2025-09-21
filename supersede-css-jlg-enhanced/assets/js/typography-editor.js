@@ -93,8 +93,10 @@
         $('#ssc-typo-vp-slider').on('input', updatePreview);
         
         $('#ssc-typo-copy').on('click', () => {
-            navigator.clipboard.writeText($('#ssc-typo-css').text());
-            window.sscToast('CSS de la typographie copié !');
+            window.sscCopyToClipboard($('#ssc-typo-css').text(), {
+                successMessage: 'CSS de la typographie copié !',
+                errorMessage: 'Impossible de copier le CSS de la typographie.'
+            }).catch(() => {});
         });
 
         generateClamp();

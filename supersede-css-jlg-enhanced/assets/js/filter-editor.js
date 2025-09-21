@@ -56,8 +56,10 @@
         $('.ssc-filter-prop, #ssc-glass-enable').on('input change', updateFilters);
         
         $('#ssc-filter-copy').on('click', () => {
-            navigator.clipboard.writeText($('#ssc-filter-css').text());
-            window.sscToast('CSS copié !');
+            window.sscCopyToClipboard($('#ssc-filter-css').text(), {
+                successMessage: 'CSS copié !',
+                errorMessage: 'Impossible de copier le CSS du filtre.'
+            }).catch(() => {});
         });
 
         updateFilters();
