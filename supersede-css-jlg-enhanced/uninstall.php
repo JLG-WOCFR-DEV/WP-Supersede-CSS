@@ -10,6 +10,7 @@ $ssc_options_to_delete = [
     'ssc_presets',
     'ssc_active_css',
     'ssc_tokens_css',
+    'ssc_tokens_registry',
     'ssc_settings', // Legacy
     'ssc_secret', // Legacy
     'ssc_modules_enabled', // Legacy
