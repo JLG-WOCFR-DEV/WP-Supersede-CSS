@@ -2,6 +2,7 @@
 namespace SSC\Infra;
 
 use SSC\Support\CssSanitizer;
+use SSC\Support\TokenRegistry;
 
 if (!defined('ABSPATH')) { exit; }
 
@@ -9,6 +10,7 @@ final class Routes {
     private const IMPORT_HANDLERS = [
         'ssc_active_css' => 'sanitizeImportCss',
         'ssc_tokens_css' => 'sanitizeImportCss',
+        'ssc_tokens_registry' => 'sanitizeImportTokens',
         'ssc_css_desktop' => 'sanitizeImportCss',
         'ssc_css_tablet' => 'sanitizeImportCss',
         'ssc_css_mobile' => 'sanitizeImportCss',
@@ -79,6 +81,19 @@ final class Routes {
                 'permission_callback' => [$this, 'authorizeRequest'],
                 'callback' => [$this, 'savePresets'],
             ]
+        ]);
+
+        register_rest_route('ssc/v1', '/tokens', [
+            [
+                'methods' => 'GET',
+                'permission_callback' => [$this, 'authorizeRequest'],
+                'callback' => [$this, 'getTokens'],
+            ],
+            [
+                'methods' => 'POST',
+                'permission_callback' => [$this, 'authorizeRequest'],
+                'callback' => [$this, 'saveTokens'],
+            ],
         ]);
 
         // NOUVEAUX ENDPOINTS POUR L'EXPORT
@@ -166,7 +181,13 @@ final class Routes {
             $css_to_store = $incoming_css;
         }
 
-        update_option($option_name, $css_to_store, false);
+        if ($option_name === 'ssc_tokens_css') {
+            $tokens = TokenRegistry::convertCssToRegistry($css_to_store);
+            $sanitizedTokens = TokenRegistry::saveRegistry($tokens);
+            $css_to_store = TokenRegistry::tokensToCss($sanitizedTokens);
+        } else {
+            update_option($option_name, $css_to_store, false);
+        }
 
         if (class_exists('\SSC\Infra\Logger')) {
             \SSC\Infra\Logger::add('css_saved', ['size' => strlen($css_to_store) . ' bytes', 'option' => $option_name]);
@@ -233,6 +254,7 @@ final class Routes {
     public function resetAllCss(): \WP_REST_Response {
         delete_option('ssc_active_css');
         delete_option('ssc_tokens_css');
+        delete_option('ssc_tokens_registry');
         delete_option('ssc_css_desktop');
         delete_option('ssc_css_tablet');
         delete_option('ssc_css_mobile');
@@ -267,6 +289,49 @@ final class Routes {
 
         update_option('ssc_presets', $presets, false);
         return new \WP_REST_Response(['ok' => true], 200);
+    }
+
+    public function getTokens(): \WP_REST_Response {
+        $registry = TokenRegistry::getRegistry();
+
+        return new \WP_REST_Response([
+            'tokens' => $registry,
+            'css' => TokenRegistry::tokensToCss($registry),
+            'types' => TokenRegistry::getSupportedTypes(),
+        ], 200);
+    }
+
+    public function saveTokens(\WP_REST_Request $request): \WP_REST_Response {
+        $payload = $request->get_json_params();
+
+        if (!is_array($payload)) {
+            $rawTokens = $request->get_param('tokens');
+            if (is_string($rawTokens)) {
+                $decoded = json_decode($rawTokens, true);
+                $payload = ['tokens' => $decoded];
+            } elseif (is_array($rawTokens)) {
+                $payload = ['tokens' => $rawTokens];
+            } else {
+                $payload = [];
+            }
+        }
+
+        $tokens = $payload['tokens'] ?? null;
+
+        if (!is_array($tokens)) {
+            return new \WP_REST_Response([
+                'ok' => false,
+                'message' => __('Invalid tokens payload.', 'supersede-css-jlg'),
+            ], 400);
+        }
+
+        $sanitized = TokenRegistry::saveRegistry($tokens);
+
+        return new \WP_REST_Response([
+            'ok' => true,
+            'tokens' => $sanitized,
+            'css' => TokenRegistry::tokensToCss($sanitized),
+        ], 200);
     }
 
     // NOUVELLES FONCTIONS POUR L'EXPORT
@@ -432,6 +497,19 @@ final class Routes {
         }
 
         return CssSanitizer::sanitize($value);
+    }
+
+    /**
+     * @param mixed $value
+     * @return array<int, array{name: string, value: string, type: string, description: string, group: string}>|null
+     */
+    private function sanitizeImportTokens($value): ?array
+    {
+        if (!is_array($value)) {
+            return null;
+        }
+
+        return TokenRegistry::saveRegistry($value);
     }
 
     /**

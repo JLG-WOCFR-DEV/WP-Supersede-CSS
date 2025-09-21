@@ -1,148 +1,387 @@
 (function($) {
-    let editor, builder;
+    const restRoot = window.SSC && window.SSC.rest && window.SSC.rest.root ? window.SSC.rest.root : '';
+    const restNonce = window.SSC && window.SSC.rest && window.SSC.rest.nonce ? window.SSC.rest.nonce : '';
+    const localized = window.SSC_TOKENS_DATA || {};
+
+    let tokens = Array.isArray(localized.tokens) ? localized.tokens.slice() : [];
+    const tokenTypes = localized.types || {
+        color: { label: 'Couleur', input: 'color' },
+        text: { label: 'Texte', input: 'text' },
+        number: { label: 'Nombre', input: 'number' },
+    };
+    const i18n = localized.i18n || {};
+
+    const builder = $('#ssc-token-builder');
+    const cssTextarea = $('#ssc-tokens');
+    const previewStyle = $('#ssc-tokens-preview-style');
+    const groupDatalistId = 'ssc-token-groups-list';
 
     function copyToClipboard(text) {
         if (navigator.clipboard && window.isSecureContext) {
             return navigator.clipboard.writeText(text);
-        } else {
-            // Méthode de repli pour les contextes non sécurisés (HTTP)
-            let textArea = document.createElement("textarea");
-            textArea.value = text;
-            textArea.style.position = "fixed";
-            textArea.style.left = "-999999px";
-            document.body.appendChild(textArea);
-            textArea.select();
-            try {
-                document.execCommand('copy');
-            } catch (err) {
-                console.error('Fallback copy failed', err);
+        }
+
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+        } catch (err) {
+            console.error('Fallback copy failed', err); // eslint-disable-line no-console
+        }
+        document.body.removeChild(textArea);
+        return Promise.resolve();
+    }
+
+    function generateCss(registry) {
+        if (!registry || !registry.length) {
+            return ':root {\n}\n';
+        }
+
+        const lines = registry.map(function(token) {
+            return '    ' + token.name + ': ' + token.value + ';';
+        });
+
+        return ':root {\n' + lines.join('\n') + '\n}';
+    }
+
+    function applyCss(css) {
+        if (cssTextarea.length) {
+            cssTextarea.val(css);
+        }
+        if (previewStyle.length) {
+            previewStyle.text(css);
+        }
+    }
+
+    function refreshCssFromTokens() {
+        applyCss(generateCss(tokens));
+    }
+
+    function normalizeName(value) {
+        if (typeof value !== 'string') {
+            return '';
+        }
+        let name = value.trim();
+        if (name === '') {
+            return '';
+        }
+        if (name.indexOf('--') !== 0) {
+            name = '--' + name.replace(/^-+/, '');
+        }
+        return name.replace(/[^a-zA-Z0-9\-]/g, '-');
+    }
+
+    function ensureGroupDatalist(groups) {
+        let datalist = document.getElementById(groupDatalistId);
+        if (!datalist) {
+            datalist = document.createElement('datalist');
+            datalist.id = groupDatalistId;
+            builder.parent().append(datalist);
+        }
+        const $datalist = $(datalist);
+        $datalist.empty();
+        const seen = new Set();
+        groups.forEach(function(group) {
+            const key = group.trim();
+            if (key === '' || seen.has(key)) {
+                return;
             }
-            document.body.removeChild(textArea);
-        }
+            seen.add(key);
+            $('<option>').attr('value', key).appendTo($datalist);
+        });
     }
 
-    function parseTokens(css) {
-        const tokenRegex = /--([\w-]+)\s*:\s*([^;]+);/g;
-        const tokens = [];
-        let match;
-        while ((match = tokenRegex.exec(css)) !== null) {
-            tokens.push({ name: `--${match[1].trim()}`, value: match[2].trim() });
-        }
-        return tokens;
+    function createField(label, input) {
+        const field = $('<label>', { class: 'ssc-token-field' });
+        field.append($('<span>', { class: 'ssc-token-field__label', text: label }));
+        field.append(input);
+        return field;
     }
 
-    function generateCSS(tokens) {
-        if (tokens.length === 0) {
-            return ':root {}';
-        }
-        const css = tokens.map(t => `  ${t.name}: ${t.value};`).join('\n');
-        return `:root {\n${css}\n}`;
-    }
+    function createTokenRow(token, index) {
+        const row = $('<div>', { class: 'ssc-token-row', 'data-index': index });
+        const typeOptions = Object.keys(tokenTypes);
+        const valueType = token.type && tokenTypes[token.type] ? tokenTypes[token.type].input : 'text';
 
-    function renderBuilder() {
-        const css = editor.val();
-        const tokens = parseTokens(css);
-        builder.empty();
+        const nameInput = $('<input>', {
+            type: 'text',
+            class: 'regular-text token-field-input token-name',
+            value: token.name || '',
+        });
 
-        tokens.forEach((token, index) => {
-            const isColor = token.value.startsWith('#') || token.value.startsWith('rgb') || token.value.startsWith('hsl');
-
-            const row = $('<div>', { class: 'ssc-kv-builder' }).css({
-                'margin-bottom': '8px',
-                display: 'flex',
-                gap: '8px',
-                'align-items': 'center'
-            });
-
-            const nameInput = $('<input>', {
-                type: 'text',
-                class: 'token-name regular-text',
-                placeholder: '--nom-du-token'
-            }).val(token.name);
-
-            const valueInput = $('<input>', {
-                class: 'token-value'
-            }).attr('type', isColor ? 'color' : 'text').val(token.value);
-
-            if (isColor) {
-                valueInput.css({
-                    height: '36px',
-                    padding: '2px',
-                    'min-width': '40px'
+        let valueInput;
+        if (valueType === 'color') {
+            const hasHexValue = typeof token.value === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(token.value.trim());
+            if (hasHexValue) {
+                valueInput = $('<input>', {
+                    type: 'color',
+                    class: 'token-field-input token-value',
+                    value: token.value.trim(),
+                });
+            } else {
+                valueInput = $('<input>', {
+                    type: 'text',
+                    class: 'token-field-input token-value',
+                    value: token.value || '',
+                    placeholder: '#000000',
                 });
             }
+        } else {
+            valueInput = $('<input>', {
+                type: valueType === 'number' ? 'number' : 'text',
+                class: 'token-field-input token-value',
+                value: token.value || '',
+            });
+            if (valueType === 'number') {
+                valueInput.attr('step', '0.01');
+            }
+        }
 
-            const deleteButton = $('<button>', {
-                class: 'button button-link-delete',
-                'data-index': index
-            }).text('Supprimer');
+        const typeSelect = $('<select>', { class: 'token-field-input token-type' });
+        typeOptions.forEach(function(optionKey) {
+            const optionMeta = tokenTypes[optionKey];
+            const optionLabel = optionMeta && optionMeta.label ? optionMeta.label : optionKey;
+            const option = $('<option>', { value: optionKey, text: optionLabel });
+            if (optionKey === token.type) {
+                option.prop('selected', true);
+            }
+            typeSelect.append(option);
+        });
 
-            row.append(nameInput, valueInput, deleteButton);
-            builder.append(row);
+        const groupInput = $('<input>', {
+            type: 'text',
+            class: 'token-field-input token-group',
+            value: token.group || 'Général',
+            list: groupDatalistId,
+        });
+
+        const descriptionInput = $('<textarea>', {
+            class: 'token-field-input token-description',
+            rows: 2,
+            text: token.description || '',
+        });
+
+        const deleteButton = $('<button>', {
+            type: 'button',
+            class: 'button button-link-delete token-delete',
+            text: i18n.deleteLabel || 'Supprimer',
+        });
+
+        row.append(createField(i18n.nameLabel || 'Nom', nameInput));
+        row.append(createField(i18n.valueLabel || 'Valeur', valueInput));
+        row.append(createField(i18n.typeLabel || 'Type', typeSelect));
+        row.append(createField(i18n.groupLabel || 'Groupe', groupInput));
+        row.append(createField(i18n.descriptionLabel || 'Description', descriptionInput));
+        row.append(deleteButton);
+
+        return row;
+    }
+
+    function renderTokens() {
+        if (!builder.length) {
+            return;
+        }
+
+        builder.empty();
+
+        if (!tokens.length) {
+            builder.append($('<p>', {
+                class: 'ssc-token-empty',
+                text: i18n.emptyState || 'Aucun token pour le moment. Utilisez le bouton ci-dessous pour commencer.',
+            }));
+            ensureGroupDatalist(['Général']);
+            return;
+        }
+
+        const groups = {};
+        const order = [];
+
+        tokens.forEach(function(token, index) {
+            const groupName = (token.group || 'Général').trim() || 'Général';
+            if (!groups[groupName]) {
+                groups[groupName] = [];
+                order.push(groupName);
+            }
+            groups[groupName].push({ token: token, index: index });
+        });
+
+        ensureGroupDatalist(order);
+
+        order.forEach(function(groupName) {
+            const section = $('<div>', { class: 'ssc-token-group' });
+            section.append($('<h4>', { text: groupName }));
+            groups[groupName].forEach(function(item) {
+                section.append(createTokenRow(item.token, item.index));
+            });
+            builder.append(section);
         });
     }
-    
-    function updateEditorFromBuilder() {
-        const tokens = [];
-        builder.find('.ssc-kv-builder').each(function() {
-            const name = $(this).find('.token-name').val();
-            const value = $(this).find('.token-value').val();
-            if (name && value) {
-                tokens.push({ name, value });
+
+    function addToken() {
+        tokens.push({
+            name: '--nouveau-token',
+            value: '#ffffff',
+            type: tokenTypes.color ? 'color' : 'text',
+            description: '',
+            group: 'Général',
+        });
+        renderTokens();
+        refreshCssFromTokens();
+    }
+
+    function removeToken(index) {
+        tokens.splice(index, 1);
+        renderTokens();
+        refreshCssFromTokens();
+    }
+
+    function updateToken(index, key, value) {
+        if (!tokens[index]) {
+            return;
+        }
+        tokens[index][key] = value;
+    }
+
+    function fetchTokensFromServer() {
+        if (!restRoot) {
+            return;
+        }
+        $.ajax({
+            url: restRoot + 'tokens',
+            method: 'GET',
+            beforeSend: function(xhr) {
+                if (restNonce) {
+                    xhr.setRequestHeader('X-WP-Nonce', restNonce);
+                }
+            },
+        }).done(function(response) {
+            if (response && Array.isArray(response.tokens)) {
+                tokens = response.tokens;
+                renderTokens();
+            }
+            if (response && typeof response.css === 'string') {
+                applyCss(response.css);
+            } else {
+                refreshCssFromTokens();
             }
         });
-        const newCSS = generateCSS(tokens);
-        editor.val(newCSS);
-        applyPreview();
     }
 
-    function applyPreview() {
-        const raw = editor.val();
-        $('#ssc-tokens-preview-style').text(raw);
+    function saveTokens() {
+        if (!restRoot) {
+            return $.Deferred().reject();
+        }
+
+        return $.ajax({
+            url: restRoot + 'tokens',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ tokens: tokens }),
+            beforeSend: function(xhr) {
+                if (restNonce) {
+                    xhr.setRequestHeader('X-WP-Nonce', restNonce);
+                }
+            },
+        }).done(function(response) {
+            if (response && Array.isArray(response.tokens)) {
+                tokens = response.tokens;
+                renderTokens();
+            }
+            if (response && typeof response.css === 'string') {
+                applyCss(response.css);
+            } else {
+                refreshCssFromTokens();
+            }
+            if (typeof window.sscToast === 'function') {
+                window.sscToast(i18n.saveSuccess || 'Tokens enregistrés');
+            }
+        }).fail(function() {
+            if (typeof window.sscToast === 'function') {
+                window.sscToast(i18n.saveError || 'Impossible d’enregistrer les tokens.');
+            }
+        });
     }
 
     $(document).ready(function() {
-        if (!$('#ssc-tokens').length) return;
+        if (!builder.length || !cssTextarea.length) {
+            return;
+        }
 
-        editor = $('#ssc-tokens');
-        builder = $('#ssc-token-builder');
+        if (localized.css) {
+            applyCss(localized.css);
+        }
 
-        $('#ssc-token-add').on('click', () => {
-            const css = editor.val();
-            const tokens = parseTokens(css);
-            tokens.push({ name: '--nouveau-token', value: '#ffffff' });
-            editor.val(generateCSS(tokens));
-            renderBuilder();
-            applyPreview();
+        renderTokens();
+        refreshCssFromTokens();
+        fetchTokensFromServer();
+
+        $('#ssc-token-add').on('click', function(event) {
+            event.preventDefault();
+            addToken();
         });
 
-        builder.on('input', '.token-name, .token-value', updateEditorFromBuilder);
-        builder.on('click', 'button', function() {
-            $(this).closest('.ssc-kv-builder').remove();
-            updateEditorFromBuilder();
-        });
-        
-        editor.on('input', () => {
-            renderBuilder();
-            applyPreview();
+        $('#ssc-tokens-save').on('click', function(event) {
+            event.preventDefault();
+            saveTokens();
         });
 
-        $('#ssc-tokens-apply').on('click', () => {
-            const css = editor.val();
-            $.ajax({
-                url: SSC.rest.root + 'save-css',
-                method: 'POST',
-                data: { css: css, option_name: 'ssc_tokens_css', append: false, _wpnonce: SSC.rest.nonce },
-                beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
-            }).done(() => window.sscToast('Tokens appliqués'));
+        $('#ssc-tokens-copy').on('click', function(event) {
+            event.preventDefault();
+            copyToClipboard(cssTextarea.val());
+            if (typeof window.sscToast === 'function') {
+                window.sscToast('Tokens copiés');
+            }
         });
 
-        $('#ssc-tokens-copy').on('click', () => {
-            copyToClipboard(editor.val());
-            window.sscToast('Tokens copiés');
+        builder.on('input', '.token-name', function() {
+            const index = $(this).closest('.ssc-token-row').data('index');
+            updateToken(index, 'name', $(this).val());
+            refreshCssFromTokens();
         });
 
-        renderBuilder();
-        applyPreview();
+        builder.on('blur', '.token-name', function() {
+            const index = $(this).closest('.ssc-token-row').data('index');
+            const normalized = normalizeName($(this).val());
+            $(this).val(normalized);
+            updateToken(index, 'name', normalized);
+            refreshCssFromTokens();
+        });
+
+        builder.on('input', '.token-value', function() {
+            const index = $(this).closest('.ssc-token-row').data('index');
+            updateToken(index, 'value', $(this).val());
+            refreshCssFromTokens();
+        });
+
+        builder.on('input', '.token-description', function() {
+            const index = $(this).closest('.ssc-token-row').data('index');
+            updateToken(index, 'description', $(this).val());
+        });
+
+        builder.on('change', '.token-type', function() {
+            const index = $(this).closest('.ssc-token-row').data('index');
+            updateToken(index, 'type', $(this).val());
+            renderTokens();
+            refreshCssFromTokens();
+        });
+
+        builder.on('change', '.token-group', function() {
+            const index = $(this).closest('.ssc-token-row').data('index');
+            const newGroup = $(this).val().trim() || 'Général';
+            updateToken(index, 'group', newGroup);
+            renderTokens();
+            refreshCssFromTokens();
+        });
+
+        builder.on('click', '.token-delete', function(event) {
+            event.preventDefault();
+            const index = $(this).closest('.ssc-token-row').data('index');
+            removeToken(index);
+        });
     });
 })(jQuery);
