@@ -37,6 +37,13 @@ if (!function_exists('sanitize_textarea_field')) {
     }
 }
 
+if (!function_exists('wp_json_encode')) {
+    function wp_json_encode($value, $options = 0, $depth = 512)
+    {
+        return json_encode($value, $options, $depth);
+    }
+}
+
 if (!function_exists('wp_kses')) {
     function wp_kses($string, $allowed_html)
     {
@@ -137,5 +144,48 @@ if ($ssc_options_store['ssc_tokens_registry'] !== $expectedTokens) {
 
 if ($ssc_options_store['ssc_tokens_css'] !== $expectedCss) {
     fwrite(STDERR, "Imported token CSS should be persisted with normalized formatting." . PHP_EOL);
+    exit(1);
+}
+
+$objectPayload = new stdClass();
+$objectPayload->title = '<strong>Title</strong>';
+$objectPayload->count = 5;
+$objectPayload->nested = new stdClass();
+$objectPayload->nested->note = '<em>Nested</em>';
+
+$jsonOnlyObject = new class() implements JsonSerializable {
+    public function jsonSerialize(): mixed
+    {
+        return ['danger' => '<script>alert(1)</script>'];
+    }
+};
+
+$ssc_options_store['ssc_settings'] = [];
+
+$objectImportResult = $applyMethod->invoke($routes, [
+    'ssc_settings' => [
+        'object_payload' => $objectPayload,
+        'json_only_object' => $jsonOnlyObject,
+    ],
+]);
+
+$expectedSettings = [
+    'object_payload' => [
+        'title' => 'Title',
+        'count' => 5,
+        'nested' => [
+            'note' => 'Nested',
+        ],
+    ],
+    'json_only_object' => '{"danger":"alert(1)"}',
+];
+
+if ($ssc_options_store['ssc_settings'] !== $expectedSettings) {
+    fwrite(STDERR, "Object payloads should be sanitized recursively or serialized when needed." . PHP_EOL);
+    exit(1);
+}
+
+if (!is_array($objectImportResult) || !in_array('ssc_settings', $objectImportResult['applied'] ?? [], true)) {
+    fwrite(STDERR, "Object payload import should be reported as applied." . PHP_EOL);
     exit(1);
 }

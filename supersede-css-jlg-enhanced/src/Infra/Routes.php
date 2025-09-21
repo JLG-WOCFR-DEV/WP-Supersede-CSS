@@ -592,6 +592,33 @@ final class Routes {
                 continue;
             }
 
+            if (is_object($item)) {
+                $objectVars = get_object_vars($item);
+                if (is_array($objectVars) && $objectVars !== []) {
+                    $nested = $this->sanitizeImportArray($objectVars);
+                    if ($nested !== null) {
+                        $sanitized[$sanitizedKey] = $nested;
+                        continue;
+                    }
+                }
+
+                $jsonOptions = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
+                if (defined('JSON_PARTIAL_OUTPUT_ON_ERROR')) {
+                    $jsonOptions |= JSON_PARTIAL_OUTPUT_ON_ERROR;
+                }
+
+                $encoded = function_exists('wp_json_encode')
+                    ? wp_json_encode($item, $jsonOptions)
+                    : json_encode($item, $jsonOptions);
+
+                if (!is_string($encoded)) {
+                    $encoded = '';
+                }
+
+                $sanitized[$sanitizedKey] = sanitize_text_field($encoded);
+                continue;
+            }
+
             $sanitized[$sanitizedKey] = sanitize_text_field((string) $item);
         }
 
