@@ -477,6 +477,16 @@ final class Routes {
                 continue;
             }
 
+            if ($optionName === 'ssc_tokens_css') {
+                $tokens = TokenRegistry::convertCssToRegistry($sanitizedValue);
+
+                if ($tokens !== []) {
+                    TokenRegistry::saveRegistry($tokens);
+                    $applied[] = $optionName;
+                    continue;
+                }
+            }
+
             update_option($optionName, $sanitizedValue, false);
             $applied[] = $optionName;
         }
