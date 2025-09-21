@@ -32,8 +32,10 @@
         $('#ssc-grid-cols, #ssc-grid-gap').on('input', generateGrid);
         
         $('#ssc-grid-copy').on('click', () => {
-            navigator.clipboard.writeText($('#ssc-grid-css').text());
-            window.sscToast('CSS de la grille copié !');
+            window.sscCopyToClipboard($('#ssc-grid-css').text(), {
+                successMessage: 'CSS de la grille copié !',
+                errorMessage: 'Impossible de copier le CSS de la grille.'
+            }).catch(() => {});
         });
         
         $('#ssc-grid-apply').on('click', () => {

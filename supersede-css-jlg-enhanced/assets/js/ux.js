@@ -7,6 +7,61 @@
         setTimeout(() => toast.remove(), 3000);
     };
 
+    // --- Clipboard Helper ---
+    window.sscCopyToClipboard = function(text, {
+        successMessage = 'Texte copié !',
+        errorMessage = 'Impossible de copier le texte.'
+    } = {}) {
+        const showSuccess = () => window.sscToast(successMessage);
+        const showError = (error) => {
+            if (errorMessage) {
+                window.sscToast(errorMessage);
+            }
+            throw error;
+        };
+
+        const fallbackCopy = () => new Promise((resolve, reject) => {
+            const textarea = $('<textarea></textarea>')
+                .css({
+                    position: 'fixed',
+                    top: '-1000px',
+                    left: '-1000px',
+                    opacity: 0
+                })
+                .val(text)
+                .appendTo('body');
+
+            textarea[0].select();
+            textarea[0].setSelectionRange(0, text.length);
+
+            let succeeded = false;
+            try {
+                succeeded = document.execCommand('copy');
+            } catch (err) {
+                textarea.remove();
+                reject(err);
+                return;
+            }
+
+            textarea.remove();
+            if (succeeded) {
+                resolve();
+            } else {
+                reject(new Error('execCommand copy failed'));
+            }
+        });
+
+        const copyPromise = (navigator.clipboard && window.isSecureContext)
+            ? navigator.clipboard.writeText(text).catch(() => fallbackCopy())
+            : fallbackCopy();
+
+        return copyPromise.then(() => {
+            showSuccess();
+        }).catch(error => {
+            showError(error);
+        });
+    };
+
     $(document).ready(function() {
         // --- Dark/Light Theme Toggle ---
         const themeToggle = $('#ssc-theme');
