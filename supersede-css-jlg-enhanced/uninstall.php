@@ -22,12 +22,33 @@ $ssc_options_to_delete = [
     'ssc_optimization_settings', // Ajouté
 ];
 
-// Boucle sur la liste et supprime chaque option
+// Supprime les options du site courant
 foreach ($ssc_options_to_delete as $option_name) {
-    if (is_multisite()) {
-        delete_site_option($option_name);
-    } else {
+    delete_option($option_name);
+}
+
+if (!is_multisite()) {
+    return;
+}
+
+// Supprime également les éventuelles options réseau
+foreach ($ssc_options_to_delete as $option_name) {
+    delete_site_option($option_name);
+}
+
+// Parcourt tous les sites du réseau pour supprimer les options locales
+$site_ids = get_sites([
+    'fields' => 'ids',
+    'number' => 0,
+]);
+
+foreach ($site_ids as $site_id) {
+    switch_to_blog($site_id);
+
+    foreach ($ssc_options_to_delete as $option_name) {
         delete_option($option_name);
     }
+
+    restore_current_blog();
 }
 
