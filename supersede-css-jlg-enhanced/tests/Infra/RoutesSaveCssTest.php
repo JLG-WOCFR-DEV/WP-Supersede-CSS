@@ -30,6 +30,13 @@ if (!function_exists('sanitize_text_field')) {
     }
 }
 
+if (!function_exists('sanitize_textarea_field')) {
+    function sanitize_textarea_field($value)
+    {
+        return trim(strip_tags((string) $value));
+    }
+}
+
 if (!function_exists('wp_kses')) {
     function wp_kses(string $string, array $allowed_html = []): string
     {
@@ -142,6 +149,7 @@ if (!function_exists('update_option')) {
 }
 
 require_once __DIR__ . '/../../src/Support/CssSanitizer.php';
+require_once __DIR__ . '/../../src/Support/TokenRegistry.php';
 require_once __DIR__ . '/../../src/Infra/Routes.php';
 
 $routesReflection = new ReflectionClass(Routes::class);
@@ -171,5 +179,32 @@ if (!array_key_exists('ssc_active_css', $ssc_options_store)) {
 
 if (array_key_exists('ssc_tokens_css', $ssc_options_store)) {
     fwrite(STDERR, 'Unexpected CSS stored under ssc_tokens_css.' . PHP_EOL);
+    exit(1);
+}
+
+$tokenCss = ":root {\n    --first-token: #123456;\n    --second-token: 1.5rem\n}";
+$tokenRequest = new WP_REST_Request([
+    'option_name' => 'ssc_tokens_css',
+    'css' => $tokenCss,
+]);
+
+$tokenResponse = $routes->saveCss($tokenRequest);
+
+if (!$tokenResponse instanceof WP_REST_Response || $tokenResponse->get_status() !== 200) {
+    fwrite(STDERR, 'Saving CSS tokens should return a successful WP_REST_Response.' . PHP_EOL);
+    exit(1);
+}
+
+$sanitizedTokenCss = \SSC\Support\CssSanitizer::sanitize($tokenCss);
+$expectedRegistry = \SSC\Support\TokenRegistry::convertCssToRegistry($sanitizedTokenCss);
+$expectedRegistryCss = \SSC\Support\TokenRegistry::tokensToCss($expectedRegistry);
+
+if ($ssc_options_store['ssc_tokens_registry'] !== $expectedRegistry) {
+    fwrite(STDERR, 'Saving CSS tokens should update the token registry using the sanitized declarations.' . PHP_EOL);
+    exit(1);
+}
+
+if ($ssc_options_store['ssc_tokens_css'] !== $expectedRegistryCss) {
+    fwrite(STDERR, 'Saving CSS tokens should persist normalized CSS output that retains all tokens.' . PHP_EOL);
     exit(1);
 }
