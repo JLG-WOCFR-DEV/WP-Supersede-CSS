@@ -53,6 +53,29 @@ if (!function_exists('wp_kses')) {
     }
 }
 
+if (!function_exists('wp_kses_bad_protocol')) {
+    function wp_kses_bad_protocol(string $string, array $allowed_protocols): string
+    {
+        unset($allowed_protocols);
+
+        return $string;
+    }
+}
+
+if (!function_exists('wp_allowed_protocols')) {
+    function wp_allowed_protocols(): array
+    {
+        return ['http', 'https'];
+    }
+}
+
+if (!function_exists('absint')) {
+    function absint($value)
+    {
+        return abs((int) $value);
+    }
+}
+
 /** @var array<string, mixed> $ssc_options_store */
 $ssc_options_store = [
     'ssc_admin_log' => [
@@ -127,6 +150,40 @@ $expectedTokens = \SSC\Support\TokenRegistry::convertCssToRegistry($sanitizedCss
 
 if ($expectedTokens === []) {
     fwrite(STDERR, "Expected tokens should not be empty for the provided CSS." . PHP_EOL);
+    exit(1);
+}
+
+$singleTokenCss = ":root {\n    --solitary-token: #bada55\n}";
+$singleTokenSanitized = \SSC\Support\CssSanitizer::sanitize($singleTokenCss);
+$singleTokenRegistry = \SSC\Support\TokenRegistry::convertCssToRegistry($singleTokenSanitized);
+
+if (count($singleTokenRegistry) !== 1) {
+    fwrite(STDERR, "A sanitized CSS payload with a single token should yield exactly one registry entry." . PHP_EOL);
+    exit(1);
+}
+
+$singleToken = $singleTokenRegistry[0];
+if ($singleToken['name'] !== '--solitary-token' || $singleToken['value'] !== '#bada55') {
+    fwrite(STDERR, "Single token CSS without trailing semicolon should preserve the token name and value." . PHP_EOL);
+    exit(1);
+}
+
+$noSemicolonCss = ":root {\n    --first-token: 10px;\n    --last-token: 1rem\n}";
+$noSemicolonSanitized = \SSC\Support\CssSanitizer::sanitize($noSemicolonCss);
+$noSemicolonRegistry = \SSC\Support\TokenRegistry::convertCssToRegistry($noSemicolonSanitized);
+
+if (count($noSemicolonRegistry) !== 2) {
+    fwrite(STDERR, "CSS without a trailing semicolon on the last declaration should still return all tokens." . PHP_EOL);
+    exit(1);
+}
+
+if ($noSemicolonRegistry[0]['name'] !== '--first-token' || $noSemicolonRegistry[0]['value'] !== '10px') {
+    fwrite(STDERR, "First token should remain unchanged when converting CSS with missing trailing semicolon." . PHP_EOL);
+    exit(1);
+}
+
+if ($noSemicolonRegistry[1]['name'] !== '--last-token' || $noSemicolonRegistry[1]['value'] !== '1rem') {
+    fwrite(STDERR, "Last token without a trailing semicolon should be preserved during CSS conversion." . PHP_EOL);
     exit(1);
 }
 

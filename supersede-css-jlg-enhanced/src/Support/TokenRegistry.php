@@ -167,7 +167,7 @@ final class TokenRegistry
     public static function convertCssToRegistry(string $css): array
     {
         $tokens = [];
-        $pattern = '/--([\w\-]+)\s*:\s*([^;]+);/';
+        $pattern = '/--([\w\-]+)\s*:\s*([^;\}]+)\s*(?:;|(?=\}))/';
 
         if (preg_match_all($pattern, $css, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
