@@ -208,3 +208,27 @@ if ($ssc_options_store['ssc_tokens_css'] !== $expectedRegistryCss) {
     fwrite(STDERR, 'Saving CSS tokens should persist normalized CSS output that retains all tokens.' . PHP_EOL);
     exit(1);
 }
+
+$complexValueCss = ":root {\n    --with-semicolon: 'foo;bar';\n}";
+$sanitizedComplexValueCss = \SSC\Support\CssSanitizer::sanitize($complexValueCss);
+$complexValueRegistry = \SSC\Support\TokenRegistry::convertCssToRegistry($sanitizedComplexValueCss);
+
+if (count($complexValueRegistry) !== 1) {
+    fwrite(STDERR, 'CSS token parsing should keep declarations with embedded semicolons.' . PHP_EOL);
+    exit(1);
+}
+
+$complexValueToken = $complexValueRegistry[0];
+
+if ($complexValueToken['value'] !== "'foo;bar'") {
+    fwrite(STDERR, 'CSS token parsing should keep the full value of declarations with embedded semicolons.' . PHP_EOL);
+    exit(1);
+}
+
+$roundTripCss = \SSC\Support\TokenRegistry::tokensToCss($complexValueRegistry);
+$roundTripRegistry = \SSC\Support\TokenRegistry::convertCssToRegistry($roundTripCss);
+
+if ($roundTripRegistry !== $complexValueRegistry) {
+    fwrite(STDERR, 'Converting CSS tokens to the registry and back should preserve the full value.' . PHP_EOL);
+    exit(1);
+}

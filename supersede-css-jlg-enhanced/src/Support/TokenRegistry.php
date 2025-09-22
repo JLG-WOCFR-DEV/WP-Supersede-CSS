@@ -167,27 +167,138 @@ final class TokenRegistry
     public static function convertCssToRegistry(string $css): array
     {
         $tokens = [];
-        $pattern = '/--([\w\-]+)\s*:\s*([^;\}]+)\s*(?:;|(?=\}))/';
+        $length = strlen($css);
+        $cursor = 0;
 
-        if (preg_match_all($pattern, $css, $matches, PREG_SET_ORDER)) {
-            foreach ($matches as $match) {
-                $rawName = isset($match[1]) ? '--' . $match[1] : '';
-                $rawValue = isset($match[2]) ? trim($match[2]) : '';
+        while ($cursor < $length) {
+            $declarationStart = strpos($css, '--', $cursor);
+            if ($declarationStart === false) {
+                break;
+            }
 
-                if ($rawName === '' || $rawValue === '') {
+            $before = $declarationStart - 1;
+            while ($before >= 0 && ctype_space($css[$before])) {
+                $before--;
+            }
+
+            if ($before >= 0 && !in_array($css[$before], ['{', ';'], true)) {
+                $cursor = $declarationStart + 2;
+                continue;
+            }
+
+            $name = '--';
+            $index = $declarationStart + 2;
+
+            while ($index < $length) {
+                $character = $css[$index];
+                if (preg_match('/[A-Za-z0-9_-]/', $character) !== 1) {
+                    break;
+                }
+
+                $name .= $character;
+                $index++;
+            }
+
+            if ($name === '--') {
+                $cursor = $declarationStart + 2;
+                continue;
+            }
+
+            while ($index < $length && ctype_space($css[$index])) {
+                $index++;
+            }
+
+            if ($index >= $length || $css[$index] !== ':') {
+                $cursor = $declarationStart + 2;
+                continue;
+            }
+
+            $index++;
+
+            while ($index < $length && ctype_space($css[$index])) {
+                $index++;
+            }
+
+            $value = '';
+            $inSingleQuote = false;
+            $inDoubleQuote = false;
+            $parenthesesDepth = 0;
+            $escaped = false;
+
+            while ($index < $length) {
+                $character = $css[$index];
+
+                if ($escaped) {
+                    $value .= $character;
+                    $escaped = false;
+                    $index++;
                     continue;
                 }
 
-                $type = self::guessTypeFromValue($rawValue);
+                if ($character === '\\') {
+                    $value .= $character;
+                    $escaped = true;
+                    $index++;
+                    continue;
+                }
 
+                if ($character === "'" && !$inDoubleQuote) {
+                    $inSingleQuote = !$inSingleQuote;
+                    $value .= $character;
+                    $index++;
+                    continue;
+                }
+
+                if ($character === '"' && !$inSingleQuote) {
+                    $inDoubleQuote = !$inDoubleQuote;
+                    $value .= $character;
+                    $index++;
+                    continue;
+                }
+
+                if (!$inSingleQuote && !$inDoubleQuote) {
+                    if ($character === '(') {
+                        $parenthesesDepth++;
+                        $value .= $character;
+                        $index++;
+                        continue;
+                    }
+
+                    if ($character === ')') {
+                        if ($parenthesesDepth > 0) {
+                            $parenthesesDepth--;
+                        }
+                        $value .= $character;
+                        $index++;
+                        continue;
+                    }
+
+                    if (($character === ';' || $character === '}') && $parenthesesDepth === 0) {
+                        break;
+                    }
+                }
+
+                $value .= $character;
+                $index++;
+            }
+
+            $rawValue = trim($value);
+
+            if ($rawValue !== '') {
                 $tokens[] = [
-                    'name' => $rawName,
+                    'name' => $name,
                     'value' => $rawValue,
-                    'type' => $type,
+                    'type' => self::guessTypeFromValue($rawValue),
                     'description' => '',
                     'group' => 'Legacy',
                 ];
             }
+
+            if ($index < $length && ($css[$index] === ';' || $css[$index] === '}')) {
+                $index++;
+            }
+
+            $cursor = $index;
         }
 
         return self::normalizeRegistry($tokens);
