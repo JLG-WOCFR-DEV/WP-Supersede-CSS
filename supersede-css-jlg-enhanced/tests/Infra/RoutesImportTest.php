@@ -147,6 +147,37 @@ if ($ssc_options_store['ssc_tokens_css'] !== $expectedCss) {
     exit(1);
 }
 
+\SSC\Support\TokenRegistry::saveRegistry([
+    [
+        'name' => '--existing-token',
+        'value' => '#abcdef',
+        'type' => 'color',
+        'description' => '',
+        'group' => 'Legacy',
+    ],
+]);
+
+$emptyTokensResult = $applyMethod->invoke($routes, [
+    'ssc_tokens_css' => '',
+]);
+
+if (!is_array($emptyTokensResult) || !in_array('ssc_tokens_css', $emptyTokensResult['applied'] ?? [], true)) {
+    fwrite(STDERR, "Empty token CSS import should be reported as applied." . PHP_EOL);
+    exit(1);
+}
+
+if ($ssc_options_store['ssc_tokens_registry'] !== []) {
+    fwrite(STDERR, "Empty token CSS import should reset the token registry." . PHP_EOL);
+    exit(1);
+}
+
+$expectedEmptyCss = \SSC\Support\TokenRegistry::tokensToCss([]);
+
+if ($ssc_options_store['ssc_tokens_css'] !== $expectedEmptyCss) {
+    fwrite(STDERR, "Empty token CSS import should persist an empty CSS template." . PHP_EOL);
+    exit(1);
+}
+
 $objectPayload = new stdClass();
 $objectPayload->title = '<strong>Title</strong>';
 $objectPayload->count = 5;
