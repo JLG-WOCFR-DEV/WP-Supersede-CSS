@@ -1,9 +1,30 @@
 (function($) {
     let editors = {};
     let pickerActive = false;
+    const editorViews = ['desktop', 'tablet', 'mobile'];
+    const codeMirrorAvailable = typeof window !== 'undefined' && typeof window.CodeMirror !== 'undefined';
+    let codeMirrorWarningShown = false;
+
+    function notifyCodeMirrorUnavailable() {
+        if (codeMirrorWarningShown) return;
+        const message = "Éditeur enrichi indisponible : CodeMirror n'est pas chargé. Les champs texte classiques seront utilisés.";
+        if (typeof window !== 'undefined' && typeof window.sscToast === 'function') {
+            window.sscToast(message);
+        } else if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+            window.alert(message);
+        } else {
+            console.warn(message);
+        }
+        codeMirrorWarningShown = true;
+    }
 
     function initCodeMirrors() {
-        ['desktop', 'tablet', 'mobile'].forEach(view => {
+        if (!codeMirrorAvailable) {
+            notifyCodeMirrorUnavailable();
+            return;
+        }
+
+        editorViews.forEach(view => {
             const textarea = document.getElementById(`ssc-css-editor-${view}`);
             if (textarea) {
                 editors[view] = CodeMirror.fromTextArea(textarea, {
@@ -14,7 +35,12 @@
     }
 
     function getEditorValue(view) {
-        return editors[view] ? editors[view].getValue() : '';
+        if (editors[view]) {
+            return editors[view].getValue();
+        }
+
+        const textarea = document.getElementById(`ssc-css-editor-${view}`);
+        return textarea ? textarea.value : '';
     }
 
     function getFullCss() {
