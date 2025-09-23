@@ -137,6 +137,15 @@ assertSameResult(
 
 assertNotContains('behavior', $sanitizedKeyframes, '@keyframes nested declarations should strip disallowed properties.');
 
+$cssWithDanglingImport = "@import url(\"foo.css\")\nbody { color: red; }";
+$sanitizedDanglingImport = CssSanitizer::sanitize($cssWithDanglingImport);
+
+assertSameResult(
+    'body {color:red}',
+    $sanitizedDanglingImport,
+    '@import rules without a semicolon should be discarded while preserving subsequent blocks.'
+);
+
 $quotedExploit = '.foo { content: "</style><script>alert(1)</script>"; color: blue; } .bar { color: __SSC_CSS_TOKEN_0__; }';
 $sanitizedExploit = CssSanitizer::sanitize($quotedExploit);
 
@@ -262,9 +271,9 @@ $cssWithDanglingImport = '@import url("https://example.com/style.css")' . PHP_EO
 $sanitizedDanglingImport = CssSanitizer::sanitize($cssWithDanglingImport);
 
 assertSameResult(
-    '@import url("https://example.com/style.css")' . PHP_EOL . 'body {color:red}',
+    'body {color:red}',
     $sanitizedDanglingImport,
-    'Body rules following an @import without semicolon should remain intact after sanitation.'
+    'Dangling @import rules should be dropped while preserving subsequent rule blocks.'
 );
 
 echo "All CssSanitizer tests passed." . PHP_EOL;
