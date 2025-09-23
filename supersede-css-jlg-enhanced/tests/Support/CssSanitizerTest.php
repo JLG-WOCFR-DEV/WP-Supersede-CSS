@@ -216,6 +216,21 @@ assertNotContains(
     'URL sanitizer should not expose sanitizer placeholder markers.'
 );
 
+$danglingBlockCss = 'body { width: expression(alert(1))';
+$sanitizedDanglingBlock = CssSanitizer::sanitize($danglingBlockCss);
+
+assertNotContains(
+    'expression',
+    $sanitizedDanglingBlock,
+    'Dangling blocks without a closing brace should not retain disallowed expressions.'
+);
+
+assertNotContains(
+    'width',
+    $sanitizedDanglingBlock,
+    'Dangling blocks without a closing brace should not keep unsafe declarations.'
+);
+
 $sanitizeImports = $reflection->getMethod('sanitizeImports');
 $sanitizeImports->setAccessible(true);
 

@@ -80,7 +80,6 @@ final class CssSanitizer
                     $sanitizedBlock = self::sanitizeStructuralBlock($css, $index, $prefix, $nextCursor);
 
                     if ($sanitizedBlock === null) {
-                        $result .= substr($css, $cursor);
                         $cursor = $length;
                         $index = $length;
                         break;
@@ -178,43 +177,9 @@ final class CssSanitizer
                     if ($depth === 0) {
                         $body = substr($css, $bodyStart, $index - $bodyStart);
 
-                        $beforeProperty = $prefix;
-                        $propertyPrefix = '';
-                        $isPropertyContext = false;
-
-                        if ($prefix !== '' && \preg_match('/@property\s+[^{}]*$/', $prefix, $propertyMatch, PREG_OFFSET_CAPTURE)) {
-                            $isPropertyContext = true;
-                            $propertyPrefix = $propertyMatch[0][0];
-                            $beforeProperty = substr($prefix, 0, $propertyMatch[0][1]);
-                        }
-
                         $nextCursor = $index + 1;
 
-                        if ($isPropertyContext) {
-                            $sanitized = self::sanitizeDeclarations($body, true);
-
-                            if ($sanitized === '') {
-                                return $beforeProperty;
-                            }
-
-                            return $beforeProperty . $propertyPrefix . '{' . $sanitized . '}';
-                        }
-
-                        $hasNestedBlocks = self::containsNestedBlocks($body);
-                        $atRuleName = self::detectAtRuleName($prefix);
-                        $requiresNestedTraversal = $hasNestedBlocks || ($atRuleName !== null && self::isNestedAtRule($atRuleName));
-
-                        if ($requiresNestedTraversal) {
-                            $sanitized = self::sanitizeNestedRuleBody($body);
-                        } else {
-                            $sanitized = self::sanitizeDeclarations($body, false);
-                        }
-
-                        if ($sanitized === '') {
-                            return $prefix . '{}';
-                        }
-
-                        return $prefix . '{' . $sanitized . '}';
+                        return self::sanitizeBlockBody($prefix, $body);
                     }
 
                     $index++;
@@ -225,7 +190,54 @@ final class CssSanitizer
             $index++;
         }
 
-        return null;
+        $nextCursor = $length;
+
+        $danglingBody = substr($css, $bodyStart);
+
+        return self::sanitizeBlockBody($prefix, $danglingBody);
+    }
+
+    private static function sanitizeBlockBody(string $prefix, string $body): string
+    {
+        $beforeProperty = $prefix;
+        $propertyPrefix = '';
+        $isPropertyContext = false;
+
+        if ($prefix !== '' && \preg_match('/@property\s+[^{}]*$/', $prefix, $propertyMatch, PREG_OFFSET_CAPTURE)) {
+            $isPropertyContext = true;
+            $propertyPrefix = $propertyMatch[0][0];
+            $beforeProperty = substr($prefix, 0, $propertyMatch[0][1]);
+        }
+
+        if ($isPropertyContext) {
+            $sanitized = self::sanitizeDeclarations($body, true);
+
+            if ($sanitized === '') {
+                return $beforeProperty;
+            }
+
+            return $beforeProperty . $propertyPrefix . '{' . $sanitized . '}';
+        }
+
+        $hasNestedBlocks = self::containsNestedBlocks($body);
+        $atRuleName = self::detectAtRuleName($prefix);
+        $requiresNestedTraversal = $hasNestedBlocks || ($atRuleName !== null && self::isNestedAtRule($atRuleName));
+
+        if ($requiresNestedTraversal) {
+            $sanitized = self::sanitizeNestedRuleBody($body);
+        } else {
+            $sanitized = self::sanitizeDeclarations($body, false);
+        }
+
+        if ($sanitized === '') {
+            if ($prefix === '') {
+                return '';
+            }
+
+            return $prefix . '{}';
+        }
+
+        return $prefix . '{' . $sanitized . '}';
     }
 
     private static function containsNestedBlocks(string $body): bool
