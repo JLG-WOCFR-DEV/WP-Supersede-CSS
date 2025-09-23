@@ -111,7 +111,7 @@ final class TokenRegistry
      */
     public static function normalizeRegistry(array $tokens): array
     {
-        $normalized = [];
+        $normalizedByName = [];
 
         foreach ($tokens as $token) {
             if (!is_array($token)) {
@@ -148,16 +148,22 @@ final class TokenRegistry
                 $group = 'Général';
             }
 
-            $normalized[] = [
+            $normalizedToken = [
                 'name' => $name,
                 'value' => $value,
                 'type' => $type,
                 'description' => $description,
                 'group' => $group,
             ];
+
+            if (array_key_exists($name, $normalizedByName)) {
+                unset($normalizedByName[$name]);
+            }
+
+            $normalizedByName[$name] = $normalizedToken;
         }
 
-        return $normalized;
+        return array_values($normalizedByName);
     }
 
     /**
@@ -166,7 +172,7 @@ final class TokenRegistry
      */
     public static function convertCssToRegistry(string $css): array
     {
-        $tokens = [];
+        $tokensByName = [];
         $length = strlen($css);
         $cursor = 0;
 
@@ -285,13 +291,19 @@ final class TokenRegistry
             $rawValue = trim($value);
 
             if ($rawValue !== '') {
-                $tokens[] = [
+                $token = [
                     'name' => $name,
                     'value' => $rawValue,
                     'type' => self::guessTypeFromValue($rawValue),
                     'description' => '',
                     'group' => 'Legacy',
                 ];
+
+                if (array_key_exists($name, $tokensByName)) {
+                    unset($tokensByName[$name]);
+                }
+
+                $tokensByName[$name] = $token;
             }
 
             if ($index < $length && ($css[$index] === ';' || $css[$index] === '}')) {
@@ -301,7 +313,7 @@ final class TokenRegistry
             $cursor = $index;
         }
 
-        return self::normalizeRegistry($tokens);
+        return self::normalizeRegistry(array_values($tokensByName));
     }
 
     /**

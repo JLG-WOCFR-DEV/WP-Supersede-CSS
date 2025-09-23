@@ -204,6 +204,56 @@ if ($ssc_options_store['ssc_tokens_css'] !== $expectedCss) {
     exit(1);
 }
 
+$duplicateTokensCss = ":root {\n    --duplicate-token: 4px;\n    --duplicate-token: 8px;\n}";
+$duplicateSanitized = \SSC\Support\CssSanitizer::sanitize($duplicateTokensCss);
+$duplicateRegistry = \SSC\Support\TokenRegistry::convertCssToRegistry($duplicateSanitized);
+
+if (count($duplicateRegistry) !== 1) {
+    fwrite(STDERR, "Duplicate CSS tokens should be collapsed into a single registry entry." . PHP_EOL);
+    exit(1);
+}
+
+$duplicateToken = $duplicateRegistry[0];
+
+if ($duplicateToken['name'] !== '--duplicate-token' || $duplicateToken['value'] !== '8px') {
+    fwrite(STDERR, "Duplicate token conversion should keep the last value encountered." . PHP_EOL);
+    exit(1);
+}
+
+$ssc_options_store['ssc_tokens_css'] = '';
+$ssc_options_store['ssc_tokens_registry'] = [];
+
+$duplicateImportResult = $applyMethod->invoke($routes, [
+    'ssc_tokens_css' => $duplicateTokensCss,
+]);
+
+if (!is_array($duplicateImportResult) || !in_array('ssc_tokens_css', $duplicateImportResult['applied'] ?? [], true)) {
+    fwrite(STDERR, "Duplicate token CSS import should still be reported as applied." . PHP_EOL);
+    exit(1);
+}
+
+$storedRegistry = $ssc_options_store['ssc_tokens_registry'];
+
+if (!is_array($storedRegistry) || count($storedRegistry) !== 1) {
+    fwrite(STDERR, "Token registry should contain a single entry after importing duplicate CSS tokens." . PHP_EOL);
+    exit(1);
+}
+
+$storedToken = $storedRegistry[0];
+
+if ($storedToken['name'] !== '--duplicate-token' || $storedToken['value'] !== '8px') {
+    fwrite(STDERR, "Token registry should preserve the last duplicate token value after import." . PHP_EOL);
+    exit(1);
+}
+
+$storedCss = $ssc_options_store['ssc_tokens_css'];
+$expectedStoredCss = \SSC\Support\TokenRegistry::tokensToCss($storedRegistry);
+
+if ($storedCss !== $expectedStoredCss) {
+    fwrite(STDERR, "Persisted CSS should only contain the deduplicated token definition." . PHP_EOL);
+    exit(1);
+}
+
 \SSC\Support\TokenRegistry::saveRegistry([
     [
         'name' => '--existing-token',
