@@ -240,4 +240,22 @@ assertNotContains(
     'Import sanitizer should strip unknown sanitizer markers.'
 );
 
+assertSameResult(
+    '@import url("https://example.com/style.css");',
+    $sanitizeImports->invoke(null, '@import "https://example.com/style.css";'),
+    'Actual @import at-rules should keep being normalized to safe URLs.'
+);
+
+assertSameResult(
+    'content: "@import url(foo)"',
+    $sanitizeImports->invoke(null, 'content: "@import url(foo)"'),
+    'Literal strings containing @import should remain untouched by the import sanitizer.'
+);
+
+assertSameResult(
+    '--example: "@import url(foo)"',
+    $sanitizeImports->invoke(null, '--example: "@import url(foo)"'),
+    'Custom property values containing @import should remain untouched by the import sanitizer.'
+);
+
 echo "All CssSanitizer tests passed." . PHP_EOL;
