@@ -30,6 +30,115 @@ class Layout {
             'type'   => true,
         ];
 
+        $allowed['form'] = [
+            'action'      => true,
+            'method'      => true,
+            'enctype'     => true,
+            'id'          => true,
+            'class'       => true,
+            'name'        => true,
+            'target'      => true,
+            'novalidate'  => true,
+            'autocomplete'=> true,
+            'data-*'      => true,
+        ];
+
+        $allowed['input'] = [
+            'type'         => true,
+            'name'         => true,
+            'value'        => true,
+            'id'           => true,
+            'class'        => true,
+            'checked'      => true,
+            'disabled'     => true,
+            'readonly'     => true,
+            'required'     => true,
+            'multiple'     => true,
+            'accept'       => true,
+            'step'         => true,
+            'min'          => true,
+            'max'          => true,
+            'placeholder'  => true,
+            'pattern'      => true,
+            'size'         => true,
+            'maxlength'    => true,
+            'autocomplete' => true,
+            'aria-*'       => true,
+            'data-*'       => true,
+        ];
+
+        $allowed['textarea'] = [
+            'name'         => true,
+            'id'           => true,
+            'class'        => true,
+            'rows'         => true,
+            'cols'         => true,
+            'wrap'         => true,
+            'placeholder'  => true,
+            'maxlength'    => true,
+            'readonly'     => true,
+            'required'     => true,
+            'autocomplete' => true,
+            'aria-*'       => true,
+            'data-*'       => true,
+        ];
+
+        $allowed['select'] = [
+            'name'         => true,
+            'id'           => true,
+            'class'        => true,
+            'multiple'     => true,
+            'size'         => true,
+            'required'     => true,
+            'disabled'     => true,
+            'autocomplete' => true,
+            'data-*'       => true,
+            'aria-*'       => true,
+        ];
+
+        $allowed['option'] = [
+            'value'    => true,
+            'label'    => true,
+            'selected' => true,
+            'disabled' => true,
+            'data-*'   => true,
+        ];
+
+        $allowed['optgroup'] = [
+            'label'    => true,
+            'disabled' => true,
+            'data-*'   => true,
+        ];
+
+        $allowed['datalist'] = [
+            'id'     => true,
+            'class'  => true,
+            'name'   => true,
+            'data-*' => true,
+        ];
+
+        $allowed['label'] = [
+            'for'     => true,
+            'id'      => true,
+            'class'   => true,
+            'data-*'  => true,
+        ];
+
+        $allowed['fieldset'] = [
+            'id'      => true,
+            'name'    => true,
+            'class'   => true,
+            'disabled'=> true,
+            'form'    => true,
+            'data-*'  => true,
+        ];
+
+        $allowed['legend'] = [
+            'id'     => true,
+            'class'  => true,
+            'data-*' => true,
+        ];
+
         $allowed['iframe'] = [
             'allow'             => true,
             'allowfullscreen'   => true,
