@@ -14,6 +14,65 @@ if (!function_exists('register_rest_route')) {
     function register_rest_route(...$args): void {}
 }
 
+if (!class_exists('WP_REST_Response')) {
+    class WP_REST_Response {
+        /** @var mixed */
+        private $data;
+
+        private int $status;
+
+        public function __construct($data = null, int $status = 200)
+        {
+            $this->data = $data;
+            $this->status = $status;
+        }
+
+        public function get_status(): int
+        {
+            return $this->status;
+        }
+
+        /** @return mixed */
+        public function get_data()
+        {
+            return $this->data;
+        }
+    }
+}
+
+if (!class_exists('WP_REST_Request')) {
+    class WP_REST_Request {
+        /** @var array<string, mixed> */
+        private array $params;
+
+        /** @var array<string, mixed>|null */
+        private ?array $json;
+
+        /**
+         * @param array<string, mixed> $params
+         * @param array<string, mixed>|null $json
+         */
+        public function __construct(array $params = [], ?array $json = null)
+        {
+            $this->params = $params;
+            $this->json = $json;
+        }
+
+        public function get_param(string $key)
+        {
+            return $this->params[$key] ?? null;
+        }
+
+        /**
+         * @return array<string, mixed>|null
+         */
+        public function get_json_params(): ?array
+        {
+            return $this->json ?? $this->params;
+        }
+    }
+}
+
 if (!function_exists('sanitize_key')) {
     function sanitize_key($key)
     {
@@ -41,6 +100,15 @@ if (!function_exists('wp_json_encode')) {
     function wp_json_encode($value, $options = 0, $depth = 512)
     {
         return json_encode($value, $options, $depth);
+    }
+}
+
+if (!function_exists('__')) {
+    function __(string $text, string $domain = ''): string
+    {
+        unset($domain);
+
+        return $text;
     }
 }
 
@@ -325,5 +393,53 @@ if ($ssc_options_store['ssc_settings'] !== $expectedSettings) {
 
 if (!is_array($objectImportResult) || !in_array('ssc_settings', $objectImportResult['applied'] ?? [], true)) {
     fwrite(STDERR, "Object payload import should be reported as applied." . PHP_EOL);
+    exit(1);
+}
+
+$ssc_options_store['ssc_active_css'] = 'original-css';
+
+$unknownModulesRequest = new WP_REST_Request(
+    ['modules' => ['totally-unknown']],
+    [
+        'modules' => ['totally-unknown'],
+        'options' => [
+            'ssc_active_css' => 'body { color: red; }',
+        ],
+    ]
+);
+
+$unknownModulesResponse = $routes->importConfig($unknownModulesRequest);
+
+if (!$unknownModulesResponse instanceof WP_REST_Response) {
+    fwrite(STDERR, "Import with unknown modules should return a REST response." . PHP_EOL);
+    exit(1);
+}
+
+if ($unknownModulesResponse->get_status() !== 400) {
+    fwrite(STDERR, "Import with unknown modules should fail with a 400 status." . PHP_EOL);
+    exit(1);
+}
+
+$unknownModulesData = $unknownModulesResponse->get_data();
+
+if (!is_array($unknownModulesData) || ($unknownModulesData['ok'] ?? null) !== false) {
+    fwrite(STDERR, "Import with unknown modules should report failure with ok=false." . PHP_EOL);
+    exit(1);
+}
+
+$expectedMessage = 'No valid Supersede CSS modules were selected for import.';
+
+if (($unknownModulesData['message'] ?? '') !== $expectedMessage) {
+    fwrite(STDERR, "Import with unknown modules should return an explicit error message." . PHP_EOL);
+    exit(1);
+}
+
+if (($unknownModulesData['skipped'] ?? []) !== ['ssc_active_css']) {
+    fwrite(STDERR, "Import with unknown modules should report skipped options." . PHP_EOL);
+    exit(1);
+}
+
+if ($ssc_options_store['ssc_active_css'] !== 'original-css') {
+    fwrite(STDERR, "Import with unknown modules should not change any stored options." . PHP_EOL);
     exit(1);
 }

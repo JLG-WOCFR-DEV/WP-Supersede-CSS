@@ -433,6 +433,15 @@ final class Routes {
         }
         unset($value);
         $modules = $this->normalizeModules($request->get_param('modules'));
+
+        if ($modules === []) {
+            return new \WP_Error(
+                'ssc_export_config_invalid_modules',
+                __('No valid Supersede CSS modules were selected for export.', 'supersede-css-jlg'),
+                ['status' => 400]
+            );
+        }
+
         $options = $this->filterOptionsByModules($options, $modules);
 
         return new \WP_REST_Response($options, 200);
@@ -472,10 +481,20 @@ final class Routes {
             ], 400);
         }
 
-        $originalOptionKeys = array_keys($options);
+        $originalOptionKeys = array_map(static fn($key): string => (string) $key, array_keys($options));
+
+        if ($modules === []) {
+            return new \WP_REST_Response([
+                'ok' => false,
+                'message' => __('No valid Supersede CSS modules were selected for import.', 'supersede-css-jlg'),
+                'applied' => [],
+                'skipped' => array_values($originalOptionKeys),
+            ], 400);
+        }
+
         $options = $this->filterOptionsByModules($options, $modules);
         $filteredOut = array_values(array_diff(
-            array_map(static fn($key): string => (string) $key, $originalOptionKeys),
+            $originalOptionKeys,
             array_map(static fn($key): string => (string) $key, array_keys($options))
         ));
 
@@ -484,7 +503,7 @@ final class Routes {
                 'ok' => false,
                 'message' => __('The selected modules do not contain any importable Supersede CSS options.', 'supersede-css-jlg'),
                 'applied' => [],
-                'skipped' => array_values(array_map(static fn($key): string => (string) $key, $originalOptionKeys)),
+                'skipped' => array_values($originalOptionKeys),
             ], 400);
         }
 
@@ -573,7 +592,7 @@ final class Routes {
         $normalized = array_values(array_unique($normalized));
 
         if ($normalized === []) {
-            return $allModules;
+            return [];
         }
 
         return $normalized;
@@ -586,6 +605,10 @@ final class Routes {
      */
     private function filterOptionsByModules(array $options, array $modules): array
     {
+        if ($modules === []) {
+            return [];
+        }
+
         if (!$this->shouldFilterModules($modules)) {
             return $options;
         }
@@ -623,6 +646,10 @@ final class Routes {
      */
     private function shouldFilterModules(array $modules): bool
     {
+        if ($modules === []) {
+            return true;
+        }
+
         return count($modules) < count(self::CONFIG_MODULES);
     }
 
