@@ -552,78 +552,260 @@ final class CssSanitizer
 
     private static function sanitizeImports(string $css): string
     {
-        $clean = (string) \preg_replace_callback('/@import\s+([^;]+);?/i', static function(array $matches): string {
-            $body = trim($matches[1]);
-            if ($body === '') {
+        if ($css === '') {
+            return '';
+        }
+
+        $length = strlen($css);
+        $result = '';
+        $lastCopyPosition = 0;
+        $index = 0;
+        $inSingleQuote = false;
+        $inDoubleQuote = false;
+        $inComment = false;
+        $escaped = false;
+
+        while ($index < $length) {
+            $character = $css[$index];
+
+            if ($inComment) {
+                if ($character === '*' && $index + 1 < $length && $css[$index + 1] === '/') {
+                    $index += 2;
+                    $inComment = false;
+                    continue;
+                }
+
+                $index++;
+                continue;
+            }
+
+            if ($escaped) {
+                $escaped = false;
+                $index++;
+                continue;
+            }
+
+            if ($character === '\\') {
+                $escaped = true;
+                $index++;
+                continue;
+            }
+
+            if ($character === "'" && !$inDoubleQuote) {
+                $inSingleQuote = !$inSingleQuote;
+                $index++;
+                continue;
+            }
+
+            if ($character === '"' && !$inSingleQuote) {
+                $inDoubleQuote = !$inDoubleQuote;
+                $index++;
+                continue;
+            }
+
+            if (!$inSingleQuote && !$inDoubleQuote) {
+                if ($character === '/' && $index + 1 < $length && $css[$index + 1] === '*') {
+                    $inComment = true;
+                    $index += 2;
+                    continue;
+                }
+
+                if ($character === '@' && $index + 7 <= $length && strncasecmp(substr($css, $index, 7), '@import', 7) === 0) {
+                    $afterIndex = $index + 7;
+                    $afterChar = $afterIndex < $length ? $css[$afterIndex] : '';
+
+                    if ($afterChar !== '' && preg_match('/[A-Za-z0-9_-]/', $afterChar)) {
+                        $index++;
+                        continue;
+                    }
+
+                    $bodyStart = $afterIndex;
+                    $scan = $bodyStart;
+                    $parenDepth = 0;
+                    $ruleInSingleQuote = false;
+                    $ruleInDoubleQuote = false;
+                    $ruleInComment = false;
+                    $ruleEscaped = false;
+
+                    while ($scan < $length) {
+                        $scanChar = $css[$scan];
+
+                        if ($ruleInComment) {
+                            if ($scanChar === '*' && $scan + 1 < $length && $css[$scan + 1] === '/') {
+                                $scan += 2;
+                                $ruleInComment = false;
+                                continue;
+                            }
+
+                            $scan++;
+                            continue;
+                        }
+
+                        if ($ruleEscaped) {
+                            $ruleEscaped = false;
+                            $scan++;
+                            continue;
+                        }
+
+                        if ($scanChar === '\\') {
+                            $ruleEscaped = true;
+                            $scan++;
+                            continue;
+                        }
+
+                        if ($scanChar === "'" && !$ruleInDoubleQuote) {
+                            $ruleInSingleQuote = !$ruleInSingleQuote;
+                            $scan++;
+                            continue;
+                        }
+
+                        if ($scanChar === '"' && !$ruleInSingleQuote) {
+                            $ruleInDoubleQuote = !$ruleInDoubleQuote;
+                            $scan++;
+                            continue;
+                        }
+
+                        if ($ruleInSingleQuote || $ruleInDoubleQuote) {
+                            $scan++;
+                            continue;
+                        }
+
+                        if ($scanChar === '/' && $scan + 1 < $length && $css[$scan + 1] === '*') {
+                            $ruleInComment = true;
+                            $scan += 2;
+                            continue;
+                        }
+
+                        if ($scanChar === '(') {
+                            $parenDepth++;
+                            $scan++;
+                            continue;
+                        }
+
+                        if ($scanChar === ')') {
+                            if ($parenDepth > 0) {
+                                $parenDepth--;
+                            }
+                            $scan++;
+                            continue;
+                        }
+
+                        if ($scanChar === ';' && $parenDepth === 0) {
+                            break;
+                        }
+
+                        $scan++;
+                    }
+
+                    $hasSemicolon = false;
+                    if ($scan < $length && $css[$scan] === ';') {
+                        $hasSemicolon = true;
+                        $scan++;
+                    }
+
+                    $ruleEnd = $scan;
+                    $bodyEnd = $hasSemicolon ? $ruleEnd - 1 : $ruleEnd;
+                    $body = substr($css, $bodyStart, $bodyEnd - $bodyStart);
+
+                    $sanitizedRule = self::sanitizeImportBody($body);
+
+                    $result .= substr($css, $lastCopyPosition, $index - $lastCopyPosition);
+
+                    if ($sanitizedRule !== '') {
+                        $result .= $sanitizedRule;
+                    }
+
+                    $lastCopyPosition = $ruleEnd;
+                    $index = $ruleEnd;
+                    $inSingleQuote = false;
+                    $inDoubleQuote = false;
+                    $escaped = false;
+                    $inComment = false;
+
+                    continue;
+                }
+            }
+
+            $index++;
+        }
+
+        if ($lastCopyPosition < $length) {
+            $result .= substr($css, $lastCopyPosition);
+        }
+
+        return self::removeSanitizerTokens($result);
+    }
+
+    private static function sanitizeImportBody(string $body): string
+    {
+        $body = trim($body);
+        if ($body === '') {
+            return '';
+        }
+
+        $quote = '';
+        $rawUrl = '';
+        $qualifiers = '';
+
+        if (stripos($body, 'url(') === 0) {
+            if (!\preg_match('/^url\((?P<content>.*?)\)(?P<qualifiers>.*)$/i', $body, $parts)) {
                 return '';
             }
 
-            $quote = '';
-            $rawUrl = '';
-            $qualifiers = '';
+            $urlContent = trim($parts['content']);
+            $qualifiers = $parts['qualifiers'] ?? '';
 
-            if (stripos($body, 'url(') === 0) {
-                if (!\preg_match('/^url\((?P<content>.*?)\)(?P<qualifiers>.*)$/i', $body, $parts)) {
-                    return '';
-                }
-
-                $urlContent = trim($parts['content']);
-                $qualifiers = $parts['qualifiers'] ?? '';
-
-                if ($urlContent !== '' && (substr($urlContent, 0, 1) === '"' || substr($urlContent, 0, 1) === "'")) {
-                    $quote = substr($urlContent, 0, 1);
-                    $urlContent = trim($urlContent, "\"'");
-                }
-
-                $rawUrl = $urlContent;
-            } else {
-                $parts = \preg_split('/\s+/', $body, 2);
-                if (empty($parts)) {
-                    return '';
-                }
-
-                $urlPart = trim($parts[0]);
-                if ($urlPart === '') {
-                    return '';
-                }
-
-                if (substr($urlPart, 0, 1) === '"' || substr($urlPart, 0, 1) === "'") {
-                    $quote = substr($urlPart, 0, 1);
-                    $urlPart = trim($urlPart, "\"'");
-                }
-
-                $rawUrl = $urlPart;
-                $qualifiers = $parts[1] ?? '';
+            if ($urlContent !== '' && (substr($urlContent, 0, 1) === '"' || substr($urlContent, 0, 1) === "'")) {
+                $quote = substr($urlContent, 0, 1);
+                $urlContent = trim($urlContent, "\"'");
             }
 
-            $rawUrl = trim($rawUrl);
-            if ($rawUrl === '') {
+            $rawUrl = $urlContent;
+        } else {
+            $parts = \preg_split('/\s+/', $body, 2);
+            if (empty($parts)) {
                 return '';
             }
 
-            $sanitizedUrl = trim(\wp_kses_bad_protocol($rawUrl, \wp_allowed_protocols()));
-            if ($sanitizedUrl === '' || \preg_match('/^(?:javascript|vbscript)/i', $sanitizedUrl)) {
+            $urlPart = trim($parts[0]);
+            if ($urlPart === '') {
                 return '';
             }
 
-            $url = $quote !== '' ? $quote . $sanitizedUrl . $quote : $sanitizedUrl;
-
-            $qualifiers = is_string($qualifiers) ? trim($qualifiers) : '';
-            if ($qualifiers !== '') {
-                $qualifiers = \wp_kses($qualifiers, []);
-                $qualifiers = (string) \preg_replace('/[{};]/', '', $qualifiers);
-                $qualifiers = trim($qualifiers);
+            if (substr($urlPart, 0, 1) === '"' || substr($urlPart, 0, 1) === "'") {
+                $quote = substr($urlPart, 0, 1);
+                $urlPart = trim($urlPart, "\"'");
             }
 
-            $result = '@import url(' . $url . ')';
-            if ($qualifiers !== '') {
-                $result .= ' ' . $qualifiers;
-            }
+            $rawUrl = $urlPart;
+            $qualifiers = $parts[1] ?? '';
+        }
 
-            return $result . ';';
-        }, $css);
+        $rawUrl = trim($rawUrl);
+        if ($rawUrl === '') {
+            return '';
+        }
 
-        return self::removeSanitizerTokens($clean);
+        $sanitizedUrl = trim(\wp_kses_bad_protocol($rawUrl, \wp_allowed_protocols()));
+        if ($sanitizedUrl === '' || \preg_match('/^(?:javascript|vbscript)/i', $sanitizedUrl)) {
+            return '';
+        }
+
+        $url = $quote !== '' ? $quote . $sanitizedUrl . $quote : $sanitizedUrl;
+
+        $qualifiers = is_string($qualifiers) ? trim($qualifiers) : '';
+        if ($qualifiers !== '') {
+            $qualifiers = \wp_kses($qualifiers, []);
+            $qualifiers = (string) \preg_replace('/[{};]/', '', $qualifiers);
+            $qualifiers = trim($qualifiers);
+        }
+
+        $result = '@import url(' . $url . ')';
+        if ($qualifiers !== '') {
+            $result .= ' ' . $qualifiers;
+        }
+
+        return $result . ';';
     }
 
     private static function sanitizeUrls(string $css): string
