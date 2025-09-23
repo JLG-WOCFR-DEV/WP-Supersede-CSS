@@ -954,12 +954,24 @@ final class CssSanitizer
 
                 if ($sanitizedToken !== '') {
                     $result .= $sanitizedToken;
+                    $offset = $cursor + 1;
                 } else {
                     $result = rtrim($result);
                     $result = preg_replace('/,\s*$/', '', $result);
+
+                    $offset = $cursor + 1;
+                    while ($offset < $length && ctype_space($css[$offset])) {
+                        $offset++;
+                    }
+
+                    if ($offset < $length && $css[$offset] === ',') {
+                        $offset++;
+                        while ($offset < $length && ctype_space($css[$offset])) {
+                            $offset++;
+                        }
+                    }
                 }
 
-                $offset = $cursor + 1;
                 $index = $offset;
                 $escaped = false;
                 continue;

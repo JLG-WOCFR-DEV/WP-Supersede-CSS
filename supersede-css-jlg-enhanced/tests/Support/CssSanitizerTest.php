@@ -104,6 +104,17 @@ assertSameResult(
 assertNotContains('javascript', $sanitizedFontFace, 'Dangerous javascript URLs should be stripped from font-face declarations.');
 assertNotContains(',;', $sanitizedFontFace, 'Sanitized font-face declarations should not contain trailing comma-semicolon sequences.');
 
+$multiBackgroundCss = "body { background-image: url('javascript:alert(1)'), url('https://example.com/safe.png'), url('data:image/png;base64,AAAA'); }";
+$sanitizedMultiBackground = CssSanitizer::sanitize($multiBackgroundCss);
+
+assertSameResult(
+    "body {background-image:url('https://example.com/safe.png'), url('data:image/png;base64,AAAA')}",
+    $sanitizedMultiBackground,
+    'Background images with multiple URLs should drop rejected entries without leaving stray commas.'
+);
+
+assertNotContains('javascript:alert(1)', $sanitizedMultiBackground, 'Rejected background-image URLs should not remain in the sanitized output.');
+
 $mediaCss = '@media screen and (min-width: 600px) { .foo { color: red; behavior: url(http://evil); } }';
 $sanitizedMedia = CssSanitizer::sanitize($mediaCss);
 
