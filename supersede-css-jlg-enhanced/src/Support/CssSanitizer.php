@@ -619,6 +619,7 @@ final class CssSanitizer
                         continue;
                     }
 
+                    $ruleStart = $index;
                     $bodyStart = $afterIndex;
                     $scan = $bodyStart;
                     $parenDepth = 0;
@@ -626,6 +627,8 @@ final class CssSanitizer
                     $ruleInDoubleQuote = false;
                     $ruleInComment = false;
                     $ruleEscaped = false;
+                    $terminator = null;
+                    $contentEnd = $length;
 
                     while ($scan < $length) {
                         $scanChar = $css[$scan];
@@ -690,38 +693,51 @@ final class CssSanitizer
                             continue;
                         }
 
-                        if ($scanChar === '{' && $parenDepth === 0) {
-                            break;
-                        }
+                        if ($parenDepth === 0) {
+                            if ($scanChar === ';') {
+                                $terminator = 'semicolon';
+                                $contentEnd = $scan;
+                                $scan++;
+                                break;
+                            }
 
-                        if ($scanChar === ';' && $parenDepth === 0) {
-                            break;
+                            if ($scanChar === '{') {
+                                $terminator = 'brace';
+                                $contentEnd = $scan;
+                                break;
+                            }
+
+                            if ($scanChar === '@') {
+                                $terminator = 'at';
+                                $contentEnd = $scan;
+                                break;
+                            }
+
+                            if ($scanChar === "\n" || $scanChar === "\r") {
+                                $terminator = 'newline';
+                                $contentEnd = $scan;
+                                break;
+                            }
                         }
 
                         $scan++;
                     }
 
-                    $hasSemicolon = false;
-                    if ($scan < $length && $css[$scan] === ';') {
-                        $hasSemicolon = true;
-                        $scan++;
-                    }
-
-                    if (!$hasSemicolon) {
-                        $index++;
-                        continue;
+                    if ($scan >= $length && $terminator === null) {
+                        $terminator = 'eof';
+                        $contentEnd = $length;
                     }
 
                     $ruleEnd = $scan;
-                    $bodyEnd = $ruleEnd - 1;
-                    $body = substr($css, $bodyStart, $bodyEnd - $bodyStart);
+                    $result .= substr($css, $lastCopyPosition, $ruleStart - $lastCopyPosition);
 
-                    $sanitizedRule = self::sanitizeImportBody($body);
+                    if ($terminator === 'semicolon') {
+                        $body = substr($css, $bodyStart, max(0, $contentEnd - $bodyStart));
+                        $sanitizedRule = self::sanitizeImportBody($body);
 
-                    $result .= substr($css, $lastCopyPosition, $index - $lastCopyPosition);
-
-                    if ($sanitizedRule !== '') {
-                        $result .= $sanitizedRule;
+                        if ($sanitizedRule !== '') {
+                            $result .= $sanitizedRule;
+                        }
                     }
 
                     $lastCopyPosition = $ruleEnd;
@@ -762,7 +778,7 @@ final class CssSanitizer
             }
 
             $urlContent = trim($parts['content']);
-            $qualifiers = $parts['qualifiers'] ?? '';
+            $qualifiersCandidate = $parts['qualifiers'] ?? '';
 
             if ($urlContent !== '' && (substr($urlContent, 0, 1) === '"' || substr($urlContent, 0, 1) === "'")) {
                 $quote = substr($urlContent, 0, 1);
@@ -770,6 +786,7 @@ final class CssSanitizer
             }
 
             $rawUrl = $urlContent;
+            $qualifiers = is_string($qualifiersCandidate) ? $qualifiersCandidate : '';
         } else {
             $parts = \preg_split('/\s+/', $body, 2);
             if (empty($parts)) {
@@ -802,16 +819,19 @@ final class CssSanitizer
 
         $url = $quote !== '' ? $quote . $sanitizedUrl . $quote : $sanitizedUrl;
 
-        $qualifiers = is_string($qualifiers) ? trim($qualifiers) : '';
-        if ($qualifiers !== '') {
-            $qualifiers = \wp_kses($qualifiers, []);
-            $qualifiers = (string) \preg_replace('/[{};]/', '', $qualifiers);
+        $sanitizedQualifiers = '';
+        if (is_string($qualifiers)) {
             $qualifiers = trim($qualifiers);
+            if ($qualifiers !== '') {
+                $qualifiers = \wp_kses($qualifiers, []);
+                $qualifiers = (string) \preg_replace('/[{};]/', '', $qualifiers);
+                $sanitizedQualifiers = trim($qualifiers);
+            }
         }
 
         $result = '@import url(' . $url . ')';
-        if ($qualifiers !== '') {
-            $result .= ' ' . $qualifiers;
+        if ($sanitizedQualifiers !== '') {
+            $result .= ' ' . $sanitizedQualifiers;
         }
 
         return $result . ';';
