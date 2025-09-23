@@ -24,6 +24,56 @@ final class Routes {
         'ssc_safe_mode' => 'sanitizeImportBoolean',
     ];
 
+    /**
+     * @var array<string, array{label: string, options: list<string>}>
+     */
+    private const CONFIG_MODULES = [
+        'css' => [
+            'label' => 'CSS actif & variantes responsives',
+            'options' => [
+                'ssc_active_css',
+                'ssc_css_desktop',
+                'ssc_css_tablet',
+                'ssc_css_mobile',
+            ],
+        ],
+        'tokens' => [
+            'label' => 'Design Tokens',
+            'options' => [
+                'ssc_tokens_css',
+                'ssc_tokens_registry',
+            ],
+        ],
+        'presets' => [
+            'label' => 'Presets & collections',
+            'options' => [
+                'ssc_presets',
+            ],
+        ],
+        'avatar' => [
+            'label' => 'Presets Avatar Glow',
+            'options' => [
+                'ssc_avatar_glow_presets',
+            ],
+        ],
+        'settings' => [
+            'label' => 'Paramètres généraux',
+            'options' => [
+                'ssc_settings',
+                'ssc_modules_enabled',
+                'ssc_optimization_settings',
+                'ssc_secret',
+                'ssc_safe_mode',
+            ],
+        ],
+        'logs' => [
+            'label' => "Journal d'administration",
+            'options' => [
+                'ssc_admin_log',
+            ],
+        ],
+    ];
+
     public function __construct() {
         add_action('rest_api_init', [$this, 'register']);
     }
@@ -338,7 +388,7 @@ final class Routes {
     /**
      * @return \WP_REST_Response|\WP_Error
      */
-    public function exportConfig() {
+    public function exportConfig(\WP_REST_Request $request) {
         global $wpdb;
         $options = [];
         $like_pattern = $wpdb->esc_like('ssc_') . '%';
@@ -382,6 +432,9 @@ final class Routes {
             });
         }
         unset($value);
+        $modules = $this->normalizeModules($request->get_param('modules'));
+        $options = $this->filterOptionsByModules($options, $modules);
+
         return new \WP_REST_Response($options, 200);
     }
 
@@ -407,6 +460,7 @@ final class Routes {
             ], 400);
         }
 
+        $modules = $this->normalizeModules($json['modules'] ?? $request->get_param('modules'));
         $options = $json['options'] ?? $json;
 
         if (!is_array($options)) {
@@ -418,7 +472,27 @@ final class Routes {
             ], 400);
         }
 
+        $originalOptionKeys = array_keys($options);
+        $options = $this->filterOptionsByModules($options, $modules);
+        $filteredOut = array_values(array_diff(
+            array_map(static fn($key): string => (string) $key, $originalOptionKeys),
+            array_map(static fn($key): string => (string) $key, array_keys($options))
+        ));
+
+        if ($options === []) {
+            return new \WP_REST_Response([
+                'ok' => false,
+                'message' => __('The selected modules do not contain any importable Supersede CSS options.', 'supersede-css-jlg'),
+                'applied' => [],
+                'skipped' => array_values(array_map(static fn($key): string => (string) $key, $originalOptionKeys)),
+            ], 400);
+        }
+
         $result = $this->applyImportedOptions($options);
+
+        if ($filteredOut !== []) {
+            $result['skipped'] = array_values(array_unique(array_merge($result['skipped'], $filteredOut)));
+        }
 
         if (empty($result['applied'])) {
             return new \WP_REST_Response([
@@ -441,6 +515,115 @@ final class Routes {
             'applied' => $result['applied'],
             'skipped' => $result['skipped'],
         ], 200);
+    }
+
+    /**
+     * @return array<string, array{label: string, options: list<string>}>
+     */
+    public static function getConfigModules(): array
+    {
+        $modules = self::CONFIG_MODULES;
+
+        foreach ($modules as &$module) {
+            $module['label'] = __($module['label'], 'supersede-css-jlg');
+        }
+        unset($module);
+
+        return $modules;
+    }
+
+    /**
+     * @param mixed $raw
+     * @return list<string>
+     */
+    private function normalizeModules($raw): array
+    {
+        $allModules = array_keys(self::CONFIG_MODULES);
+
+        if ($raw === null) {
+            return $allModules;
+        }
+
+        if (is_string($raw)) {
+            $raw = [$raw];
+        }
+
+        if (!is_array($raw)) {
+            return $allModules;
+        }
+
+        $normalized = [];
+
+        foreach ($raw as $module) {
+            if (!is_string($module)) {
+                continue;
+            }
+
+            $key = sanitize_key($module);
+
+            if ($key === 'all') {
+                return $allModules;
+            }
+
+            if (isset(self::CONFIG_MODULES[$key])) {
+                $normalized[] = $key;
+            }
+        }
+
+        $normalized = array_values(array_unique($normalized));
+
+        if ($normalized === []) {
+            return $allModules;
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     * @param list<string> $modules
+     * @return array<string, mixed>
+     */
+    private function filterOptionsByModules(array $options, array $modules): array
+    {
+        if (!$this->shouldFilterModules($modules)) {
+            return $options;
+        }
+
+        $allowedOptions = $this->getModuleOptionWhitelist($modules);
+
+        if ($allowedOptions === []) {
+            return [];
+        }
+
+        $allowedKeys = array_flip($allowedOptions);
+
+        return array_intersect_key($options, $allowedKeys);
+    }
+
+    /**
+     * @param list<string> $modules
+     * @return list<string>
+     */
+    private function getModuleOptionWhitelist(array $modules): array
+    {
+        $options = [];
+
+        foreach ($modules as $module) {
+            foreach (self::CONFIG_MODULES[$module]['options'] as $optionName) {
+                $options[$optionName] = true;
+            }
+        }
+
+        return array_keys($options);
+    }
+
+    /**
+     * @param list<string> $modules
+     */
+    private function shouldFilterModules(array $modules): bool
+    {
+        return count($modules) < count(self::CONFIG_MODULES);
     }
 
     /**

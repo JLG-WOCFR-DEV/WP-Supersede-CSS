@@ -14,16 +14,51 @@
         if (!$('#ssc-export-config').length) return;
 
         // --- EXPORTATION ---
+        const moduleCheckboxes = $('input[name="ssc-modules[]"]');
+
+        function getSelectedModules() {
+            return moduleCheckboxes
+                .filter(':checked')
+                .map((_, el) => el.value)
+                .get()
+                .filter(Boolean);
+        }
+
+        function ensureModulesSelected(context) {
+            const modules = getSelectedModules();
+            if (modules.length > 0) {
+                return modules;
+            }
+
+            const message = context === 'import'
+                ? 'Veuillez sélectionner au moins un ensemble à importer.'
+                : 'Veuillez sélectionner au moins un ensemble à exporter.';
+
+            if (typeof window.sscToast === 'function' && context !== 'import') {
+                window.sscToast(message);
+            }
+
+            if (context === 'import') {
+                handleImportError(message);
+            }
+
+            return [];
+        }
 
         // Exporter la configuration complète (.json)
         $('#ssc-export-config').on('click', function() {
             const btn = $(this);
+            const modules = ensureModulesSelected('export');
+            if (!modules.length) {
+                return;
+            }
+
             btn.text('Exportation...').prop('disabled', true);
 
             $.ajax({
                 url: SSC.rest.root + 'export-config',
                 method: 'GET',
-                data: { _wpnonce: SSC.rest.nonce },
+                data: { _wpnonce: SSC.rest.nonce, modules },
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
             }).done(response => {
                 const jsonContent = JSON.stringify(response, null, 2);
@@ -85,6 +120,11 @@
         }
 
         importBtn.on('click', function() {
+            const modules = ensureModulesSelected('import');
+            if (!modules.length) {
+                return;
+            }
+
             const file = importInput[0]?.files?.[0];
             if (!file) {
                 handleImportError('Veuillez sélectionner un fichier JSON à importer.');
@@ -114,7 +154,7 @@
                     url: SSC.rest.root + 'import-config',
                     method: 'POST',
                     contentType: 'application/json',
-                    data: JSON.stringify({ options: parsed, _wpnonce: SSC.rest.nonce }),
+                    data: JSON.stringify({ options: parsed, modules, _wpnonce: SSC.rest.nonce }),
                     beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
                 }).done(response => {
                     const applied = Array.isArray(response.applied) ? response.applied.length : 0;
