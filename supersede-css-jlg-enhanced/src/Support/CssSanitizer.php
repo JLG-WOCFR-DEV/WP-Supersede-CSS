@@ -690,6 +690,10 @@ final class CssSanitizer
                             continue;
                         }
 
+                        if ($scanChar === '{' && $parenDepth === 0) {
+                            break;
+                        }
+
                         if ($scanChar === ';' && $parenDepth === 0) {
                             break;
                         }
@@ -703,8 +707,13 @@ final class CssSanitizer
                         $scan++;
                     }
 
+                    if (!$hasSemicolon) {
+                        $index++;
+                        continue;
+                    }
+
                     $ruleEnd = $scan;
-                    $bodyEnd = $hasSemicolon ? $ruleEnd - 1 : $ruleEnd;
+                    $bodyEnd = $ruleEnd - 1;
                     $body = substr($css, $bodyStart, $bodyEnd - $bodyStart);
 
                     $sanitizedRule = self::sanitizeImportBody($body);

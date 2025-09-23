@@ -258,4 +258,13 @@ assertSameResult(
     'Custom property values containing @import should remain untouched by the import sanitizer.'
 );
 
+$cssWithDanglingImport = '@import url("https://example.com/style.css")' . PHP_EOL . 'body { color: red; }';
+$sanitizedDanglingImport = CssSanitizer::sanitize($cssWithDanglingImport);
+
+assertSameResult(
+    '@import url("https://example.com/style.css")' . PHP_EOL . 'body {color:red}',
+    $sanitizedDanglingImport,
+    'Body rules following an @import without semicolon should remain intact after sanitation.'
+);
+
 echo "All CssSanitizer tests passed." . PHP_EOL;
