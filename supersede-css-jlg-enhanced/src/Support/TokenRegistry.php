@@ -37,10 +37,22 @@ final class TokenRegistry
 
         if ($stored !== self::REGISTRY_NOT_FOUND && is_array($stored)) {
             $normalized = self::normalizeRegistry($stored);
+            $shouldPersistCss = false;
+
             if ($stored !== $normalized) {
                 update_option(self::OPTION_REGISTRY, $normalized, false);
+                $shouldPersistCss = true;
             }
-            self::persistCss($normalized);
+
+            $existingCss = get_option(self::OPTION_CSS, null);
+            if (!is_string($existingCss) || trim($existingCss) === '') {
+                $shouldPersistCss = true;
+            }
+
+            if ($shouldPersistCss) {
+                self::persistCss($normalized);
+            }
+
             return $normalized;
         }
 
@@ -91,7 +103,12 @@ final class TokenRegistry
     public static function saveRegistry(array $tokens): array
     {
         $normalized = self::normalizeRegistry($tokens);
-        update_option(self::OPTION_REGISTRY, $normalized, false);
+
+        $stored = get_option(self::OPTION_REGISTRY, null);
+        if (!is_array($stored) || $stored !== $normalized) {
+            update_option(self::OPTION_REGISTRY, $normalized, false);
+        }
+
         self::persistCss($normalized);
 
         return $normalized;
