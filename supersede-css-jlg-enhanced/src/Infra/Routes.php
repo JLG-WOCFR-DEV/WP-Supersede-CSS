@@ -191,18 +191,28 @@ final class Routes {
                 'mobile' => ['param' => 'css_mobile', 'option' => 'ssc_css_mobile'],
             ];
 
+            $pendingUpdates = [];
+
             foreach ($segments_config as $key => $config) {
                 $raw_value = $request->get_param($config['param']);
                 if ($raw_value !== null) {
                     $segment_payload = true;
+                    if (!is_string($raw_value)) {
+                        return new \WP_REST_Response(['ok' => false, 'message' => 'Invalid CSS segment.'], 400);
+                    }
+
                     $sanitized_value = $this->sanitizeCssSegment($raw_value);
-                    update_option($config['option'], $sanitized_value, false);
+                    $pendingUpdates[$config['option']] = $sanitized_value;
                     $sanitized_segments[$key] = $sanitized_value;
                 } else {
                     $existing_value = get_option($config['option'], '');
                     $existing_value = is_string($existing_value) ? $existing_value : '';
                     $sanitized_segments[$key] = CssSanitizer::sanitize($existing_value);
                 }
+            }
+
+            foreach ($pendingUpdates as $option => $value) {
+                update_option($option, $value, false);
             }
         }
 
