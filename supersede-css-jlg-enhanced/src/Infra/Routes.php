@@ -692,6 +692,17 @@ final class Routes {
                 continue;
             }
 
+            if ($optionName === 'ssc_tokens_registry') {
+                if (!is_array($sanitizedValue)) {
+                    $skipped[] = $optionName;
+                    continue;
+                }
+
+                TokenRegistry::saveRegistry($sanitizedValue);
+                $applied[] = $optionName;
+                continue;
+            }
+
             update_option($optionName, $sanitizedValue, false);
             $applied[] = $optionName;
         }
@@ -724,7 +735,7 @@ final class Routes {
             return null;
         }
 
-        return TokenRegistry::saveRegistry($value);
+        return TokenRegistry::normalizeRegistry($value);
     }
 
     /**

@@ -103,6 +103,13 @@ if (!function_exists('wp_json_encode')) {
     }
 }
 
+if (!function_exists('wp_check_invalid_utf8')) {
+    function wp_check_invalid_utf8($string)
+    {
+        return trim(strip_tags((string) $string));
+    }
+}
+
 if (!function_exists('__')) {
     function __(string $text, string $domain = ''): string
     {
@@ -322,6 +329,76 @@ if ($storedCss !== $expectedStoredCss) {
     exit(1);
 }
 
+$sanitizeTokensMethod = $routesReflection->getMethod('sanitizeImportTokens');
+$sanitizeTokensMethod->setAccessible(true);
+
+$ssc_options_store['ssc_tokens_css'] = '__original_css__';
+$ssc_options_store['ssc_tokens_registry'] = '__original_registry__';
+
+$rawRegistryPayload = [
+    [
+        'name' => 'Primary Color',
+        'value' => '#FFFFFF',
+        'type' => 'color',
+        'description' => '<strong>Important</strong>',
+        'group' => 'Colors',
+    ],
+    [
+        'name' => '',
+        'value' => 'should-be-ignored',
+        'type' => 'text',
+        'description' => 'Unused',
+        'group' => '',
+    ],
+];
+
+$sanitizedRegistryPayload = $sanitizeTokensMethod->invoke($routes, $rawRegistryPayload);
+
+if (!is_array($sanitizedRegistryPayload) || count($sanitizedRegistryPayload) !== 1) {
+    fwrite(STDERR, "Token registry imports should normalize entries without persisting side effects." . PHP_EOL);
+    exit(1);
+}
+
+if ($ssc_options_store['ssc_tokens_registry'] !== '__original_registry__' || $ssc_options_store['ssc_tokens_css'] !== '__original_css__') {
+    fwrite(STDERR, "Sanitizing token registry imports should not modify stored options before apply." . PHP_EOL);
+    exit(1);
+}
+
+$registryImportResult = $applyMethod->invoke($routes, [
+    'ssc_tokens_registry' => $rawRegistryPayload,
+]);
+
+if (!is_array($registryImportResult) || !in_array('ssc_tokens_registry', $registryImportResult['applied'] ?? [], true)) {
+    fwrite(STDERR, "Token registry array imports should be reported as applied." . PHP_EOL);
+    exit(1);
+}
+
+$storedRegistryAfterDirectImport = $ssc_options_store['ssc_tokens_registry'];
+
+if (!is_array($storedRegistryAfterDirectImport) || count($storedRegistryAfterDirectImport) !== 1) {
+    fwrite(STDERR, "Direct token registry imports should persist normalized entries." . PHP_EOL);
+    exit(1);
+}
+
+$storedDirectToken = $storedRegistryAfterDirectImport[0];
+
+if ($storedDirectToken['name'] !== '--primary-color' || $storedDirectToken['value'] !== '#FFFFFF') {
+    fwrite(STDERR, "Token registry imports should normalize token names and values." . PHP_EOL);
+    exit(1);
+}
+
+if ($storedDirectToken['group'] !== 'Colors' || $storedDirectToken['description'] !== 'Important') {
+    fwrite(STDERR, "Token registry imports should sanitize metadata fields." . PHP_EOL);
+    exit(1);
+}
+
+$expectedRegistryCss = \SSC\Support\TokenRegistry::tokensToCss($storedRegistryAfterDirectImport);
+
+if ($ssc_options_store['ssc_tokens_css'] !== $expectedRegistryCss) {
+    fwrite(STDERR, "Token registry imports should regenerate the CSS representation once applied." . PHP_EOL);
+    exit(1);
+}
+
 \SSC\Support\TokenRegistry::saveRegistry([
     [
         'name' => '--existing-token',
@@ -388,6 +465,7 @@ $expectedSettings = [
 
 if ($ssc_options_store['ssc_settings'] !== $expectedSettings) {
     fwrite(STDERR, "Object payloads should be sanitized recursively or serialized when needed." . PHP_EOL);
+    fwrite(STDERR, 'Actual settings: ' . json_encode($ssc_options_store['ssc_settings']) . PHP_EOL);
     exit(1);
 }
 
