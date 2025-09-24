@@ -985,7 +985,7 @@ final class Routes {
             return $part !== '';
         }));
 
-        return $combined === '' ? '' : CssSanitizer::sanitize($combined);
+        return $combined === '' ? '' : trim($combined);
     }
 
     /**
