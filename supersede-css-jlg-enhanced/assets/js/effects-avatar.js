@@ -2,7 +2,21 @@
     let presets = {};
     let activePresetId = null;
     // **LA CORRECTION EST SUR LA LIGNE CI-DESSOUS**
-    let defaultAvatarUrl = typeof SSC !== 'undefined' ? SSC.pluginUrl + 'assets/images/placeholder-avatar.png' : '';
+    const ensureTrailingSlash = (url) => url.endsWith('/') ? url : url + '/';
+    function resolveDefaultAvatarUrl() {
+        const previewImg = document.getElementById('ssc-glow-preview-img');
+        if (previewImg && previewImg.getAttribute('src')) {
+            return previewImg.getAttribute('src');
+        }
+
+        if (typeof SSC !== 'undefined' && SSC && typeof SSC.pluginUrl === 'string' && SSC.pluginUrl.length) {
+            return ensureTrailingSlash(SSC.pluginUrl) + 'assets/images/placeholder-avatar.png';
+        }
+
+        return '';
+    }
+
+    const defaultAvatarUrl = resolveDefaultAvatarUrl();
     let currentAvatarUrl = defaultAvatarUrl;
 
     // Charger les presets depuis la base de données
