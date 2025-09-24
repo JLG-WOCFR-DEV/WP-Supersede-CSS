@@ -1,11 +1,14 @@
 (function($) {
     let presets = {};
     let activePresetId = null;
-    // **LA CORRECTION EST SUR LA LIGNE CI-DESSOUS**
+    const placeholderAssetPath = 'assets/images/placeholder-avatar.png';
     let defaultAvatarUrl = '';
-    if (typeof SSC !== 'undefined' && SSC && typeof SSC.pluginUrl === 'string') {
+
+    if (typeof window.sscPluginAssetUrl === 'function') {
+        defaultAvatarUrl = window.sscPluginAssetUrl(placeholderAssetPath);
+    } else if (typeof SSC !== 'undefined' && SSC && typeof SSC.pluginUrl === 'string') {
         const pluginUrl = SSC.pluginUrl.endsWith('/') ? SSC.pluginUrl : SSC.pluginUrl + '/';
-        defaultAvatarUrl = pluginUrl + 'assets/images/placeholder-avatar.png';
+        defaultAvatarUrl = pluginUrl + placeholderAssetPath;
     }
     let currentAvatarUrl = defaultAvatarUrl;
 
