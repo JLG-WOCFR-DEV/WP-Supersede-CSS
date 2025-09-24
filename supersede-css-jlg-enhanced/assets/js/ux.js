@@ -7,6 +7,22 @@
         setTimeout(() => toast.remove(), 3000);
     };
 
+    // --- Plugin Asset URL Helper ---
+    window.sscPluginAssetUrl = function(relativePath) {
+        if (typeof relativePath !== 'string' || relativePath.trim() === '') {
+            return '';
+        }
+
+        const sanitizedPath = relativePath.replace(/^\/+/, '');
+
+        if (typeof SSC === 'undefined' || !SSC || typeof SSC.pluginUrl !== 'string') {
+            return sanitizedPath;
+        }
+
+        const baseUrl = SSC.pluginUrl.endsWith('/') ? SSC.pluginUrl : SSC.pluginUrl + '/';
+        return baseUrl + sanitizedPath;
+    };
+
     // --- Clipboard Helper ---
     window.sscCopyToClipboard = function(text, {
         successMessage = 'Texte copié !',
