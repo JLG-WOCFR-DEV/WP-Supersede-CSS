@@ -910,7 +910,43 @@ final class Routes {
             return '';
         }
 
-        return (string) $value;
+        $value = (string) $value;
+
+        $trimmed = trim($value);
+
+        if ($trimmed !== '' && ($trimmed[0] === '{' || $trimmed[0] === '[')) {
+            $decoded = json_decode($trimmed, true);
+
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $sanitized = $this->sanitizeImportArray($decoded);
+
+                if ($sanitized !== null) {
+                    $jsonOptions = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
+
+                    if (defined('JSON_PARTIAL_OUTPUT_ON_ERROR')) {
+                        $jsonOptions |= JSON_PARTIAL_OUTPUT_ON_ERROR;
+                    }
+
+                    $encoded = function_exists('wp_json_encode')
+                        ? wp_json_encode($sanitized, $jsonOptions)
+                        : json_encode($sanitized, $jsonOptions);
+
+                    if (is_string($encoded)) {
+                        $value = $encoded;
+                    }
+                }
+            }
+        }
+
+        $value = wp_kses($value, []);
+
+        $value = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]+/', '', $value);
+
+        if (!is_string($value)) {
+            $value = '';
+        }
+
+        return trim($value);
     }
 
     /**
