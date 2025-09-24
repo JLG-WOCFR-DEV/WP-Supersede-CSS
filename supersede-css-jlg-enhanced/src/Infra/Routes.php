@@ -754,7 +754,7 @@ final class Routes {
     /**
      * @param mixed $value
      */
-    private function sanitizeImportArray($value): ?array
+    private function sanitizeImportArray($value, int $depth = 0): ?array
     {
         if (!is_array($value)) {
             return null;
@@ -763,13 +763,13 @@ final class Routes {
         $sanitized = [];
 
         foreach ($value as $key => $item) {
-            $sanitizedKey = is_string($key) ? sanitize_key($key) : (string) $key;
-            if ($sanitizedKey === '') {
-                $sanitizedKey = 'key_' . md5((string) $key);
+            $sanitizedKey = $this->sanitizeImportKey($key, $depth);
+            if ($sanitizedKey === null) {
+                continue;
             }
 
             if (is_array($item)) {
-                $nested = $this->sanitizeImportArray($item);
+                $nested = $this->sanitizeImportArray($item, $depth + 1);
                 if ($nested === null) {
                     continue;
                 }
@@ -800,7 +800,7 @@ final class Routes {
             if (is_object($item)) {
                 $objectVars = get_object_vars($item);
                 if (is_array($objectVars) && $objectVars !== []) {
-                    $nested = $this->sanitizeImportArray($objectVars);
+                    $nested = $this->sanitizeImportArray($objectVars, $depth + 1);
                     if ($nested !== null) {
                         $sanitized[$sanitizedKey] = $nested;
                         continue;
@@ -828,6 +828,31 @@ final class Routes {
         }
 
         return $sanitized;
+    }
+
+    /**
+     * @param mixed $key
+     * @return int|string|null
+     */
+    private function sanitizeImportKey($key, int $depth)
+    {
+        if ($depth > 0) {
+            return $key;
+        }
+
+        if (is_string($key)) {
+            $sanitized = sanitize_key($key);
+
+            return $sanitized !== '' ? $sanitized : null;
+        }
+
+        if (is_int($key)) {
+            return $key;
+        }
+
+        $casted = (string) $key;
+
+        return $casted !== '' ? $casted : null;
     }
 
     private function sanitizeImportStringValue(string $value): string
