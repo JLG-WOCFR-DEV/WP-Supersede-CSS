@@ -1,30 +1,10 @@
 (function($) {
     let presets = {};
     let activePresetId = null;
-    const buildPluginAssetUrl = (baseUrl, assetPath) => {
-        if (typeof baseUrl !== 'string' || !baseUrl.length) {
-            return '';
-        }
-
-        const normalizedBase = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
-        const normalizedAsset = typeof assetPath === 'string' ? assetPath.replace(/^\//, '') : '';
-
-        return normalizedBase + normalizedAsset;
-    };
-    function resolveDefaultAvatarUrl() {
-        const previewImg = document.getElementById('ssc-glow-preview-img');
-        if (previewImg && previewImg.getAttribute('src')) {
-            return previewImg.getAttribute('src');
-        }
-
-        if (typeof SSC !== 'undefined' && SSC && typeof SSC.pluginUrl === 'string') {
-            return buildPluginAssetUrl(SSC.pluginUrl, 'assets/images/placeholder-avatar.png');
-        }
-
-        return '';
-    }
-
-    const defaultAvatarUrl = resolveDefaultAvatarUrl();
+    const pluginUrl = (typeof SSC !== 'undefined' && SSC && typeof SSC.pluginUrl === 'string')
+        ? SSC.pluginUrl.replace(/\/?$/, '/')
+        : '';
+    const defaultAvatarUrl = pluginUrl ? pluginUrl + 'assets/images/placeholder-avatar.png' : '';
     let currentAvatarUrl = defaultAvatarUrl;
 
     // Charger les presets depuis la base de données
