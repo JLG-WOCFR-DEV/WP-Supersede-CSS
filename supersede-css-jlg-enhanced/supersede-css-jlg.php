@@ -32,6 +32,37 @@ spl_autoload_register(function($class){
     }
 });
 
+if (!function_exists('ssc_get_cached_css')) {
+    function ssc_get_cached_css(): string
+    {
+        $cached = get_option('ssc_css_cache', false);
+
+        if (is_string($cached)) {
+            return $cached;
+        }
+
+        $css_main = get_option('ssc_active_css', '');
+        $css_tokens = get_option('ssc_tokens_css', '');
+
+        $css_main = is_string($css_main) ? $css_main : '';
+        $css_tokens = is_string($css_tokens) ? $css_tokens : '';
+
+        $css_combined = $css_tokens . "\n" . $css_main;
+        $css_filtered = CssSanitizer::sanitize($css_combined);
+
+        update_option('ssc_css_cache', $css_filtered, false);
+
+        return $css_filtered;
+    }
+}
+
+if (!function_exists('ssc_invalidate_css_cache')) {
+    function ssc_invalidate_css_cache(): void
+    {
+        delete_option('ssc_css_cache');
+    }
+}
+
 add_action('plugins_loaded', function(){
     if (is_admin()) {
         new SSC\Admin\Admin();
@@ -39,15 +70,10 @@ add_action('plugins_loaded', function(){
     if (class_exists('SSC\Infra\Routes')) {
         SSC\Infra\Routes::boot();
     }
-    
+
     add_action('wp_enqueue_scripts', function(){
-        $css_main = get_option('ssc_active_css', '');
-        $css_tokens = get_option('ssc_tokens_css', '');
-        $css_main = is_string($css_main) ? $css_main : '';
-        $css_tokens = is_string($css_tokens) ? $css_tokens : '';
-        $css_combined = $css_tokens . "\n" . $css_main;
-        // Filtre le CSS en s'appuyant sur wp_kses() et safe_style_css() pour neutraliser les injections.
-        $css_filtered = CssSanitizer::sanitize($css_combined);
+        // Récupère le CSS mis en cache, recalculé uniquement après une mise à jour.
+        $css_filtered = ssc_get_cached_css();
 
         if ($css_filtered !== '') {
             wp_register_style('ssc-styles-handle', false);

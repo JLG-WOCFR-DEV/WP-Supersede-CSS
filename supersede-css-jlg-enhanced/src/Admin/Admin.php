@@ -17,98 +17,106 @@ final class Admin
     }
 
     public function menu(): void {
-        add_menu_page('Supersede CSS', 'Supersede CSS', $this->cap, $this->slug, [$this, 'renderDashboard'], 'dashicons-art', 58);
+        add_menu_page(
+            __('Supersede CSS', 'supersede-css-jlg'),
+            __('Supersede CSS', 'supersede-css-jlg'),
+            $this->cap,
+            $this->slug,
+            [$this, 'renderDashboard'],
+            'dashicons-art',
+            58
+        );
         
         // Tous les modules sont déclarés ici pour simplifier la maintenance.
         $modules = [
             [
                 'slug'   => 'layout-builder',
-                'label'  => 'Maquettage de Page',
+                'label'  => __('Maquettage de Page', 'supersede-css-jlg'),
                 'class'  => '\\SSC\\Admin\\Pages\\PageLayoutBuilder',
             ],
             [
                 'slug'   => 'utilities',
-                'label'  => 'Utilities',
+                'label'  => __('Utilities', 'supersede-css-jlg'),
                 'class'  => '\\SSC\\Admin\\Pages\\Utilities',
             ],
             [
                 'slug'   => 'tokens',
-                'label'  => 'Tokens Manager',
+                'label'  => __('Tokens Manager', 'supersede-css-jlg'),
                 'class'  => '\\SSC\\Admin\\Pages\\Tokens',
             ],
             [
                 'slug'   => 'effects',
-                'label'  => 'Effets Visuels',
+                'label'  => __('Effets Visuels', 'supersede-css-jlg'),
                 'class'  => '\\SSC\\Admin\\Pages\\VisualEffects',
             ],
             [
                 'slug'   => 'filters',
-                'label'  => 'Filtres & Verre',
+                'label'  => __('Filtres & Verre', 'supersede-css-jlg'),
                 'class'  => '\\SSC\\Admin\\Pages\\FilterEditor',
             ],
             [
                 'slug'   => 'clip-path',
-                'label'  => 'Découpe (Clip-Path)',
+                'label'  => __('Découpe (Clip-Path)', 'supersede-css-jlg'),
                 'class'  => '\\SSC\\Admin\\Pages\\ClipPathEditor',
             ],
             [
                 'slug'   => 'typography',
-                'label'  => 'Typographie Fluide',
+                'label'  => __('Typographie Fluide', 'supersede-css-jlg'),
                 'class'  => '\\SSC\\Admin\\Pages\\TypographyEditor',
             ],
             [
                 'slug'   => 'tron',
-                'label'  => 'Tron Grid',
+                'label'  => __('Tron Grid', 'supersede-css-jlg'),
                 'class'  => '\\SSC\\Admin\\Pages\\TronGrid',
             ],
             [
                 'slug'   => 'avatar',
-                'label'  => 'Avatar Glow',
+                'label'  => __('Avatar Glow', 'supersede-css-jlg'),
                 'class'  => '\\SSC\\Admin\\Pages\\AvatarGlow',
             ],
             [
                 'slug'   => 'anim',
-                'label'  => 'Animation Studio',
+                'label'  => __('Animation Studio', 'supersede-css-jlg'),
                 'class'  => '\\SSC\\Admin\\Pages\\AnimationStudio',
             ],
             [
                 'slug'   => 'grid',
-                'label'  => 'Grid Editor',
+                'label'  => __('Grid Editor', 'supersede-css-jlg'),
                 'class'  => '\\SSC\\Admin\\Pages\\GridEditor',
             ],
             [
                 'slug'   => 'shadow',
-                'label'  => 'Shadow Editor',
+                'label'  => __('Shadow Editor', 'supersede-css-jlg'),
                 'class'  => '\\SSC\\Admin\\Pages\\ShadowEditor',
             ],
             [
                 'slug'   => 'gradient',
-                'label'  => 'Gradient Editor',
+                'label'  => __('Gradient Editor', 'supersede-css-jlg'),
                 'class'  => '\\SSC\\Admin\\Pages\\GradientEditor',
             ],
             [
                 'slug'   => 'scope',
-                'label'  => 'Scope Builder',
+                'label'  => __('Scope Builder', 'supersede-css-jlg'),
                 'class'  => '\\SSC\\Admin\\Pages\\ScopeBuilder',
             ],
             [
                 'slug'   => 'preset',
-                'label'  => 'Preset Designer',
+                'label'  => __('Preset Designer', 'supersede-css-jlg'),
                 'class'  => '\\SSC\\Admin\\Pages\\PresetDesigner',
             ],
             [
                 'slug'   => 'import',
-                'label'  => 'Import / Export',
+                'label'  => __('Import / Export', 'supersede-css-jlg'),
                 'class'  => '\\SSC\\Admin\\Pages\\ImportExport',
             ],
             [
                 'slug'   => 'css-viewer',
-                'label'  => 'Visualiseur CSS',
+                'label'  => __('Visualiseur CSS', 'supersede-css-jlg'),
                 'class'  => '\\SSC\\Admin\\Pages\\CssViewer',
             ],
             [
                 'slug'   => 'debug-center',
-                'label'  => 'Debug Center',
+                'label'  => __('Debug Center', 'supersede-css-jlg'),
                 'class'  => '\\SSC\\Admin\\Pages\\DebugCenter',
             ],
         ];
@@ -126,11 +134,24 @@ final class Admin
         add_submenu_page($this->slug, $label, $label, $this->cap, $slug, function () use ($fqcn, $label, $slug): void {
             ob_start();
             try {
-                if (class_exists($fqcn)) { (new $fqcn())->render(); }
-                else { echo '<div class="notice notice-error"><p>Erreur : La classe pour le module <strong>' . esc_html($label) . '</strong> est introuvable.</p></div>'; }
+                if (class_exists($fqcn)) {
+                    (new $fqcn())->render();
+                } else {
+                    $message = sprintf(
+                        /* translators: %s: Supersede CSS module label. */
+                        __('Error: The class for the "%s" module could not be found.', 'supersede-css-jlg'),
+                        $label
+                    );
+                    echo '<div class="notice notice-error"><p>' . esc_html($message) . '</p></div>';
+                }
             } catch (\Throwable $e) {
                 if (class_exists('\SSC\Infra\Logger')) { \SSC\Infra\Logger::add('render_error', ['module' => $label, 'error' => $e->getMessage()]); }
-                echo '<div class="notice notice-error"><p><strong>Supersede CSS:</strong> Le module <em>' . esc_html($label) . '</em> a échoué.</p></div>';
+                $error_message = sprintf(
+                    /* translators: %s: Supersede CSS module label. */
+                    __('Supersede CSS: The "%s" module failed to render.', 'supersede-css-jlg'),
+                    $label
+                );
+                echo '<div class="notice notice-error"><p>' . esc_html($error_message) . '</p></div>';
                 if (defined('WP_DEBUG') && WP_DEBUG) { echo '<pre>' . esc_html($e->getMessage() . "\n" . $e->getTraceAsString()) . '</pre>'; }
             }
             $page_content = ob_get_clean();

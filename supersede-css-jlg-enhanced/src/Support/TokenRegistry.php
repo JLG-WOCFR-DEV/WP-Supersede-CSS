@@ -111,6 +111,10 @@ final class TokenRegistry
 
         self::persistCss($normalized);
 
+        if (function_exists('\ssc_invalidate_css_cache')) {
+            \ssc_invalidate_css_cache();
+        }
+
         return $normalized;
     }
 

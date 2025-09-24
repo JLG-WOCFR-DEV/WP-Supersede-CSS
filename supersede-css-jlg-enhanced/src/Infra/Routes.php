@@ -254,6 +254,10 @@ final class Routes {
         if (class_exists('\SSC\Infra\Logger')) {
             \SSC\Infra\Logger::add('css_saved', ['size' => strlen($css_to_store) . ' bytes', 'option' => $option_name]);
         }
+
+        if (function_exists('\ssc_invalidate_css_cache')) {
+            \ssc_invalidate_css_cache();
+        }
         return new \WP_REST_Response(['ok' => true], 200);
     }
 
@@ -320,6 +324,10 @@ final class Routes {
         delete_option('ssc_css_desktop');
         delete_option('ssc_css_tablet');
         delete_option('ssc_css_mobile');
+
+        if (function_exists('\ssc_invalidate_css_cache')) {
+            \ssc_invalidate_css_cache();
+        }
 
         if (class_exists('\SSC\Infra\Logger')) {
             \SSC\Infra\Logger::add('css_resetted', []);
@@ -690,6 +698,9 @@ final class Routes {
             if ($optionName === 'ssc_tokens_css') {
                 $tokens = TokenRegistry::convertCssToRegistry($sanitizedValue);
                 TokenRegistry::saveRegistry($tokens);
+                if (function_exists('\ssc_invalidate_css_cache')) {
+                    \ssc_invalidate_css_cache();
+                }
                 $applied[] = $optionName;
                 continue;
             }
@@ -701,11 +712,17 @@ final class Routes {
                 }
 
                 TokenRegistry::saveRegistry($sanitizedValue);
+                if (function_exists('\ssc_invalidate_css_cache')) {
+                    \ssc_invalidate_css_cache();
+                }
                 $applied[] = $optionName;
                 continue;
             }
 
             update_option($optionName, $sanitizedValue, false);
+            if (function_exists('\ssc_invalidate_css_cache') && in_array($optionName, ['ssc_active_css', 'ssc_css_desktop', 'ssc_css_tablet', 'ssc_css_mobile'], true)) {
+                \ssc_invalidate_css_cache();
+            }
             $applied[] = $optionName;
         }
 
@@ -883,23 +900,35 @@ final class Routes {
      */
     private function sanitizeImportKey($key, int $depth)
     {
-        if ($depth > 0) {
+        if (is_int($key)) {
             return $key;
         }
 
         if (is_string($key)) {
             $sanitized = sanitize_key($key);
 
+            if ($sanitized === '') {
+                $fallback = preg_replace('/[^a-z0-9_\-]+/i', '-', strtolower($key));
+                $fallback = is_string($fallback) ? trim($fallback, '-_') : '';
+                $sanitized = $fallback;
+            }
+
             return $sanitized !== '' ? $sanitized : null;
         }
 
-        if (is_int($key)) {
-            return $key;
+        $casted = (string) $key;
+        if ($casted === '') {
+            return null;
         }
 
-        $casted = (string) $key;
+        $sanitized = sanitize_key($casted);
+        if ($sanitized === '') {
+            $fallback = preg_replace('/[^a-z0-9_\-]+/i', '-', strtolower($casted));
+            $fallback = is_string($fallback) ? trim($fallback, '-_') : '';
+            $sanitized = $fallback;
+        }
 
-        return $casted !== '' ? $casted : null;
+        return $sanitized !== '' ? $sanitized : null;
     }
 
     private function sanitizeImportStringValue(string $value): string
