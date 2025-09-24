@@ -230,6 +230,27 @@ assertSameResult(
     'Dangerous url() tokens should keep being stripped.'
 );
 
+assertSameResult(
+    'background:',
+    $sanitizeUrls->invoke(null, 'background: url("\\6a\\61\\76\\61\\73\\63\\72\\69\\70\\74:alert(1)")'),
+    'CSS-escaped dangerous protocols inside url() should be decoded and removed.'
+);
+
+assertSameResult(
+    "@font-face {src:url('https://example.com/good.woff2') format('woff2')}",
+    CssSanitizer::sanitize("@font-face { src: url('javascript:alert(1)') format('woff2'), url('https://example.com/good.woff2') format('woff2'); }"),
+    'Rejected font-face src entries should remove their trailing descriptors.'
+);
+
+$imageSetCss = 'div { background-image: image-set(url("javascript:alert(1)") 1x type("image/png"), url("https://example.com/safe.png") 2x type("image/png")); }';
+$sanitizedImageSet = CssSanitizer::sanitize($imageSetCss);
+
+assertSameResult(
+    'div {background-image:image-set(url("https://example.com/safe.png") 2x type("image/png"))}',
+    $sanitizedImageSet,
+    'Rejected image-set entries should remove associated resolution and type descriptors.'
+);
+
 assertNotContains(
     '__SSC_CSS_TOKEN_',
     $sanitizeUrls->invoke(null, '__SSC_CSS_TOKEN_0__'),

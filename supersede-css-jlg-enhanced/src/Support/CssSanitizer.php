@@ -959,16 +959,13 @@ final class CssSanitizer
                     $result = rtrim($result);
                     $result = preg_replace('/,\s*$/', '', $result);
 
-                    $offset = $cursor + 1;
-                    while ($offset < $length && ctype_space($css[$offset])) {
-                        $offset++;
-                    }
+                    $offset = self::skipWhitespace($css, $cursor + 1);
+                    $offset = self::skipUrlDescriptors($css, $offset);
+                    $offset = self::skipWhitespace($css, $offset);
 
                     if ($offset < $length && $css[$offset] === ',') {
                         $offset++;
-                        while ($offset < $length && ctype_space($css[$offset])) {
-                            $offset++;
-                        }
+                        $offset = self::skipWhitespace($css, $offset);
                     }
                 }
 
@@ -1005,24 +1002,270 @@ final class CssSanitizer
             }
         }
 
-        if (self::isSafeDataUri($raw)) {
-            $sanitized = $raw;
+        $decoded = self::decodeCssEscapes($raw);
+        if ($decoded === '') {
+            return '';
+        }
+
+        if (self::isSafeDataUri($decoded)) {
+            $sanitizedValue = $decoded;
         } else {
-            $sanitized = trim(\wp_kses_bad_protocol($raw, \wp_allowed_protocols()));
-            if ($sanitized === '' || \preg_match('/^(?:javascript|vbscript)/i', $sanitized)) {
+            $sanitizedValue = trim(\wp_kses_bad_protocol($decoded, \wp_allowed_protocols()));
+            if ($sanitizedValue === '' || \preg_match('/^(?:javascript|vbscript)/i', $sanitizedValue)) {
                 return '';
             }
 
-            if (str_starts_with(strtolower($sanitized), 'data:')) {
+            if (str_starts_with(strtolower($sanitizedValue), 'data:')) {
                 return '';
             }
+        }
+
+        if ($sanitizedValue === '') {
+            return '';
         }
 
         if ($quote === '') {
             $quote = '"';
         }
 
-        return 'url(' . $quote . $sanitized . $quote . ')';
+        $escaped = self::escapeCssString($sanitizedValue, $quote);
+
+        if ($escaped === '') {
+            return '';
+        }
+
+        return 'url(' . $quote . $escaped . $quote . ')';
+    }
+
+    private static function skipWhitespace(string $css, int $offset): int
+    {
+        $length = strlen($css);
+        while ($offset < $length && ctype_space($css[$offset])) {
+            $offset++;
+        }
+
+        return $offset;
+    }
+
+    private static function skipUrlDescriptors(string $css, int $offset): int
+    {
+        $length = strlen($css);
+        $descriptorFunctions = [
+            'format',
+            'type',
+            'tech',
+            'supports',
+            'layer',
+        ];
+
+        while ($offset < $length) {
+            $offset = self::skipWhitespace($css, $offset);
+            if ($offset >= $length) {
+                return $offset;
+            }
+
+            $character = $css[$offset];
+            if ($character === ',' || $character === ')' || $character === ';') {
+                return $offset;
+            }
+
+            $remaining = substr($css, $offset);
+
+            if (preg_match('/^(?:[+-]?(?:\d*\.\d+|\d+)(?:dpi|dppx|dpcm|x))/Ai', $remaining, $matches)) {
+                $offset += strlen($matches[0]);
+                continue;
+            }
+
+            if (preg_match('/^([a-zA-Z_-][a-zA-Z0-9_-]*)/A', $remaining, $matches)) {
+                $identifier = strtolower($matches[1]);
+                if (in_array($identifier, $descriptorFunctions, true)) {
+                    $offset += strlen($matches[0]);
+                    $offset = self::skipWhitespace($css, $offset);
+                    if ($offset < $length && $css[$offset] === '(') {
+                        $offset = self::skipParenthesizedBlock($css, $offset);
+                        continue;
+                    }
+                }
+            }
+
+            break;
+        }
+
+        return $offset;
+    }
+
+    private static function skipParenthesizedBlock(string $css, int $offset): int
+    {
+        $length = strlen($css);
+        $depth = 0;
+        $cursor = $offset;
+
+        while ($cursor < $length) {
+            $character = $css[$cursor];
+
+            if ($character === '\\') {
+                $cursor += 2;
+                continue;
+            }
+
+            if ($character === '"' || $character === "'") {
+                $quote = $character;
+                $cursor++;
+
+                while ($cursor < $length) {
+                    $current = $css[$cursor];
+                    if ($current === '\\') {
+                        $cursor += 2;
+                        continue;
+                    }
+
+                    if ($current === $quote) {
+                        $cursor++;
+                        break;
+                    }
+
+                    $cursor++;
+                }
+
+                continue;
+            }
+
+            if ($character === '(') {
+                $depth++;
+                $cursor++;
+                continue;
+            }
+
+            if ($character === ')') {
+                $depth--;
+                $cursor++;
+                if ($depth <= 0) {
+                    break;
+                }
+
+                continue;
+            }
+
+            $cursor++;
+        }
+
+        return $cursor;
+    }
+
+    private static function decodeCssEscapes(string $value): string
+    {
+        $length = strlen($value);
+        if ($length === 0) {
+            return '';
+        }
+
+        $result = '';
+        $index = 0;
+
+        while ($index < $length) {
+            $character = $value[$index];
+
+            if ($character !== '\\') {
+                $result .= $character;
+                $index++;
+                continue;
+            }
+
+            $index++;
+            if ($index >= $length) {
+                break;
+            }
+
+            $next = $value[$index];
+
+            if ($next === "\n" || $next === "\r" || $next === "\f") {
+                if ($next === "\r" && $index + 1 < $length && $value[$index + 1] === "\n") {
+                    $index++;
+                }
+
+                $index++;
+                continue;
+            }
+
+            if (ctype_xdigit($next)) {
+                $hex = $next;
+                $index++;
+                $count = 1;
+
+                while ($count < 6 && $index < $length && ctype_xdigit($value[$index])) {
+                    $hex .= $value[$index];
+                    $index++;
+                    $count++;
+                }
+
+                $codepoint = hexdec($hex);
+                if ($codepoint === 0 || $codepoint > 0x10FFFF) {
+                    $codepoint = 0xFFFD;
+                }
+
+                if ($index < $length) {
+                    $whitespace = $value[$index];
+                    if ($whitespace === ' ' || $whitespace === "\t" || $whitespace === "\n" || $whitespace === "\r" || $whitespace === "\f") {
+                        if ($whitespace === "\r" && $index + 1 < $length && $value[$index + 1] === "\n") {
+                            $index++;
+                        }
+
+                        $index++;
+                    }
+                }
+
+                $result .= self::codepointToUtf8($codepoint);
+                continue;
+            }
+
+            $result .= $next;
+            $index++;
+        }
+
+        return $result;
+    }
+
+    private static function codepointToUtf8(int $codepoint): string
+    {
+        if ($codepoint <= 0x7F) {
+            return chr($codepoint);
+        }
+
+        if ($codepoint <= 0x7FF) {
+            return chr(0xC0 | ($codepoint >> 6)) . chr(0x80 | ($codepoint & 0x3F));
+        }
+
+        if ($codepoint <= 0xFFFF) {
+            return chr(0xE0 | ($codepoint >> 12))
+                . chr(0x80 | (($codepoint >> 6) & 0x3F))
+                . chr(0x80 | ($codepoint & 0x3F));
+        }
+
+        if ($codepoint <= 0x10FFFF) {
+            return chr(0xF0 | ($codepoint >> 18))
+                . chr(0x80 | (($codepoint >> 12) & 0x3F))
+                . chr(0x80 | (($codepoint >> 6) & 0x3F))
+                . chr(0x80 | ($codepoint & 0x3F));
+        }
+
+        return chr(0xEF) . chr(0xBF) . chr(0xBD);
+    }
+
+    private static function escapeCssString(string $value, string $quote): string
+    {
+        if ($value === '') {
+            return '';
+        }
+
+        $escaped = str_replace('\\', '\\\\', $value);
+
+        if ($quote === '"') {
+            $escaped = str_replace('"', '\\"', $escaped);
+        } else {
+            $escaped = str_replace("'", "\\'", $escaped);
+        }
+
+        return $escaped;
     }
 
     private static function isSafeDataUri(string $value): bool
