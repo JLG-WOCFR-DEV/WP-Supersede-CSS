@@ -1,13 +1,21 @@
 <?php declare(strict_types=1);
 namespace SSC\Admin;
 
+use SSC\Support\CssSanitizer;
+
 if (!defined('ABSPATH')) { exit; }
 
 class Layout {
+    private static ?array $allowedTagsCache = null;
+
     /**
      * Returns the list of allowed HTML tags for admin page rendering.
      */
     public static function allowed_tags(): array {
+        if (self::$allowedTagsCache !== null) {
+            return self::$allowedTagsCache;
+        }
+
         $allowed = wp_kses_allowed_html('post');
 
         foreach ($allowed as $tag => $attributes) {
@@ -265,10 +273,13 @@ class Layout {
             $allowed[$tag] = $svg_attributes;
         }
 
-        return $allowed;
+        self::$allowedTagsCache = $allowed;
+
+        return self::$allowedTagsCache;
     }
 
     public static function render(string $page_content, string $current_page_slug): void {
+        $page_content = self::sanitize_style_blocks($page_content);
         
         $menu_items = [
             'Fondamentaux' => [
@@ -328,6 +339,26 @@ class Layout {
             </div>
         </div>
         <?php
+    }
+
+    private static function sanitize_style_blocks(string $html): string
+    {
+        return (string) preg_replace_callback(
+            '#<style\b([^>]*)>(.*?)</style>#is',
+            static function (array $matches): string {
+                $attributes = $matches[1] ?? '';
+                $decodeFlags = ENT_QUOTES;
+                if (defined('ENT_SUBSTITUTE')) {
+                    $decodeFlags |= ENT_SUBSTITUTE;
+                }
+
+                $css = html_entity_decode($matches[2] ?? '', $decodeFlags, 'UTF-8');
+                $sanitizedCss = CssSanitizer::sanitize($css);
+
+                return sprintf('<style%s>%s</style>', $attributes, $sanitizedCss);
+            },
+            $html
+        );
     }
 }
 

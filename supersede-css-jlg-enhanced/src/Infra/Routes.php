@@ -7,6 +7,8 @@ use SSC\Support\TokenRegistry;
 if (!defined('ABSPATH')) { exit; }
 
 final class Routes {
+    private const IMPORT_MAX_DEPTH = 20;
+    private const IMPORT_MAX_ITEMS = 5000;
     private const IMPORT_HANDLERS = [
         'ssc_active_css' => 'sanitizeImportCss',
         'ssc_tokens_css' => 'sanitizeImportCss',
@@ -765,9 +767,25 @@ final class Routes {
     /**
      * @param mixed $value
      */
-    private function sanitizeImportArray($value, int $depth = 0): ?array
+    private function sanitizeImportArray($value, int $depth = 0, ?\SplObjectStorage $objectStack = null, ?int &$itemBudget = null): ?array
     {
         if (!is_array($value)) {
+            return null;
+        }
+
+        if ($depth > self::IMPORT_MAX_DEPTH) {
+            return null;
+        }
+
+        if ($objectStack === null) {
+            $objectStack = new \SplObjectStorage();
+        }
+
+        if ($itemBudget === null) {
+            $itemBudget = self::IMPORT_MAX_ITEMS;
+        }
+
+        if ($itemBudget <= 0) {
             return null;
         }
 
@@ -779,8 +797,18 @@ final class Routes {
                 continue;
             }
 
+            if ($itemBudget <= 0) {
+                break;
+            }
+
+            $itemBudget--;
+
             if (is_array($item)) {
-                $nested = $this->sanitizeImportArray($item, $depth + 1);
+                if ($depth + 1 > self::IMPORT_MAX_DEPTH) {
+                    continue;
+                }
+
+                $nested = $this->sanitizeImportArray($item, $depth + 1, $objectStack, $itemBudget);
                 if ($nested === null) {
                     continue;
                 }
@@ -809,14 +837,22 @@ final class Routes {
             }
 
             if (is_object($item)) {
+                if ($objectStack->contains($item)) {
+                    continue;
+                }
+
+                $objectStack->attach($item);
                 $objectVars = get_object_vars($item);
                 if (is_array($objectVars) && $objectVars !== []) {
-                    $nested = $this->sanitizeImportArray($objectVars, $depth + 1);
+                    $nested = $this->sanitizeImportArray($objectVars, $depth + 1, $objectStack, $itemBudget);
                     if ($nested !== null) {
+                        $objectStack->detach($item);
                         $sanitized[$sanitizedKey] = $nested;
                         continue;
                     }
                 }
+
+                $objectStack->detach($item);
 
                 $jsonOptions = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
                 if (defined('JSON_PARTIAL_OUTPUT_ON_ERROR')) {
