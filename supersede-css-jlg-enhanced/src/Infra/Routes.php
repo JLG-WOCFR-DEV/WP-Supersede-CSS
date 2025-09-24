@@ -420,18 +420,6 @@ final class Routes {
             $options[$result->option_name] = maybe_unserialize($result->option_value);
         }
 
-        foreach ($options as $name => &$value) {
-            if (!is_array($value)) {
-                continue;
-            }
-
-            array_walk_recursive($value, static function (&$item): void {
-                if (is_string($item)) {
-                    $item = wp_kses_post($item);
-                }
-            });
-        }
-        unset($value);
         $modules = $this->normalizeModules($request->get_param('modules'));
 
         if ($modules === []) {
@@ -795,7 +783,7 @@ final class Routes {
             }
 
             if (is_string($item)) {
-                $sanitized[$sanitizedKey] = sanitize_text_field($item);
+                $sanitized[$sanitizedKey] = $this->sanitizeImportStringValue($item);
                 continue;
             }
 
@@ -822,14 +810,25 @@ final class Routes {
                     $encoded = '';
                 }
 
-                $sanitized[$sanitizedKey] = sanitize_text_field($encoded);
+                $sanitized[$sanitizedKey] = $this->sanitizeImportStringValue($encoded);
                 continue;
             }
 
-            $sanitized[$sanitizedKey] = sanitize_text_field((string) $item);
+            $sanitized[$sanitizedKey] = $this->sanitizeImportStringValue((string) $item);
         }
 
         return $sanitized;
+    }
+
+    private function sanitizeImportStringValue(string $value): string
+    {
+        $value = wp_check_invalid_utf8($value);
+
+        if ($value === false) {
+            return '';
+        }
+
+        return (string) $value;
     }
 
     /**
@@ -838,11 +837,11 @@ final class Routes {
     private function sanitizeImportString($value): ?string
     {
         if (is_string($value)) {
-            return sanitize_text_field($value);
+            return $this->sanitizeImportStringValue($value);
         }
 
         if (is_scalar($value)) {
-            return sanitize_text_field((string) $value);
+            return $this->sanitizeImportStringValue((string) $value);
         }
 
         return null;
