@@ -2,7 +2,11 @@
     let presets = {};
     let activePresetId = null;
     // **LA CORRECTION EST SUR LA LIGNE CI-DESSOUS**
-    let defaultAvatarUrl = typeof SSC !== 'undefined' ? SSC.pluginUrl + 'assets/images/placeholder-avatar.png' : '';
+    let defaultAvatarUrl = '';
+    if (typeof SSC !== 'undefined' && SSC && typeof SSC.pluginUrl === 'string') {
+        const pluginUrl = SSC.pluginUrl.endsWith('/') ? SSC.pluginUrl : SSC.pluginUrl + '/';
+        defaultAvatarUrl = pluginUrl + 'assets/images/placeholder-avatar.png';
+    }
     let currentAvatarUrl = defaultAvatarUrl;
 
     // Charger les presets depuis la base de données
