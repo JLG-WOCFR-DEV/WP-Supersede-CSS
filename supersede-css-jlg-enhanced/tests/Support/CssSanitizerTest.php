@@ -225,9 +225,21 @@ assertSameResult(
 );
 
 assertSameResult(
+    'background:url("https://example.com/image.png")',
+    $sanitizeUrls->invoke(null, 'background:url ( "https://example.com/image.png" )'),
+    'URL sanitizer should allow insignificant whitespace between the keyword and the opening parenthesis.'
+);
+
+assertSameResult(
     'background:)',
     $sanitizeUrls->invoke(null, 'background: url(javascript:alert(1))'),
     'Dangerous url() tokens should keep being stripped.'
+);
+
+assertSameResult(
+    'background:',
+    $sanitizeUrls->invoke(null, "background:url ( '\\6a\\61\\76\\61\\73\\63\\72\\69\\70\\74:alert(1)' )"),
+    'Whitespace before the url parenthesis should not allow escaped dangerous protocols.'
 );
 
 assertSameResult(

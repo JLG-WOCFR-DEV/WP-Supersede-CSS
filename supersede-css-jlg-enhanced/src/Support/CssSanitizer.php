@@ -8,8 +8,12 @@ final class CssSanitizer
 {
     private const PLACEHOLDER_PREFIX = '__SSC_CSS_TOKEN_';
 
+    private static array $valueNormalizationCache = [];
+
     public static function sanitize(string $css): string
     {
+        self::resetValueNormalizationCache();
+
         $css = trim($css);
         if ($css === '') {
             return '';
@@ -19,6 +23,11 @@ final class CssSanitizer
         $css = self::sanitizeImports($css);
         $css = self::sanitizeUrls($css);
 
+        return self::sanitizeStructuralContent($css);
+    }
+
+    private static function sanitizeStructuralContent(string $css): string
+    {
         $length = strlen($css);
         if ($length > 0) {
             $result = '';
@@ -108,6 +117,31 @@ final class CssSanitizer
         $css = self::removeSanitizerTokens($css);
 
         return trim($css);
+    }
+
+    private static function resetValueNormalizationCache(): void
+    {
+        self::$valueNormalizationCache = [];
+    }
+
+    private static function normalizeValue(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return '';
+        }
+
+        $key = md5($value);
+        if (!isset(self::$valueNormalizationCache[$key])) {
+            $sanitized = self::stripHtmlTags($value);
+            if ($sanitized !== '') {
+                $sanitized = self::sanitizeUrls($sanitized);
+            }
+
+            self::$valueNormalizationCache[$key] = trim($sanitized);
+        }
+
+        return self::$valueNormalizationCache[$key];
     }
 
     private static function sanitizeStructuralBlock(string $css, int $openingBracePosition, string $prefix, int &$nextCursor): ?string
@@ -326,9 +360,7 @@ final class CssSanitizer
 
     private static function sanitizeNestedRuleBody(string $body): string
     {
-        $sanitized = self::sanitize($body);
-
-        return $sanitized;
+        return self::sanitizeStructuralContent($body);
     }
 
     private static function sanitizeDeclarations(string $declarations, bool $isPropertyContext = false): string
@@ -422,8 +454,7 @@ final class CssSanitizer
 
         switch ($property) {
             case 'syntax':
-                $value = self::stripHtmlTags($value);
-                $value = self::sanitizeUrls($value);
+                $value = self::normalizeValue($value);
 
                 if ($value === '') {
                     return '';
@@ -542,8 +573,11 @@ final class CssSanitizer
 
     private static function sanitizeCustomPropertyValue(string $value): string
     {
-        $value = self::stripHtmlTags($value);
-        $value = self::sanitizeUrls($value);
+        $value = self::normalizeValue($value);
+        if ($value === '') {
+            return '';
+        }
+
         $value = (string) \preg_replace('/expression\s*\([^)]*\)/i', '', $value);
         $value = (string) \preg_replace('/behavior\s*:[^;]+;?/i', '', $value);
 
@@ -899,12 +933,22 @@ final class CssSanitizer
             if (
                 !$inSingleQuote
                 && !$inDoubleQuote
-                && $length - $index >= 4
-                && strncasecmp(substr($css, $index, 4), 'url(', 4) === 0
+                && $length - $index >= 3
+                && strncasecmp(substr($css, $index, 3), 'url', 3) === 0
             ) {
+                $parenPosition = $index + 3;
+                while ($parenPosition < $length && ctype_space($css[$parenPosition])) {
+                    $parenPosition++;
+                }
+
+                if ($parenPosition >= $length || $css[$parenPosition] !== '(') {
+                    $index++;
+                    continue;
+                }
+
                 $result .= substr($css, $offset, $index - $offset);
 
-                $cursor = $index + 4;
+                $cursor = $parenPosition + 1;
                 $tokenInSingleQuote = false;
                 $tokenInDoubleQuote = false;
                 $tokenEscaped = false;
@@ -949,7 +993,7 @@ final class CssSanitizer
                     break;
                 }
 
-                $content = substr($css, $index + 4, $cursor - ($index + 4));
+                $content = substr($css, $parenPosition + 1, $cursor - ($parenPosition + 1));
                 $sanitizedToken = self::sanitizeUrlToken($content);
 
                 if ($sanitizedToken !== '') {
@@ -1454,6 +1498,8 @@ final class CssSanitizer
 
     public static function sanitizePresetCollection(array $presets): array
     {
+        self::resetValueNormalizationCache();
+
         $sanitized = [];
         foreach ($presets as $key => $preset) {
             if (!is_array($preset)) {
@@ -1545,8 +1591,11 @@ final class CssSanitizer
             return '';
         }
 
-        $value = self::stripHtmlTags($value);
-        $value = self::sanitizeUrls($value);
+        $value = self::normalizeValue($value);
+        if ($value === '') {
+            return '';
+        }
+
         $value = (string) \preg_replace('/expression\s*\([^)]*\)/i', '', $value);
         $value = (string) \preg_replace('/behaviou?r\s*:[^;]+;?/i', '', $value);
         $value = (string) \preg_replace('/-moz-binding\s*:[^;]+;?/i', '', $value);
@@ -1953,6 +2002,8 @@ final class CssSanitizer
 
     public static function sanitizeAvatarGlowPresets(array $presets): array
     {
+        self::resetValueNormalizationCache();
+
         $sanitized = [];
         foreach ($presets as $key => $preset) {
             if (!is_array($preset)) {
