@@ -92,6 +92,15 @@ assertSameResult(
 
 assertNotContains('behavior', $sanitizedWithDoubleBrace, 'Behavior property should not survive in the sanitized CSS.');
 
+$customPropertyWithScrollBehavior = ':root { --snippet: scroll-behavior: smooth; color: red; }';
+$sanitizedCustomProperty = CssSanitizer::sanitize($customPropertyWithScrollBehavior);
+
+if (preg_match('/scroll-behavior:\s*smooth/', $sanitizedCustomProperty) !== 1) {
+    fwrite(STDERR, 'Custom property snippets should preserve scroll-behavior declarations.' . PHP_EOL);
+    fwrite(STDERR, 'Sanitized CSS: ' . $sanitizedCustomProperty . PHP_EOL);
+    exit(1);
+}
+
 $fontFaceCss = "@font-face { font-family: 'Custom'; src: url('https://example.com/font.woff2') format('woff2'), url('data:font/woff2;base64,AAAA'), url('javascript:alert(1)'); font-display: swap; unicode-range: U+000-5FF; }";
 $sanitizedFontFace = CssSanitizer::sanitize($fontFaceCss);
 

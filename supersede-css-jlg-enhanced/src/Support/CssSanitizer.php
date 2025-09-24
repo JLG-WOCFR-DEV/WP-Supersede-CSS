@@ -579,9 +579,50 @@ final class CssSanitizer
         }
 
         $value = (string) \preg_replace('/expression\s*\([^)]*\)/i', '', $value);
-        $value = (string) \preg_replace('/behavior\s*:[^;]+;?/i', '', $value);
+        if ($value === '') {
+            return '';
+        }
 
-        return trim($value);
+        $trimmedValue = rtrim($value);
+        $hadTrailingSemicolon = $trimmedValue !== '' && substr($trimmedValue, -1) === ';';
+
+        $declarations = self::splitDeclarations($value);
+        if ($declarations === []) {
+            return trim($value);
+        }
+
+        $filtered = [];
+
+        foreach ($declarations as $declaration) {
+            $cleaned = trim($declaration);
+            if ($cleaned === '') {
+                continue;
+            }
+
+            $separatorPosition = strpos($cleaned, ':');
+            if ($separatorPosition === false) {
+                $filtered[] = $declaration;
+                continue;
+            }
+
+            $property = strtolower(trim(substr($cleaned, 0, $separatorPosition)));
+            if ($property === 'behavior' || $property === 'behaviour') {
+                continue;
+            }
+
+            $filtered[] = $declaration;
+        }
+
+        if ($filtered === []) {
+            return '';
+        }
+
+        $rebuilt = implode(';', $filtered);
+        if ($hadTrailingSemicolon) {
+            $rebuilt .= ';';
+        }
+
+        return trim($rebuilt);
     }
 
     private static function sanitizeImports(string $css): string
