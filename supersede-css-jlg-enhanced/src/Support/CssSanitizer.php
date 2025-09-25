@@ -843,6 +843,12 @@ final class CssSanitizer
             return '';
         }
 
+        $body = self::removeCssComments($body);
+        $body = trim($body);
+        if ($body === '') {
+            return '';
+        }
+
         $quote = '';
         $rawUrl = '';
         $qualifiers = '';
@@ -910,6 +916,78 @@ final class CssSanitizer
         }
 
         return $result . ';';
+    }
+
+    private static function removeCssComments(string $css): string
+    {
+        $length = strlen($css);
+        if ($length === 0) {
+            return '';
+        }
+
+        $result = '';
+        $index = 0;
+        $inSingleQuote = false;
+        $inDoubleQuote = false;
+        $escaped = false;
+
+        while ($index < $length) {
+            $character = $css[$index];
+
+            if ($escaped) {
+                $result .= $character;
+                $escaped = false;
+                $index++;
+                continue;
+            }
+
+            if ($character === '\\') {
+                $escaped = true;
+                $result .= $character;
+                $index++;
+                continue;
+            }
+
+            if ($character === "'" && !$inDoubleQuote) {
+                $inSingleQuote = !$inSingleQuote;
+                $result .= $character;
+                $index++;
+                continue;
+            }
+
+            if ($character === '"' && !$inSingleQuote) {
+                $inDoubleQuote = !$inDoubleQuote;
+                $result .= $character;
+                $index++;
+                continue;
+            }
+
+            if (
+                !$inSingleQuote
+                && !$inDoubleQuote
+                && $character === '/'
+                && $index + 1 < $length
+                && $css[$index + 1] === '*'
+            ) {
+                $index += 2;
+
+                while ($index < $length) {
+                    if ($css[$index] === '*' && $index + 1 < $length && $css[$index + 1] === '/') {
+                        $index += 2;
+                        break;
+                    }
+
+                    $index++;
+                }
+
+                continue;
+            }
+
+            $result .= $character;
+            $index++;
+        }
+
+        return $result;
     }
 
     private static function sanitizeUrls(string $css): string
