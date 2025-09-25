@@ -106,6 +106,13 @@ if (!function_exists('sanitize_text_field')) {
     }
 }
 
+if (!function_exists('wp_check_invalid_utf8')) {
+    function wp_check_invalid_utf8($string)
+    {
+        return is_string($string) ? $string : '';
+    }
+}
+
 if (!function_exists('__')) {
     function __(string $text, string $domain = ''): string
     {
@@ -123,6 +130,15 @@ if (!function_exists('maybe_unserialize')) {
 if (!function_exists('wp_kses_post')) {
     function wp_kses_post($value)
     {
+        return is_string($value) ? strip_tags($value) : $value;
+    }
+}
+
+if (!function_exists('wp_kses')) {
+    function wp_kses($value, $allowed_html = [])
+    {
+        unset($allowed_html);
+
         return is_string($value) ? strip_tags($value) : $value;
     }
 }

@@ -933,7 +933,9 @@ final class Routes {
 
     private function sanitizeImportStringValue(string $value): string
     {
-        $value = wp_check_invalid_utf8($value);
+        if (function_exists('wp_check_invalid_utf8')) {
+            $value = wp_check_invalid_utf8($value);
+        }
 
         if ($value === false) {
             return '';
