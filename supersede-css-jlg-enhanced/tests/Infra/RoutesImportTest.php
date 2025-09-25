@@ -382,7 +382,7 @@ if (!is_array($storedRegistryAfterDirectImport) || count($storedRegistryAfterDir
 
 $storedDirectToken = $storedRegistryAfterDirectImport[0];
 
-if ($storedDirectToken['name'] !== '--primary-color' || $storedDirectToken['value'] !== '#FFFFFF') {
+if ($storedDirectToken['name'] !== '--Primary-Color' || $storedDirectToken['value'] !== '#FFFFFF') {
     fwrite(STDERR, "Token registry imports should normalize token names and values." . PHP_EOL);
     exit(1);
 }
