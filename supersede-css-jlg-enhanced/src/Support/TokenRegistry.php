@@ -150,7 +150,7 @@ final class TokenRegistry
             }
 
             $name = '--' . preg_replace('/[^a-z0-9\-]+/i', '-', ltrim($name, '-'));
-            $name = strtolower($name);
+            $normalizedKey = strtolower($name);
 
             $valueRaw = isset($token['value']) ? (string) $token['value'] : '';
             $value = trim(sanitize_textarea_field($valueRaw));
@@ -177,11 +177,11 @@ final class TokenRegistry
                 'group' => $group,
             ];
 
-            if (array_key_exists($name, $normalizedByName)) {
-                unset($normalizedByName[$name]);
+            if (array_key_exists($normalizedKey, $normalizedByName)) {
+                unset($normalizedByName[$normalizedKey]);
             }
 
-            $normalizedByName[$name] = $normalizedToken;
+            $normalizedByName[$normalizedKey] = $normalizedToken;
         }
 
         return array_values($normalizedByName);
