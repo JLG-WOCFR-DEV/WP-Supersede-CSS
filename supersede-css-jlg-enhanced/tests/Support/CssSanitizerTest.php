@@ -309,6 +309,12 @@ assertSameResult(
 );
 
 assertSameResult(
+    '@import url("https://example.com/style.css");',
+    $sanitizeImports->invoke(null, '@import/*comment*/ url("https://example.com/style.css");'),
+    'CSS comments adjacent to @import should be stripped before sanitization.'
+);
+
+assertSameResult(
     'content: "@import url(foo)"',
     $sanitizeImports->invoke(null, 'content: "@import url(foo)"'),
     'Literal strings containing @import should remain untouched by the import sanitizer.'
