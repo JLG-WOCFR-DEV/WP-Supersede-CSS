@@ -91,8 +91,8 @@ require_once __DIR__ . '/../../src/Infra/Routes.php';
 $routesReflection = new ReflectionClass(Routes::class);
 $routes = $routesReflection->newInstanceWithoutConstructor();
 
-$tokenCss = ":root {\n    --primary-color: #123456;\n}";
-$activeCss = "body { color: var(--primary-color); }";
+$tokenCss = "<div>\n:root {\n    --primary-color: #123456;\n}\n</div>";
+$activeCss = "body { color: var(--primary-color); }<script>alert('oops');</script>";
 
 $ssc_options_store['ssc_tokens_css'] = $tokenCss;
 $ssc_options_store['ssc_active_css'] = $activeCss;
