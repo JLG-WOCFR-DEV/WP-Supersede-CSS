@@ -1,4 +1,11 @@
 (function($) {
+    const wpPackages = typeof window !== 'undefined' && window.wp ? window.wp : {};
+    const i18n = wpPackages.i18n ? wpPackages.i18n : {};
+    const __ = typeof i18n.__ === 'function' ? i18n.__ : (text) => text;
+    const _x = typeof i18n._x === 'function' ? i18n._x : (text) => text;
+    const _n = typeof i18n._n === 'function' ? i18n._n : (single) => single;
+    const _nx = typeof i18n._nx === 'function' ? i18n._nx : (single) => single;
+
     let editors = {};
     let pickerActive = false;
     const editorViews = ['desktop', 'tablet', 'mobile'];
@@ -7,7 +14,7 @@
 
     function notifyCodeMirrorUnavailable() {
         if (codeMirrorWarningShown) return;
-        const message = "Éditeur enrichi indisponible : CodeMirror n'est pas chargé. Les champs texte classiques seront utilisés.";
+        const message = __('Éditeur enrichi indisponible : CodeMirror n\'est pas chargé. Les champs texte classiques seront utilisés.', 'supersede-css-jlg');
         if (typeof window !== 'undefined' && typeof window.sscToast === 'function') {
             window.sscToast(message);
         } else if (typeof window !== 'undefined' && typeof window.alert === 'function') {
@@ -114,7 +121,7 @@
                     _wpnonce: SSC.rest.nonce
                 },
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
-            }).done(() => window.sscToast('CSS enregistré !'));
+            }).done(() => window.sscToast(__('CSS enregistré !', 'supersede-css-jlg')));
         });
 
         const pickerToggle = $('#ssc-element-picker-toggle');
@@ -175,16 +182,16 @@
                     }
                     pickerToggle.click();
                 });
-            } catch(e) { console.warn("Impossible d'accéder au contenu de l'iframe. Assurez-vous que l'URL chargée est sur le même domaine que votre page d'administration WordPress."); }
+            } catch(e) { console.warn(__('Impossible d\'accéder au contenu de l\'iframe. Assurez-vous que l\'URL chargée est sur le même domaine que votre page d\'administration WordPress.', 'supersede-css-jlg')); }
         });
-        
+
         $('#ssc-preview-load').on('click', function(e) {
             e.preventDefault();
             const rawValue = (urlField.val() || '').trim();
 
             if (!rawValue) {
                 if (!e.isTrigger) {
-                    notifyInvalidUrl('Veuillez saisir une URL valide pour l\'aperçu.');
+                    notifyInvalidUrl(__('Veuillez saisir une URL valide pour l\'aperçu.', 'supersede-css-jlg'));
                     if (lastValidPreviewUrl) {
                         urlField.val(lastValidPreviewUrl);
                     }
@@ -197,7 +204,7 @@
                 parsedUrl = new URL(rawValue, window.location.origin);
             } catch (error) {
                 if (!e.isTrigger) {
-                    notifyInvalidUrl('URL invalide. Veuillez saisir une adresse commençant par http:// ou https://');
+                    notifyInvalidUrl(__('URL invalide. Veuillez saisir une adresse commençant par http:// ou https://', 'supersede-css-jlg'));
                     if (lastValidPreviewUrl) {
                         urlField.val(lastValidPreviewUrl);
                     }
@@ -207,7 +214,7 @@
 
             if (!/^https?:$/i.test(parsedUrl.protocol)) {
                 if (!e.isTrigger) {
-                    notifyInvalidUrl('Seules les URL http et https sont autorisées.');
+                    notifyInvalidUrl(__('Seules les URL http et https sont autorisées.', 'supersede-css-jlg'));
                     if (lastValidPreviewUrl) {
                         urlField.val(lastValidPreviewUrl);
                     }
