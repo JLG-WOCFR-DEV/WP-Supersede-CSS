@@ -233,7 +233,16 @@ final class Admin
             foreach ($scripts_by_page[$page] as $handle) {
                 $path = 'assets/js/' . $handle . '.js';
                 if (is_file(SSC_PLUGIN_DIR . $path)) {
-                    wp_enqueue_script('ssc-'.$handle, SSC_PLUGIN_URL.$path, ['jquery'], SSC_VERSION, true);
+                    $dependencies = ['jquery'];
+                    if ($handle === 'utilities') {
+                        $dependencies[] = 'wp-i18n';
+                    }
+
+                    wp_enqueue_script('ssc-'.$handle, SSC_PLUGIN_URL.$path, $dependencies, SSC_VERSION, true);
+
+                    if ($handle === 'utilities' && function_exists('wp_set_script_translations')) {
+                        wp_set_script_translations('ssc-utilities', 'supersede-css-jlg');
+                    }
                 }
             }
         }
