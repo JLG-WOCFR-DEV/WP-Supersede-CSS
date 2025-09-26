@@ -478,13 +478,20 @@ final class Routes {
     }
 
     public function exportCss(): \WP_REST_Response {
-        $css = get_option('ssc_active_css', '/* Aucun CSS actif trouvé. */');
-        $css = is_string($css) ? $css : '';
-        $css = CssSanitizer::sanitize($css);
-        if ($css === '') {
-            $css = '/* Aucun CSS actif trouvé. */';
+        $tokensCss = get_option('ssc_tokens_css', '');
+        $activeCss = get_option('ssc_active_css', '');
+
+        $tokensCss = is_string($tokensCss) ? $tokensCss : '';
+        $activeCss = is_string($activeCss) ? $activeCss : '';
+
+        $combinedCss = CssSanitizer::sanitize($tokensCss . "\n" . $activeCss);
+        $hasSourceCss = ($tokensCss !== '') || ($activeCss !== '');
+
+        if (!$hasSourceCss) {
+            $combinedCss = '/* Aucun CSS actif trouvé. */';
         }
-        return new \WP_REST_Response(['css' => $css], 200);
+
+        return new \WP_REST_Response(['css' => $combinedCss], 200);
     }
 
     public function importConfig(\WP_REST_Request $request): \WP_REST_Response {
