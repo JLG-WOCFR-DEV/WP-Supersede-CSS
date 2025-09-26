@@ -1,14 +1,18 @@
 (function($) {
-    const i18n = (typeof window !== 'undefined' && window.wp && window.wp.i18n)
-        ? window.wp.i18n
-        : {
-            __: (text) => text,
-            _x: (text) => text,
-            _n: (single, plural, number) => (number === 1 ? single : plural),
-            _nx: (single, plural, number) => (number === 1 ? single : plural),
-        };
+    const fallbackI18n = {
+        __: (text) => text,
+        _x: (text) => text,
+        _n: (single, plural, number) => (number === 1 ? single : plural),
+        _nx: (single, plural, number) => (number === 1 ? single : plural),
+    };
 
-    const { __, _x, _n, _nx } = i18n;
+    const hasI18n = typeof window !== 'undefined' && window.wp && window.wp.i18n;
+    const { __, _x, _n, _nx } = hasI18n ? window.wp.i18n : fallbackI18n;
+
+    if (!hasI18n) {
+        // eslint-disable-next-line no-console
+        console.warn(__('wp.i18n is not available. Falling back to untranslated strings.', 'supersede-css-jlg'));
+    }
 
     let editors = {};
     let pickerActive = false;
