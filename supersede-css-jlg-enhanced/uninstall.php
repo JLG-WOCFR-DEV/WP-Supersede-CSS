@@ -18,6 +18,7 @@ $ssc_options_to_delete = [
     'ssc_css_desktop', // Ajouté
     'ssc_css_tablet', // Ajouté
     'ssc_css_mobile', // Ajouté
+    'ssc_css_cache', // Ajouté
     'ssc_avatar_glow_presets', // Ajouté
     'ssc_optimization_settings', // Ajouté
 ];
