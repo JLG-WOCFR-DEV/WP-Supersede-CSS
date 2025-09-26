@@ -484,12 +484,11 @@ final class Routes {
         $tokensCss = is_string($tokensCss) ? $tokensCss : '';
         $activeCss = is_string($activeCss) ? $activeCss : '';
 
-        $combinedCss = CssSanitizer::sanitize($tokensCss . "\n" . $activeCss);
-        $hasSourceCss = ($tokensCss !== '') || ($activeCss !== '');
-
-        if (!$hasSourceCss) {
-            $combinedCss = '/* Aucun CSS actif trouvé. */';
+        if ($tokensCss === '' && $activeCss === '') {
+            return new \WP_REST_Response(['css' => '/* Aucun CSS actif trouvé. */'], 200);
         }
+
+        $combinedCss = CssSanitizer::sanitize($tokensCss . "\n" . $activeCss);
 
         return new \WP_REST_Response(['css' => $combinedCss], 200);
     }
