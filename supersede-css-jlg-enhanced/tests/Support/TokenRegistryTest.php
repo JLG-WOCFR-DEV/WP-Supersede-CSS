@@ -69,6 +69,21 @@ if (!function_exists('update_option')) {
 require_once __DIR__ . '/../../src/Support/CssSanitizer.php';
 require_once __DIR__ . '/../../src/Support/TokenRegistry.php';
 
+$normalized = TokenRegistry::normalizeRegistry([
+    [
+        'name' => '--BrandPrimary',
+        'value' => '#3366ff',
+        'type' => 'color',
+        'description' => 'Primary brand color.',
+        'group' => 'Brand',
+    ],
+]);
+
+if ($normalized === [] || $normalized[0]['name'] !== '--BrandPrimary') {
+    fwrite(STDERR, 'TokenRegistry::normalizeRegistry should preserve the original token casing.' . PHP_EOL);
+    exit(1);
+}
+
 $registry = TokenRegistry::saveRegistry([
     [
         'name' => '--BrandPrimary',
