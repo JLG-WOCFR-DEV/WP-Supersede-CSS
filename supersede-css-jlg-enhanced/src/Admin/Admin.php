@@ -243,7 +243,7 @@ final class Admin
                     wp_enqueue_script($script_handle, SSC_PLUGIN_URL . $path, $dependencies, SSC_VERSION, true);
 
                     if ($handle === 'utilities' && function_exists('wp_set_script_translations')) {
-                        wp_set_script_translations($script_handle, 'supersede-css-jlg');
+                        wp_set_script_translations($script_handle, 'supersede-css-jlg', SSC_PLUGIN_DIR . 'languages');
                     }
                 }
             }

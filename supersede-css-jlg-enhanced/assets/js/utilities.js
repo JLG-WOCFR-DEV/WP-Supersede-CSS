@@ -1,10 +1,13 @@
 (function($) {
     const wpPackages = typeof window !== 'undefined' && window.wp ? window.wp : {};
-    const i18n = wpPackages.i18n ? wpPackages.i18n : {};
-    const __ = typeof i18n.__ === 'function' ? i18n.__ : (text) => text;
-    const _x = typeof i18n._x === 'function' ? i18n._x : (text) => text;
-    const _n = typeof i18n._n === 'function' ? i18n._n : (single) => single;
-    const _nx = typeof i18n._nx === 'function' ? i18n._nx : (single) => single;
+    const i18n = wpPackages.i18n ? wpPackages.i18n : null;
+    const fallbacks = {
+        __: (text) => text,
+        _x: (text) => text,
+        _n: (single) => single,
+        _nx: (single) => single,
+    };
+    const { __, _x, _n, _nx } = i18n ? i18n : fallbacks;
 
     let editors = {};
     let pickerActive = false;
