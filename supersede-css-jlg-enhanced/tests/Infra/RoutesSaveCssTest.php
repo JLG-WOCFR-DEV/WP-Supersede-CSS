@@ -140,6 +140,20 @@ $ssc_options_store = [];
 
 global $ssc_options_store;
 
+/** @var int $ssc_cache_invalidations */
+$ssc_cache_invalidations = 0;
+
+global $ssc_cache_invalidations;
+
+if (!function_exists('ssc_invalidate_css_cache')) {
+    function ssc_invalidate_css_cache(): void
+    {
+        global $ssc_cache_invalidations;
+
+        $ssc_cache_invalidations++;
+    }
+}
+
 if (!function_exists('get_option')) {
     function get_option($name, $default = false)
     {
@@ -282,5 +296,33 @@ $roundTripRegistry = \SSC\Support\TokenRegistry::convertCssToRegistry($roundTrip
 
 if ($roundTripRegistry !== $complexValueRegistry) {
     fwrite(STDERR, 'Converting CSS tokens to the registry and back should preserve the full value.' . PHP_EOL);
+    exit(1);
+}
+
+$legacyTabletCss = "body { color: red; }<script>alert('xss');</script>";
+$expectedSanitizedTabletCss = \SSC\Support\CssSanitizer::sanitize($legacyTabletCss);
+
+$ssc_options_store['ssc_css_tablet'] = $legacyTabletCss;
+$ssc_cache_invalidations = 0;
+
+$legacyRequest = new WP_REST_Request([
+    'option_name' => 'ssc_active_css',
+    'css' => 'body { color: blue; }',
+]);
+
+$legacyResponse = $routes->saveCss($legacyRequest);
+
+if (!$legacyResponse instanceof WP_REST_Response || $legacyResponse->get_status() !== 200) {
+    fwrite(STDERR, 'Saving CSS with legacy tablet data should return a successful WP_REST_Response.' . PHP_EOL);
+    exit(1);
+}
+
+if ($ssc_options_store['ssc_css_tablet'] !== $expectedSanitizedTabletCss) {
+    fwrite(STDERR, 'Implicit CSS sanitization should persist cleaned tablet CSS.' . PHP_EOL);
+    exit(1);
+}
+
+if ($ssc_cache_invalidations < 2) {
+    fwrite(STDERR, 'Implicit CSS sanitization should invalidate the cache when rewriting tablet CSS.' . PHP_EOL);
     exit(1);
 }
