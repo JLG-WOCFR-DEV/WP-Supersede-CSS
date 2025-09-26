@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
     <div class="ssc-two" style="align-items: flex-start;">
         <div class="ssc-pane">
             <label><?php esc_html_e('Sélecteur(s)', 'supersede-css-jlg'); ?></label><input type="text" id="ssc-sel" class="large-text" placeholder="<?php echo esc_attr__('.btn, .card > a', 'supersede-css-jlg'); ?>">
-            <label><?php esc_html_e('Pseudo-classe', 'supersede-css-jlg'); ?></label><select id="ssc-pseudo"><option value=""><?php esc_html_e('(aucune)', 'supersede-css-jlg'); ?></option><option value=":hover">:hover</option><option value=":focus">:focus</option></select>
+            <label><?php esc_html_e('Pseudo-classe', 'supersede-css-jlg'); ?></label><select id="ssc-pseudo"><option value=""><?php esc_html_e('(aucune)', 'supersede-css-jlg'); ?></option><option value=":hover"><?php esc_html_e(':hover', 'supersede-css-jlg'); ?></option><option value=":focus"><?php esc_html_e(':focus', 'supersede-css-jlg'); ?></option></select>
             <label><?php esc_html_e('Propriétés CSS', 'supersede-css-jlg'); ?></label><textarea id="ssc-css" rows="12" class="code"></textarea>
             <div class="ssc-actions"><button id="ssc-apply" class="button button-primary"><?php esc_html_e('Appliquer', 'supersede-css-jlg'); ?></button><button id="ssc-copy" class="button"><?php esc_html_e('Copier', 'supersede-css-jlg'); ?></button></div>
         </div>
