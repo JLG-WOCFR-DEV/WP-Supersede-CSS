@@ -139,18 +139,22 @@ final class TokenRegistry
                 continue;
             }
 
-            $name = isset($token['name']) ? (string) $token['name'] : '';
-            $name = trim($name);
-            if ($name === '') {
+            $rawName = isset($token['name']) ? (string) $token['name'] : '';
+            $rawName = trim($rawName);
+            if ($rawName === '') {
                 continue;
             }
 
-            if (strpos($name, '--') !== 0) {
-                $name = '--' . ltrim($name, '-');
+            if (strpos($rawName, '--') !== 0) {
+                $rawName = '--' . ltrim($rawName, '-');
             }
 
-            $name = '--' . preg_replace('/[^a-z0-9\-]+/i', '-', ltrim($name, '-'));
-            $normalizedKey = strtolower($name);
+            $normalizedName = '--' . preg_replace('/[^a-z0-9\-]+/i', '-', ltrim($rawName, '-'));
+            if ($normalizedName === '--') {
+                continue;
+            }
+
+            $normalizedKey = strtolower($normalizedName);
 
             $valueRaw = isset($token['value']) ? (string) $token['value'] : '';
             $value = trim(sanitize_textarea_field($valueRaw));
@@ -170,7 +174,7 @@ final class TokenRegistry
             }
 
             $normalizedToken = [
-                'name' => $name,
+                'name' => $normalizedName,
                 'value' => $value,
                 'type' => $type,
                 'description' => $description,
