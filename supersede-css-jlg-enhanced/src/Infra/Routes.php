@@ -209,7 +209,16 @@ final class Routes {
                 } else {
                     $existing_value = get_option($config['option'], '');
                     $existing_value = is_string($existing_value) ? $existing_value : '';
-                    $sanitized_segments[$key] = CssSanitizer::sanitize($existing_value);
+                    $sanitized_value = CssSanitizer::sanitize($existing_value);
+                    $sanitized_segments[$key] = $sanitized_value;
+
+                    if ($sanitized_value !== $existing_value) {
+                        update_option($config['option'], $sanitized_value, false);
+
+                        if (function_exists('\\ssc_invalidate_css_cache')) {
+                            \ssc_invalidate_css_cache();
+                        }
+                    }
                 }
             }
 
