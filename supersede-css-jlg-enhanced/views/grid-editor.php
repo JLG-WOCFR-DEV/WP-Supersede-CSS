@@ -12,11 +12,11 @@ if (!defined('ABSPATH')) {
 
             <label><strong><?php esc_html_e('Nombre de colonnes', 'supersede-css-jlg'); ?></strong></label>
             <input type="range" id="ssc-grid-cols" min="1" max="12" value="3" step="1">
-            <span id="ssc-grid-cols-val">3</span>
+            <span id="ssc-grid-cols-val"><?php echo esc_html__('3', 'supersede-css-jlg'); ?></span>
 
             <label style="margin-top:16px; display:block;"><strong><?php esc_html_e('Espacement (gap) en pixels', 'supersede-css-jlg'); ?></strong></label>
             <input type="range" id="ssc-grid-gap" min="0" max="100" value="16" step="1">
-            <span id="ssc-grid-gap-val">16px</span>
+            <span id="ssc-grid-gap-val"><?php echo esc_html__('16px', 'supersede-css-jlg'); ?></span>
 
             <div class="ssc-actions" style="margin-top:24px; border-top: 1px solid var(--ssc-border); padding-top: 16px;">
                 <button id="ssc-grid-apply" class="button button-primary"><?php esc_html_e('Appliquer', 'supersede-css-jlg'); ?></button>

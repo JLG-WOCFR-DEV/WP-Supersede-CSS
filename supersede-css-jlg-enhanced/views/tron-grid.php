@@ -22,15 +22,15 @@ if (!defined('ABSPATH')) {
 
             <label style="margin-top:16px; display:block;"><strong><?php esc_html_e('Taille de la grille (pixels)', 'supersede-css-jlg'); ?></strong></label>
             <input type="range" id="ssc-tron-size" min="20" max="200" value="50" step="5">
-            <span id="ssc-tron-size-val">50px</span>
+            <span id="ssc-tron-size-val"><?php echo esc_html__('50px', 'supersede-css-jlg'); ?></span>
 
             <label style="margin-top:16px; display:block;"><strong><?php esc_html_e('Épaisseur des lignes (pixels)', 'supersede-css-jlg'); ?></strong></label>
             <input type="range" id="ssc-tron-thickness" min="1" max="5" value="1" step="1">
-            <span id="ssc-tron-thickness-val">1px</span>
+            <span id="ssc-tron-thickness-val"><?php echo esc_html__('1px', 'supersede-css-jlg'); ?></span>
 
             <label style="margin-top:16px; display:block;"><strong><?php esc_html_e('Vitesse de l\'animation (secondes)', 'supersede-css-jlg'); ?></strong></label>
             <input type="range" id="ssc-tron-speed" min="1" max="30" value="10" step="1">
-            <span id="ssc-tron-speed-val">10s</span>
+            <span id="ssc-tron-speed-val"><?php echo esc_html__('10s', 'supersede-css-jlg'); ?></span>
 
             <div class="ssc-actions" style="margin-top:24px; border-top: 1px solid var(--ssc-border); padding-top: 16px;">
                 <button id="ssc-tron-apply" class="button button-primary"><?php esc_html_e('Appliquer sur le site', 'supersede-css-jlg'); ?></button>

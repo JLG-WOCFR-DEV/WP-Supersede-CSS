@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
             </select>
             <label style="margin-top:16px; display:block;"><strong><?php esc_html_e('Durée (secondes)', 'supersede-css-jlg'); ?></strong></label>
             <input type="range" id="ssc-anim-duration" min="0.1" max="5" value="1.5" step="0.1">
-            <span id="ssc-anim-duration-val">1.5s</span>
+            <span id="ssc-anim-duration-val"><?php echo esc_html__('1.5s', 'supersede-css-jlg'); ?></span>
             <div class="ssc-actions" style="margin-top:24px; border-top: 1px solid var(--ssc-border); padding-top: 16px;">
                 <button id="ssc-anim-apply" class="button button-primary"><?php esc_html_e('Appliquer', 'supersede-css-jlg'); ?></button>
                 <button id="ssc-anim-copy" class="button"><?php esc_html_e('Copier CSS', 'supersede-css-jlg'); ?></button>
