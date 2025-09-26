@@ -4,7 +4,7 @@ if (!defined('ABSPATH')) {
 }
 /** @var array{plugin_version?:string,wordpress_version?:string,php_version?:string} $system_info */
 /** @var array<int,array<string,mixed>> $log_entries */
-$plugin_version    = $system_info['plugin_version'] ?? 'N/A';
+$plugin_version    = $system_info['plugin_version'] ?? __('N/A', 'supersede-css-jlg');
 $wordpress_version = $system_info['wordpress_version'] ?? '';
 $php_version       = $system_info['php_version'] ?? '';
 ?>

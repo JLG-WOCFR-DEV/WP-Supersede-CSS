@@ -34,7 +34,7 @@ if (!defined('ABSPATH')) {
             <div class="ssc-typo-vp-slider-container">
                 <label><?php esc_html_e('Largeur du viewport (px)', 'supersede-css-jlg'); ?></label>
                 <input type="range" id="ssc-typo-vp-slider" min="320" max="1280" value="960">
-                <span id="ssc-typo-vp-value">960px</span>
+                <span id="ssc-typo-vp-value"><?php echo esc_html__('960px', 'supersede-css-jlg'); ?></span>
             </div>
             <div id="ssc-typo-preview" style="margin-top: 16px; font-size: clamp(16px, 3vw, 48px);"><?php esc_html_e('Design fluide, lecture parfaite.', 'supersede-css-jlg'); ?></div>
         </div>

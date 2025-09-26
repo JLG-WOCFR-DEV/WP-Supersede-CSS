@@ -36,7 +36,7 @@ if (!defined('ABSPATH')) {
                 <option value="polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)"><?php esc_html_e('Étoile', 'supersede-css-jlg'); ?></option>
                 <option value="polygon(0 15%, 15% 15%, 15% 0, 85% 0, 85% 15%, 100% 15%, 100% 85%, 85% 85%, 85% 100%, 15% 100%, 15% 85%, 0 85%)"><?php esc_html_e('Croix', 'supersede-css-jlg'); ?></option>
             </select>
-            <label style="margin-top:16px; display:block;"><strong><?php esc_html_e("Taille de l'aperçu:", 'supersede-css-jlg'); ?> <span id="ssc-clip-size-val">300px</span></strong></label>
+            <label style="margin-top:16px; display:block;"><strong><?php esc_html_e("Taille de l'aperçu:", 'supersede-css-jlg'); ?> <span id="ssc-clip-size-val"><?php echo esc_html__('300px', 'supersede-css-jlg'); ?></span></strong></label>
             <input type="range" id="ssc-clip-preview-size" min="100" max="500" value="300" step="10" style="width:100%;">
             <h3 style="margin-top:16px;"><?php esc_html_e('Code CSS Généré', 'supersede-css-jlg'); ?></h3>
             <pre id="ssc-clip-css" class="ssc-code"></pre>

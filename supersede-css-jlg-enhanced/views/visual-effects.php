@@ -55,14 +55,14 @@ if (!defined('ABSPATH')) {
                 <label style="margin-top:16px;"><strong><?php esc_html_e('Couleur de la ligne', 'supersede-css-jlg'); ?></strong></label>
                 <input type="color" id="ssc-ecg-color" value="#00ff00">
                 <label style="margin-top:16px;"><strong><?php esc_html_e('Positionnement (top)', 'supersede-css-jlg'); ?></strong></label>
-                <input type="range" id="ssc-ecg-top" min="0" max="100" value="50" step="1"><span id="ssc-ecg-top-val">50%</span>
+                <input type="range" id="ssc-ecg-top" min="0" max="100" value="50" step="1"><span id="ssc-ecg-top-val"><?php echo esc_html__('50%', 'supersede-css-jlg'); ?></span>
                 <label style="margin-top:16px;"><strong><?php esc_html_e('Superposition (z-index)', 'supersede-css-jlg'); ?></strong></label>
-                <input type="range" id="ssc-ecg-z-index" min="-10" max="10" value="1" step="1"><span id="ssc-ecg-z-index-val">1</span>
+                <input type="range" id="ssc-ecg-z-index" min="-10" max="10" value="1" step="1"><span id="ssc-ecg-z-index-val"><?php echo esc_html__('1', 'supersede-css-jlg'); ?></span>
                 <hr>
                 <label><strong><?php esc_html_e('Logo/Image au centre', 'supersede-css-jlg'); ?></strong></label>
                 <button id="ssc-ecg-upload-btn" class="button"><?php esc_html_e('Choisir une image', 'supersede-css-jlg'); ?></button>
                 <label style="margin-top:16px;"><strong><?php esc_html_e('Taille du logo', 'supersede-css-jlg'); ?></strong></label>
-                <input type="range" id="ssc-ecg-logo-size" min="20" max="200" value="100" step="1"><span id="ssc-ecg-logo-size-val">100px</span>
+                <input type="range" id="ssc-ecg-logo-size" min="20" max="200" value="100" step="1"><span id="ssc-ecg-logo-size-val"><?php echo esc_html__('100px', 'supersede-css-jlg'); ?></span>
                 <hr>
                 <pre id="ssc-ecg-css" class="ssc-code ssc-code-small" style="margin-top:16px;"></pre>
                 <button id="ssc-ecg-apply" class="button button-primary" style="margin-top:8px;"><?php esc_html_e('Appliquer l\'Effet', 'supersede-css-jlg'); ?></button>

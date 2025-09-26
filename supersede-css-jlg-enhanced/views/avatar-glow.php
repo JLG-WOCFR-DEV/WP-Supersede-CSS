@@ -34,10 +34,10 @@ if (!defined('ABSPATH')) {
                 </div>
                 <label style="margin-top:16px;"><strong><?php esc_html_e('Vitesse (secondes)', 'supersede-css-jlg'); ?></strong></label>
                 <input type="range" id="ssc-glow-speed" min="1" max="20" value="5" step="0.5">
-                <span id="ssc-glow-speed-val">5s</span>
+                <span id="ssc-glow-speed-val"><?php echo esc_html__('5s', 'supersede-css-jlg'); ?></span>
                 <label style="margin-top:16px;"><strong><?php esc_html_e('Épaisseur (pixels)', 'supersede-css-jlg'); ?></strong></label>
                 <input type="range" id="ssc-glow-thickness" min="2" max="12" value="4" step="1">
-                <span id="ssc-glow-thickness-val">4px</span>
+                <span id="ssc-glow-thickness-val"><?php echo esc_html__('4px', 'supersede-css-jlg'); ?></span>
             </div>
 
             <div class="ssc-actions" style="margin-top:24px; border-top: 1px solid var(--ssc-border); padding-top: 16px;">
