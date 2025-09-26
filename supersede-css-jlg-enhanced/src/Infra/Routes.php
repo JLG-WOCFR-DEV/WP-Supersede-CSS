@@ -299,16 +299,27 @@ final class Routes {
     }
 
     public function saveAvatarGlowPresets(\WP_REST_Request $request): \WP_REST_Response {
-        $presets_json = wp_unslash($request->get_param('presets'));
+        $payload = $request->get_json_params();
 
-        if (!is_string($presets_json)) {
-            return new \WP_REST_Response(['ok' => false, 'message' => 'Invalid JSON.'], 400);
+        if (!is_array($payload) || !array_key_exists('presets', $payload)) {
+            $raw_presets = $request->get_param('presets');
+            if (is_string($raw_presets)) {
+                $decoded = json_decode(wp_unslash($raw_presets), true);
+                $payload = ['presets' => $decoded];
+            } elseif (is_array($raw_presets)) {
+                $payload = ['presets' => $raw_presets];
+            } else {
+                $payload = [];
+            }
         }
 
-        $presets = json_decode($presets_json, true);
+        $presets = $payload['presets'] ?? null;
 
-        if (json_last_error() !== JSON_ERROR_NONE || !is_array($presets)) {
-            return new \WP_REST_Response(['ok' => false, 'message' => 'Invalid JSON.'], 400);
+        if (!is_array($presets)) {
+            return new \WP_REST_Response([
+                'ok' => false,
+                'message' => __('Invalid presets payload.', 'supersede-css-jlg'),
+            ], 400);
         }
 
         $presets = CssSanitizer::sanitizeAvatarGlowPresets($presets);
@@ -343,16 +354,27 @@ final class Routes {
     }
 
     public function savePresets(\WP_REST_Request $request): \WP_REST_Response {
-        $presets_json = wp_unslash($request->get_param('presets'));
+        $payload = $request->get_json_params();
 
-        if (!is_string($presets_json)) {
-            return new \WP_REST_Response(['ok' => false, 'message' => 'Invalid JSON.'], 400);
+        if (!is_array($payload) || !array_key_exists('presets', $payload)) {
+            $raw_presets = $request->get_param('presets');
+            if (is_string($raw_presets)) {
+                $decoded = json_decode(wp_unslash($raw_presets), true);
+                $payload = ['presets' => $decoded];
+            } elseif (is_array($raw_presets)) {
+                $payload = ['presets' => $raw_presets];
+            } else {
+                $payload = [];
+            }
         }
 
-        $presets = json_decode($presets_json, true);
+        $presets = $payload['presets'] ?? null;
 
-        if (json_last_error() !== JSON_ERROR_NONE || !is_array($presets)) {
-            return new \WP_REST_Response(['ok' => false, 'message' => 'Invalid JSON.'], 400);
+        if (!is_array($presets)) {
+            return new \WP_REST_Response([
+                'ok' => false,
+                'message' => __('Invalid presets payload.', 'supersede-css-jlg'),
+            ], 400);
         }
 
         $presets = CssSanitizer::sanitizePresetCollection($presets);

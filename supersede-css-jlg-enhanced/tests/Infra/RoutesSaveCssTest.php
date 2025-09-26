@@ -86,14 +86,26 @@ if (!class_exists('WP_REST_Request')) {
         /** @var array<string, mixed> */
         private array $params;
 
-        public function __construct(array $params = [])
+        /** @var array<string, mixed>|null */
+        private ?array $json;
+
+        public function __construct(array $params = [], ?array $json = null)
         {
             $this->params = $params;
+            $this->json = $json;
         }
 
         public function get_param(string $key)
         {
             return $this->params[$key] ?? null;
+        }
+
+        /**
+         * @return array<string, mixed>
+         */
+        public function get_json_params(): array
+        {
+            return is_array($this->json) ? $this->json : [];
         }
     }
 }
