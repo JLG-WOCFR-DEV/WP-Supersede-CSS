@@ -245,7 +245,9 @@ final class Routes {
 
         if ($option_name === 'ssc_tokens_css') {
             $tokens = TokenRegistry::convertCssToRegistry($css_to_store);
-            $sanitizedTokens = TokenRegistry::saveRegistry($tokens);
+            $existingRegistry = TokenRegistry::getRegistry();
+            $tokensWithMetadata = TokenRegistry::mergeMetadata($tokens, $existingRegistry);
+            $sanitizedTokens = TokenRegistry::saveRegistry($tokensWithMetadata);
             $css_to_store = TokenRegistry::tokensToCss($sanitizedTokens);
         } else {
             update_option($option_name, $css_to_store, false);
