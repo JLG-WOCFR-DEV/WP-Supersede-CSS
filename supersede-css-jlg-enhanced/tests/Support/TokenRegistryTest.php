@@ -122,3 +122,59 @@ if (strpos($regeneratedCss, '--BrandPrimary') === false) {
     fwrite(STDERR, 'tokensToCss should keep the original casing when exporting.' . PHP_EOL);
     exit(1);
 }
+
+$existingTokens = [
+    [
+        'name' => '--BrandPrimary',
+        'value' => '#3366ff',
+        'type' => 'color',
+        'description' => 'Primary brand color.',
+        'group' => 'Brand',
+    ],
+    [
+        'name' => '--SpacingSmall',
+        'value' => '4px',
+        'type' => 'number',
+        'description' => 'Small spacing token.',
+        'group' => 'Spacing',
+    ],
+];
+
+$incomingTokens = [
+    [
+        'name' => '--BrandPrimary',
+        'value' => '#123456',
+        'type' => 'text',
+        'description' => '',
+        'group' => 'Legacy',
+    ],
+    [
+        'name' => '--NewToken',
+        'value' => 'value',
+        'type' => 'text',
+        'description' => '',
+        'group' => 'Legacy',
+    ],
+];
+
+$mergedTokens = TokenRegistry::mergeMetadata($incomingTokens, $existingTokens);
+
+if ($mergedTokens === [] || count($mergedTokens) !== 2) {
+    fwrite(STDERR, 'mergeMetadata should preserve the list of incoming tokens.' . PHP_EOL);
+    exit(1);
+}
+
+if ($mergedTokens[0]['type'] !== 'color' || $mergedTokens[0]['group'] !== 'Brand' || $mergedTokens[0]['description'] !== 'Primary brand color.') {
+    fwrite(STDERR, 'mergeMetadata should restore metadata from the existing registry when names match.' . PHP_EOL);
+    exit(1);
+}
+
+if ($mergedTokens[0]['value'] !== '#123456') {
+    fwrite(STDERR, 'mergeMetadata should keep the incoming value for matching tokens.' . PHP_EOL);
+    exit(1);
+}
+
+if ($mergedTokens[1]['type'] !== 'text' || $mergedTokens[1]['group'] !== 'Legacy') {
+    fwrite(STDERR, 'mergeMetadata should leave unmatched tokens untouched.' . PHP_EOL);
+    exit(1);
+}

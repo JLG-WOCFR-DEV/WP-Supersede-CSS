@@ -194,6 +194,25 @@ if (array_key_exists('ssc_tokens_css', $ssc_options_store)) {
     exit(1);
 }
 
+$initialRegistry = [
+    [
+        'name' => '--first-token',
+        'value' => '#abcdef',
+        'type' => 'color',
+        'description' => 'Existing color token.',
+        'group' => 'Palette',
+    ],
+    [
+        'name' => '--second-token',
+        'value' => '8px',
+        'type' => 'text',
+        'description' => 'Existing size token.',
+        'group' => 'Spacing',
+    ],
+];
+
+\SSC\Support\TokenRegistry::saveRegistry($initialRegistry);
+
 $tokenCss = ":root {\n    --first-token: #123456;\n    --second-token: 1.5rem\n}";
 $tokenRequest = new WP_REST_Request([
     'option_name' => 'ssc_tokens_css',
@@ -208,7 +227,28 @@ if (!$tokenResponse instanceof WP_REST_Response || $tokenResponse->get_status() 
 }
 
 $sanitizedTokenCss = \SSC\Support\CssSanitizer::sanitize($tokenCss);
-$expectedRegistry = \SSC\Support\TokenRegistry::convertCssToRegistry($sanitizedTokenCss);
+$convertedRegistry = \SSC\Support\TokenRegistry::convertCssToRegistry($sanitizedTokenCss);
+$normalizedInitial = \SSC\Support\TokenRegistry::normalizeRegistry($initialRegistry);
+$initialByName = [];
+
+foreach ($normalizedInitial as $existingToken) {
+    $initialByName[strtolower($existingToken['name'])] = $existingToken;
+}
+
+$expectedRegistry = [];
+
+foreach ($convertedRegistry as $token) {
+    $key = strtolower($token['name']);
+    if (isset($initialByName[$key])) {
+        $existingToken = $initialByName[$key];
+        $token['type'] = $existingToken['type'];
+        $token['group'] = $existingToken['group'];
+        $token['description'] = $existingToken['description'];
+    }
+
+    $expectedRegistry[] = $token;
+}
+
 $expectedRegistryCss = \SSC\Support\TokenRegistry::tokensToCss($expectedRegistry);
 
 if ($ssc_options_store['ssc_tokens_registry'] !== $expectedRegistry) {

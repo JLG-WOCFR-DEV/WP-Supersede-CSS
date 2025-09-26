@@ -343,6 +343,55 @@ final class TokenRegistry
 
     /**
      * @param array<int, array{name: string, value: string, type: string, description: string, group: string}> $tokens
+     * @param array<int, array{name: string, value: string, type: string, description: string, group: string}> $existing
+     * @return array<int, array{name: string, value: string, type: string, description: string, group: string}>
+     */
+    public static function mergeMetadata(array $tokens, array $existing): array
+    {
+        if ($tokens === []) {
+            return [];
+        }
+
+        $existingByName = [];
+
+        foreach (self::normalizeRegistry($existing) as $existingToken) {
+            $name = strtolower($existingToken['name']);
+            $existingByName[$name] = [
+                'type' => $existingToken['type'],
+                'group' => $existingToken['group'],
+                'description' => $existingToken['description'],
+            ];
+        }
+
+        $merged = [];
+
+        foreach ($tokens as $token) {
+            if (!is_array($token)) {
+                continue;
+            }
+
+            $name = isset($token['name']) ? (string) $token['name'] : '';
+            if ($name === '') {
+                continue;
+            }
+
+            $key = strtolower($name);
+
+            if (isset($existingByName[$key])) {
+                $metadata = $existingByName[$key];
+                $token['type'] = $metadata['type'];
+                $token['group'] = $metadata['group'];
+                $token['description'] = $metadata['description'];
+            }
+
+            $merged[] = $token;
+        }
+
+        return $merged;
+    }
+
+    /**
+     * @param array<int, array{name: string, value: string, type: string, description: string, group: string}> $tokens
      */
     public static function tokensToCss(array $tokens): string
     {
