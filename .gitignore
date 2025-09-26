@@ -1,0 +1,7 @@
+node_modules/
+supersede-css-jlg-enhanced/node_modules/
+playwright-report/
+supersede-css-jlg-enhanced/playwright-report/
+test-results/
+supersede-css-jlg-enhanced/test-results/
+.DS_Store

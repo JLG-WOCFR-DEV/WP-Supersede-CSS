@@ -1,0 +1,12 @@
+{
+  "name": "supersede-css-jlg-enhanced",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "test:ui": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0",
+    "jquery": "^3.7.1"
+  }
+}
