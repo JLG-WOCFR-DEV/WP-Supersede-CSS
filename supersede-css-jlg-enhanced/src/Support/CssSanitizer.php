@@ -1631,7 +1631,14 @@ final class CssSanitizer
             }
 
             $name = isset($preset['name']) ? \sanitize_text_field((string) $preset['name']) : '';
-            $scope = isset($preset['scope']) ? self::sanitizeSelector((string) $preset['scope']) : '';
+
+            if (isset($preset['scope'])) {
+                $scope = self::sanitizeSelector((string) $preset['scope']);
+            } elseif (isset($preset['selector'])) {
+                $scope = self::sanitizeSelector((string) $preset['selector']);
+            } else {
+                $scope = '';
+            }
 
             $props = [];
             if (!empty($preset['props']) && is_array($preset['props'])) {
@@ -1649,6 +1656,16 @@ final class CssSanitizer
                 }
             }
 
+            if (empty($props) && isset($preset['styles'])) {
+                $styles = self::sanitize((string) $preset['styles']);
+                if ($styles !== '') {
+                    $parsedProps = self::parseSanitizedDeclarationList($styles);
+                    if (!empty($parsedProps)) {
+                        $props = $parsedProps;
+                    }
+                }
+            }
+
             $sanitized[$id] = [
                 'name' => $name,
                 'scope' => $scope,
@@ -1657,6 +1674,170 @@ final class CssSanitizer
         }
 
         return $sanitized;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function parseSanitizedDeclarationList(string $css): array
+    {
+        $css = trim($css);
+        if ($css === '') {
+            return [];
+        }
+
+        $segments = [];
+        if (strpos($css, '{') !== false) {
+            if (preg_match_all('/\{([^{}]*)\}/', $css, $matches)) {
+                foreach ($matches[1] as $segment) {
+                    $segment = trim($segment);
+                    if ($segment !== '') {
+                        $segments[] = $segment;
+                    }
+                }
+            }
+        }
+
+        if (empty($segments)) {
+            $segments[] = $css;
+        }
+
+        $props = [];
+        foreach ($segments as $segment) {
+            $parsed = self::parseDeclarationSegment($segment);
+            foreach ($parsed as $property => $value) {
+                $props[$property] = $value;
+            }
+        }
+
+        return $props;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function parseDeclarationSegment(string $segment): array
+    {
+        $length = strlen($segment);
+        if ($length === 0) {
+            return [];
+        }
+
+        $props = [];
+        $buffer = '';
+        $property = null;
+        $inSingleQuote = false;
+        $inDoubleQuote = false;
+        $escaped = false;
+        $parenDepth = 0;
+        $bracketDepth = 0;
+
+        for ($index = 0; $index < $length; $index++) {
+            $character = $segment[$index];
+
+            if ($escaped) {
+                $buffer .= $character;
+                $escaped = false;
+                continue;
+            }
+
+            if ($character === '\\') {
+                $buffer .= $character;
+                $escaped = true;
+                continue;
+            }
+
+            if ($character === "'" && !$inDoubleQuote) {
+                $buffer .= $character;
+                $inSingleQuote = !$inSingleQuote;
+                continue;
+            }
+
+            if ($character === '"' && !$inSingleQuote) {
+                $buffer .= $character;
+                $inDoubleQuote = !$inDoubleQuote;
+                continue;
+            }
+
+            if ($inSingleQuote || $inDoubleQuote) {
+                $buffer .= $character;
+                continue;
+            }
+
+            if ($character === '(') {
+                $parenDepth++;
+                $buffer .= $character;
+                continue;
+            }
+
+            if ($character === ')') {
+                if ($parenDepth > 0) {
+                    $parenDepth--;
+                }
+                $buffer .= $character;
+                continue;
+            }
+
+            if ($character === '[') {
+                $bracketDepth++;
+                $buffer .= $character;
+                continue;
+            }
+
+            if ($character === ']') {
+                if ($bracketDepth > 0) {
+                    $bracketDepth--;
+                }
+                $buffer .= $character;
+                continue;
+            }
+
+            if ($character === ':' && $property === null && $parenDepth === 0 && $bracketDepth === 0) {
+                $property = trim($buffer);
+                $buffer = '';
+                continue;
+            }
+
+            if ($character === ';' && $parenDepth === 0 && $bracketDepth === 0) {
+                self::appendSanitizedDeclaration($props, $property, trim($buffer));
+                $property = null;
+                $buffer = '';
+                continue;
+            }
+
+            $buffer .= $character;
+        }
+
+        self::appendSanitizedDeclaration($props, $property, trim($buffer));
+
+        return $props;
+    }
+
+    /**
+     * @param array<string, string> $props
+     */
+    private static function appendSanitizedDeclaration(array &$props, ?string $property, string $value): void
+    {
+        if ($property === null) {
+            return;
+        }
+
+        $property = trim($property);
+        if ($property === '' || $value === '') {
+            return;
+        }
+
+        if (preg_match('/(--[A-Za-z0-9_-]+|[A-Za-z_-][A-Za-z0-9_-]*)$/', $property, $matches)) {
+            $property = $matches[1];
+        }
+
+        $clean = self::sanitizeDeclarationPair($property, $value);
+        if ($clean === null) {
+            return;
+        }
+
+        [$cleanProp, $cleanValue] = $clean;
+        $props[$cleanProp] = $cleanValue;
     }
 
     private static function sanitizeSelector(string $selector): string

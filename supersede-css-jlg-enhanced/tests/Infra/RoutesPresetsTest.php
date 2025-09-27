@@ -217,7 +217,10 @@ if ($storedJsonGlowPresets !== $expectedJsonGlow) {
 }
 
 $legacyPresets = [
-    'first' => ['selector' => 'body', 'styles' => '<script>alert(1)</script>color:red;'],
+    'first' => [
+        'selector' => 'body',
+        'styles' => '<script>alert(1)</script>color:red;margin-top: 10px;behavior:url(foo);',
+    ],
 ];
 
 $legacyPresetsRequest = new WP_REST_Request([
@@ -239,8 +242,27 @@ if ($storedLegacyPresets !== $expectedLegacyPresets) {
     exit(1);
 }
 
+$legacyProps = $expectedLegacyPresets['first']['props'] ?? [];
+if (!isset($legacyProps['color']) || $legacyProps['color'] !== 'red') {
+    fwrite(STDERR, 'Legacy preset styles should keep safe declarations.' . PHP_EOL);
+    exit(1);
+}
+
+if (!isset($legacyProps['margin-top']) || $legacyProps['margin-top'] !== '10px') {
+    fwrite(STDERR, 'Legacy preset styles should retain multiple declarations.' . PHP_EOL);
+    exit(1);
+}
+
+if (isset($legacyProps['behavior'])) {
+    fwrite(STDERR, 'Disallowed declarations should not survive legacy preset sanitization.' . PHP_EOL);
+    exit(1);
+}
+
 $jsonPresets = [
-    'second' => ['selector' => '.example', 'styles' => 'color: blue;'],
+    'second' => [
+        'selector' => '.example',
+        'styles' => 'color: blue; padding: 4px 8px; behavior:url(foo);',
+    ],
 ];
 
 $jsonPresetsRequest = new WP_REST_Request([], ['presets' => $jsonPresets]);
@@ -256,6 +278,22 @@ $expectedJsonPresets = \SSC\Support\CssSanitizer::sanitizePresetCollection($json
 
 if ($storedJsonPresets !== $expectedJsonPresets) {
     fwrite(STDERR, 'JSON presets should overwrite existing presets after sanitization.' . PHP_EOL);
+    exit(1);
+}
+
+$jsonProps = $expectedJsonPresets['second']['props'] ?? [];
+if (!isset($jsonProps['color']) || $jsonProps['color'] !== 'blue') {
+    fwrite(STDERR, 'Imported preset styles should expose color declarations to the UI.' . PHP_EOL);
+    exit(1);
+}
+
+if (!isset($jsonProps['padding']) || $jsonProps['padding'] !== '4px 8px') {
+    fwrite(STDERR, 'Imported preset styles should keep shorthand declarations.' . PHP_EOL);
+    exit(1);
+}
+
+if (isset($jsonProps['behavior'])) {
+    fwrite(STDERR, 'Unsafe declarations must be stripped from imported presets.' . PHP_EOL);
     exit(1);
 }
 
