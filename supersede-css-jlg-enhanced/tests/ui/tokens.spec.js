@@ -58,36 +58,6 @@ test.describe('Token manager admin UI', () => {
       await route.fallback();
     });
 
-    await page.addInitScript(({ restEndpoint }) => {
-      window.SSC = {
-        rest: {
-          root: restEndpoint,
-          nonce: 'ui-test-nonce',
-        },
-      };
-      window.SSC_TOKENS_DATA = {
-        tokens: [],
-        css: '',
-        types: {
-          color: { label: 'Colour', input: 'color' },
-          text: { label: 'Text', input: 'text' },
-        },
-        i18n: {
-          addToken: 'Add token',
-          emptyState: 'No tokens yet',
-          groupLabel: 'Group',
-          nameLabel: 'Name',
-          valueLabel: 'Value',
-          typeLabel: 'Type',
-          descriptionLabel: 'Description',
-          deleteLabel: 'Delete',
-          saveSuccess: 'Tokens saved',
-          saveError: 'Unable to save tokens',
-        },
-      };
-      window.sscToast = () => {};
-    }, { restEndpoint: restRoot });
-
     await page.setContent(`
       <html>
         <head>
@@ -112,13 +82,38 @@ test.describe('Token manager admin UI', () => {
       </html>
     `, { waitUntil: 'domcontentloaded' });
 
-    const initialFetch = page.waitForResponse((response) =>
-      response.url() === restRoot + 'tokens' && response.request().method() === 'GET'
-    );
+    await page.evaluate(({ restEndpoint, initialTokens }) => {
+      window.SSC = {
+        rest: {
+          root: restEndpoint,
+          nonce: 'ui-test-nonce',
+        },
+      };
+      window.SSC_TOKENS_DATA = {
+        tokens: initialTokens,
+        css: '',
+        types: {
+          color: { label: 'Colour', input: 'color' },
+          text: { label: 'Text', input: 'text' },
+        },
+        i18n: {
+          addToken: 'Add token',
+          emptyState: 'No tokens yet',
+          groupLabel: 'Group',
+          nameLabel: 'Name',
+          valueLabel: 'Value',
+          typeLabel: 'Type',
+          descriptionLabel: 'Description',
+          deleteLabel: 'Delete',
+          saveSuccess: 'Tokens saved',
+          saveError: 'Unable to save tokens',
+        },
+      };
+      window.sscToast = () => {};
+    }, { restEndpoint: restRoot, initialTokens: serverTokens });
 
     await page.addScriptTag({ path: jqueryPath });
     await page.addScriptTag({ path: tokensScriptPath });
-    await initialFetch;
 
     const builder = page.locator('#ssc-token-builder');
     const rows = builder.locator('.ssc-token-row');
@@ -126,16 +121,22 @@ test.describe('Token manager admin UI', () => {
     const cssTextarea = page.locator('#ssc-tokens');
 
     await expect(rows).toHaveCount(1);
-    await expect(previewStyle).toContainText('--primary-color: #123456;');
+    let currentCss = await previewStyle.evaluate((el) => el.textContent || '');
+    expect(currentCss).toContain('--primary-color: #123456;');
 
     await page.locator('#ssc-token-add').click();
     await expect(rows).toHaveCount(2);
 
     const newRow = builder.locator('.ssc-token-row').last();
-    await newRow.locator('.token-name').fill('--secondary-color');
-    await newRow.locator('.token-value').fill('#ff0000');
+    await newRow.locator('.token-name').fill('spacing_small');
+    await newRow.locator('.token-name').blur();
+    await expect(newRow.locator('.token-name')).toHaveValue('--spacing_small');
+    await newRow.locator('.token-type').selectOption('text');
+    const valueInput = newRow.locator('.token-value');
+    await valueInput.fill('1rem');
 
-    await expect(previewStyle).toContainText('--secondary-color: #ff0000;');
+    currentCss = await previewStyle.evaluate((el) => el.textContent || '');
+    expect(currentCss).toContain('--spacing_small: 1rem;');
 
     const saveResponse = page.waitForResponse((response) =>
       response.url() === restRoot + 'tokens' && response.request().method() === 'POST'
@@ -143,13 +144,16 @@ test.describe('Token manager admin UI', () => {
     await page.locator('#ssc-tokens-save').click();
     await saveResponse;
     expect(serverTokens.length).toBe(2);
+    expect(serverTokens[1].name).toBe('--spacing_small');
 
-    await newRow.locator('.token-value').fill('#00ff00');
-    await expect(previewStyle).toContainText('--secondary-color: #00ff00;');
+    await newRow.locator('.token-value').fill('2rem');
+    currentCss = await previewStyle.evaluate((el) => el.textContent || '');
+    expect(currentCss).toContain('--spacing_small: 2rem;');
 
     await builder.locator('.ssc-token-row').last().locator('.token-delete').click();
     await expect(rows).toHaveCount(1);
-    await expect(previewStyle).not.toContainText('--secondary-color');
+    currentCss = await previewStyle.evaluate((el) => el.textContent || '');
+    expect(currentCss).not.toContain('--spacing_small');
 
     const deleteSave = page.waitForResponse((response) =>
       response.url() === restRoot + 'tokens' && response.request().method() === 'POST'
@@ -158,7 +162,8 @@ test.describe('Token manager admin UI', () => {
     await deleteSave;
 
     expect(serverTokens.length).toBe(1);
-    await expect(previewStyle).toContainText('--primary-color: #123456;');
+    currentCss = await previewStyle.evaluate((el) => el.textContent || '');
+    expect(currentCss).toContain('--primary-color: #123456;');
     await expect(cssTextarea).toHaveValue(/--primary-color: #123456;/);
   });
 });

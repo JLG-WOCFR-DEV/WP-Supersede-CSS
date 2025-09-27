@@ -75,7 +75,7 @@
         if (name.indexOf('--') !== 0) {
             name = '--' + name.replace(/^-+/, '');
         }
-        return name.replace(/[^a-zA-Z0-9\-]/g, '-');
+        return name.replace(/[^a-zA-Z0-9_\-]/g, '-');
     }
 
     function ensureGroupDatalist(groups) {
