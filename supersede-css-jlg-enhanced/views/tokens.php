@@ -14,7 +14,6 @@ if (function_exists('wp_localize_script')) {
         'i18n' => [
             'addToken' => __('Ajouter un token', 'supersede-css-jlg'),
             'emptyState' => __('Aucun token pour le moment. Utilisez le bouton ci-dessous pour commencer.', 'supersede-css-jlg'),
-            'groupLabel' => __('Groupe', 'supersede-css-jlg'),
             'nameLabel' => __('Nom', 'supersede-css-jlg'),
             'valueLabel' => __('Valeur', 'supersede-css-jlg'),
             'typeLabel' => __('Type', 'supersede-css-jlg'),
@@ -22,6 +21,8 @@ if (function_exists('wp_localize_script')) {
             'deleteLabel' => __('Supprimer', 'supersede-css-jlg'),
             'saveSuccess' => __('Tokens enregistrés', 'supersede-css-jlg'),
             'saveError' => __('Impossible d’enregistrer les tokens.', 'supersede-css-jlg'),
+            'groupLabel' => __('Groupe', 'supersede-css-jlg'),
+            'reloadConfirm' => __('Cette action remplacera vos modifications locales non enregistrées par la version du serveur. Continuer ?', 'supersede-css-jlg'),
         ],
     ]);
 }
@@ -74,6 +75,7 @@ if (function_exists('wp_localize_script')) {
 
             <div class="ssc-token-toolbar" style="margin-bottom:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                 <button id="ssc-token-add" class="button"><?php esc_html_e('+ Ajouter un Token', 'supersede-css-jlg'); ?></button>
+                <button id="ssc-tokens-reload" class="button"><?php esc_html_e('Recharger', 'supersede-css-jlg'); ?></button>
             </div>
 
             <div id="ssc-token-builder" class="ssc-token-builder" aria-live="polite">
