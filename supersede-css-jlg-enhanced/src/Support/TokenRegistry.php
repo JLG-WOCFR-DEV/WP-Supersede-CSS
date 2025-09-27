@@ -149,7 +149,7 @@ final class TokenRegistry
                 $rawName = '--' . ltrim($rawName, '-');
             }
 
-            $normalizedName = '--' . preg_replace('/[^a-z0-9\-]+/i', '-', ltrim($rawName, '-'));
+            $normalizedName = '--' . preg_replace('/[^a-z0-9_-]+/i', '-', ltrim($rawName, '-'));
             if ($normalizedName === '--') {
                 continue;
             }

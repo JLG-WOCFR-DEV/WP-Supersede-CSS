@@ -178,3 +178,53 @@ if ($mergedTokens[1]['type'] !== 'text' || $mergedTokens[1]['group'] !== 'Legacy
     fwrite(STDERR, 'mergeMetadata should leave unmatched tokens untouched.' . PHP_EOL);
     exit(1);
 }
+
+$ssc_options_store = [];
+
+$underscoredTokens = [
+    [
+        'name' => '--spacing_small',
+        'value' => '8px',
+        'type' => 'text',
+        'description' => 'Spacing token with underscore.',
+        'group' => 'Spacing',
+    ],
+];
+
+$savedRegistry = TokenRegistry::saveRegistry($underscoredTokens);
+
+if ($savedRegistry === [] || $savedRegistry[0]['name'] !== '--spacing_small') {
+    fwrite(STDERR, 'saveRegistry should preserve underscores in token names.' . PHP_EOL);
+    exit(1);
+}
+
+if (!isset($ssc_options_store['ssc_tokens_registry']) || !is_array($ssc_options_store['ssc_tokens_registry'])) {
+    fwrite(STDERR, 'saveRegistry should persist the registry with the underscored token.' . PHP_EOL);
+    exit(1);
+}
+
+$storedRegistry = $ssc_options_store['ssc_tokens_registry'];
+
+if ($storedRegistry === [] || $storedRegistry[0]['name'] !== '--spacing_small') {
+    fwrite(STDERR, 'Persisted registry should keep underscores in token names.' . PHP_EOL);
+    exit(1);
+}
+
+if (!isset($ssc_options_store['ssc_tokens_css']) || strpos($ssc_options_store['ssc_tokens_css'], '--spacing_small') === false) {
+    fwrite(STDERR, 'Persisted CSS should include the underscored token name.' . PHP_EOL);
+    exit(1);
+}
+
+$roundTrip = TokenRegistry::getRegistry();
+
+if ($roundTrip === [] || $roundTrip[0]['name'] !== '--spacing_small') {
+    fwrite(STDERR, 'getRegistry should return tokens with underscores intact.' . PHP_EOL);
+    exit(1);
+}
+
+$roundTripCss = TokenRegistry::tokensToCss($roundTrip);
+
+if (strpos($roundTripCss, '--spacing_small') === false) {
+    fwrite(STDERR, 'tokensToCss should keep underscores after round-trip.' . PHP_EOL);
+    exit(1);
+}
