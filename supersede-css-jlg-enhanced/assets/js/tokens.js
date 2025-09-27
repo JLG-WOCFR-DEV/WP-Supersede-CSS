@@ -4,6 +4,7 @@
     const localized = window.SSC_TOKENS_DATA || {};
 
     let tokens = Array.isArray(localized.tokens) ? localized.tokens.slice() : [];
+    let hasLocalChanges = false;
     const tokenTypes = localized.types || {
         color: { label: 'Couleur', input: 'color' },
         text: { label: 'Texte', input: 'text' },
@@ -13,6 +14,7 @@
 
     const builder = $('#ssc-token-builder');
     const cssTextarea = $('#ssc-tokens');
+    const reloadButton = $('#ssc-tokens-reload');
     const previewStyle = $('#ssc-tokens-preview-style');
     const groupDatalistId = 'ssc-token-groups-list';
 
@@ -230,12 +232,14 @@
             description: '',
             group: 'Général',
         });
+        hasLocalChanges = true;
         renderTokens();
         refreshCssFromTokens();
     }
 
     function removeToken(index) {
         tokens.splice(index, 1);
+        hasLocalChanges = true;
         renderTokens();
         refreshCssFromTokens();
     }
@@ -245,6 +249,7 @@
             return;
         }
         tokens[index][key] = value;
+        hasLocalChanges = true;
     }
 
     function fetchTokensFromServer() {
@@ -260,12 +265,17 @@
                 }
             },
         }).done(function(response) {
-            if (response && Array.isArray(response.tokens)) {
-                tokens = response.tokens;
-                renderTokens();
-            }
-            if (response && typeof response.css === 'string') {
-                applyCss(response.css);
+            if (!hasLocalChanges) {
+                if (response && Array.isArray(response.tokens)) {
+                    tokens = response.tokens;
+                    renderTokens();
+                    hasLocalChanges = false;
+                }
+                if (response && typeof response.css === 'string') {
+                    applyCss(response.css);
+                } else {
+                    refreshCssFromTokens();
+                }
             } else {
                 refreshCssFromTokens();
             }
@@ -297,6 +307,7 @@
             } else {
                 refreshCssFromTokens();
             }
+            hasLocalChanges = false;
             if (typeof window.sscToast === 'function') {
                 window.sscToast(i18n.saveSuccess || 'Tokens enregistrés');
             }
@@ -338,8 +349,23 @@
             }
         });
 
+        if (reloadButton.length) {
+            reloadButton.on('click', function(event) {
+                event.preventDefault();
+                if (hasLocalChanges) {
+                    const confirmMessage = i18n.reloadConfirm || 'Des modifications locales non enregistrées seront perdues. Continuer ?';
+                    if (!window.confirm(confirmMessage)) {
+                        return;
+                    }
+                }
+                hasLocalChanges = false;
+                fetchTokensFromServer();
+            });
+        }
+
         builder.on('input', '.token-name', function() {
             const index = $(this).closest('.ssc-token-row').data('index');
+            hasLocalChanges = true;
             updateToken(index, 'name', $(this).val());
             refreshCssFromTokens();
         });
@@ -348,23 +374,27 @@
             const index = $(this).closest('.ssc-token-row').data('index');
             const normalized = normalizeName($(this).val());
             $(this).val(normalized);
+            hasLocalChanges = true;
             updateToken(index, 'name', normalized);
             refreshCssFromTokens();
         });
 
         builder.on('input', '.token-value', function() {
             const index = $(this).closest('.ssc-token-row').data('index');
+            hasLocalChanges = true;
             updateToken(index, 'value', $(this).val());
             refreshCssFromTokens();
         });
 
         builder.on('input', '.token-description', function() {
             const index = $(this).closest('.ssc-token-row').data('index');
+            hasLocalChanges = true;
             updateToken(index, 'description', $(this).val());
         });
 
         builder.on('change', '.token-type', function() {
             const index = $(this).closest('.ssc-token-row').data('index');
+            hasLocalChanges = true;
             updateToken(index, 'type', $(this).val());
             renderTokens();
             refreshCssFromTokens();
@@ -373,6 +403,7 @@
         builder.on('change', '.token-group', function() {
             const index = $(this).closest('.ssc-token-row').data('index');
             const newGroup = $(this).val().trim() || 'Général';
+            hasLocalChanges = true;
             updateToken(index, 'group', newGroup);
             renderTokens();
             refreshCssFromTokens();

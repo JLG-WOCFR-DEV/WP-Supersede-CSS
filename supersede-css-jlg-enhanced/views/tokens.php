@@ -22,6 +22,7 @@ if (function_exists('wp_localize_script')) {
             'deleteLabel' => __('Supprimer', 'supersede-css-jlg'),
             'saveSuccess' => __('Tokens enregistrés', 'supersede-css-jlg'),
             'saveError' => __('Impossible d’enregistrer les tokens.', 'supersede-css-jlg'),
+            'reloadConfirm' => __('Des modifications locales non enregistrées seront perdues. Continuer ?', 'supersede-css-jlg'),
         ],
     ]);
 }
@@ -88,6 +89,7 @@ if (function_exists('wp_localize_script')) {
             <div class="ssc-actions" style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
                 <button id="ssc-tokens-save" class="button button-primary"><?php esc_html_e('Enregistrer les Tokens', 'supersede-css-jlg'); ?></button>
                 <button id="ssc-tokens-copy" class="button"><?php esc_html_e('Copier le CSS', 'supersede-css-jlg'); ?></button>
+                <button id="ssc-tokens-reload" class="button" type="button"><?php esc_html_e('Recharger', 'supersede-css-jlg'); ?></button>
             </div>
         </div>
     </div>
