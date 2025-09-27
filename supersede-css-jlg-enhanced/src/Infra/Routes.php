@@ -473,7 +473,8 @@ final class Routes {
             $options[$result->option_name] = maybe_unserialize($result->option_value);
         }
 
-        $modules = $this->normalizeModules($request->get_param('modules'));
+        $rawModules = $request->get_param('modules');
+        $modules = $this->normalizeModules($rawModules);
 
         if ($modules === []) {
             return new \WP_Error(
@@ -483,7 +484,7 @@ final class Routes {
             );
         }
 
-        $options = $this->filterOptionsByModules($options, $modules);
+        $options = $this->filterOptionsByModules($options, $modules, $rawModules !== null);
 
         return new \WP_REST_Response($options, 200);
     }
@@ -516,7 +517,8 @@ final class Routes {
             ], 400);
         }
 
-        $modules = $this->normalizeModules($json['modules'] ?? $request->get_param('modules'));
+        $rawModules = $json['modules'] ?? $request->get_param('modules');
+        $modules = $this->normalizeModules($rawModules);
         $options = $json['options'] ?? $json;
 
         if (!is_array($options)) {
@@ -539,7 +541,7 @@ final class Routes {
             ], 400);
         }
 
-        $options = $this->filterOptionsByModules($options, $modules);
+        $options = $this->filterOptionsByModules($options, $modules, $rawModules !== null);
         $filteredOut = array_values(array_diff(
             $originalOptionKeys,
             array_map(static fn($key): string => (string) $key, array_keys($options))
@@ -650,13 +652,13 @@ final class Routes {
      * @param list<string> $modules
      * @return array<string, mixed>
      */
-    private function filterOptionsByModules(array $options, array $modules): array
+    private function filterOptionsByModules(array $options, array $modules, bool $selectionProvided = true): array
     {
         if ($modules === []) {
             return [];
         }
 
-        if (!$this->shouldFilterModules($modules)) {
+        if (!$selectionProvided) {
             return $options;
         }
 
@@ -691,15 +693,6 @@ final class Routes {
     /**
      * @param list<string> $modules
      */
-    private function shouldFilterModules(array $modules): bool
-    {
-        if ($modules === []) {
-            return true;
-        }
-
-        return count($modules) < count(self::CONFIG_MODULES);
-    }
-
     /**
      * @param array<mixed> $options
      * @return array{applied: list<string>, skipped: list<string>}
