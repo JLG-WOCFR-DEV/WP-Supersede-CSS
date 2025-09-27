@@ -41,6 +41,13 @@ if (!function_exists('wp_allowed_protocols')) {
     }
 }
 
+if (!function_exists('__')) {
+    function __($text, $domain = 'default')
+    {
+        return sprintf('[%s] %s', $domain, $text);
+    }
+}
+
 /** @var array<string, mixed> $ssc_options_store */
 $ssc_options_store = [];
 
@@ -195,6 +202,13 @@ $savedRegistry = TokenRegistry::saveRegistry($underscoredTokens);
 
 if ($savedRegistry === [] || $savedRegistry[0]['name'] !== '--spacing_small') {
     fwrite(STDERR, 'saveRegistry should preserve underscores in token names.' . PHP_EOL);
+    exit(1);
+}
+
+$supportedTypes = TokenRegistry::getSupportedTypes();
+
+if (!isset($supportedTypes['color']['label']) || $supportedTypes['color']['label'] !== '[supersede-css-jlg] Couleur') {
+    fwrite(STDERR, 'getSupportedTypes should return translated labels.' . PHP_EOL);
     exit(1);
 }
 

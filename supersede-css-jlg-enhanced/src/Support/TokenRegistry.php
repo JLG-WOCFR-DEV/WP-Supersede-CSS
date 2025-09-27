@@ -123,7 +123,13 @@ final class TokenRegistry
      */
     public static function getSupportedTypes(): array
     {
-        return self::SUPPORTED_TYPES;
+        $types = self::SUPPORTED_TYPES;
+
+        foreach ($types as $key => $type) {
+            $types[$key]['label'] = __($type['label'], 'supersede-css-jlg');
+        }
+
+        return $types;
     }
 
     /**
