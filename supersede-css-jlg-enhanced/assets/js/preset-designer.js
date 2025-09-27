@@ -1,6 +1,67 @@
 (function($) {
     let presets = {};
     let activePresetId = null;
+    const hasOwn = Object.prototype.hasOwnProperty;
+
+    function parseStylesToProps(styles) {
+        const cssText = typeof styles === 'string' ? styles.trim() : '';
+        if (!cssText) {
+            return {};
+        }
+
+        const element = document.createElement('div');
+        element.style.cssText = cssText;
+
+        const props = {};
+        for (let index = 0; index < element.style.length; index++) {
+            const property = element.style[index];
+            const value = element.style.getPropertyValue(property);
+            if (property && value) {
+                props[property] = value.trim();
+            }
+        }
+
+        return props;
+    }
+
+    function normalizePreset(preset = {}) {
+        const normalized = {
+            name: typeof preset.name === 'string' ? preset.name.trim() : '',
+            scope: '',
+            props: {},
+        };
+
+        const scopeCandidates = [preset.scope, preset.selector];
+        for (const candidate of scopeCandidates) {
+            if (typeof candidate === 'string' && candidate.trim()) {
+                normalized.scope = candidate.trim();
+                break;
+            }
+        }
+
+        if (preset.props && typeof preset.props === 'object') {
+            for (const [key, value] of Object.entries(preset.props)) {
+                if (!key) {
+                    continue;
+                }
+
+                const trimmedKey = key.trim();
+                const stringValue = typeof value === 'string' ? value : value != null ? String(value) : '';
+                if (trimmedKey && stringValue) {
+                    normalized.props[trimmedKey] = stringValue;
+                }
+            }
+        }
+
+        if (Object.keys(normalized.props).length === 0 && typeof preset.styles === 'string') {
+            const parsedProps = parseStylesToProps(preset.styles);
+            if (Object.keys(parsedProps).length > 0) {
+                normalized.props = parsedProps;
+            }
+        }
+
+        return normalized;
+    }
 
     // Charger les presets depuis la BDD
     function loadPresets() {
@@ -11,6 +72,13 @@
             beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
         }).done(response => {
             presets = response || {};
+            const normalizedPresets = {};
+            for (const id in presets) {
+                if (hasOwn.call(presets, id)) {
+                    normalizedPresets[id] = normalizePreset(presets[id]);
+                }
+            }
+            presets = normalizedPresets;
             renderPresetList();
             populateQuickApply();
         });
@@ -151,7 +219,7 @@
             });
 
             const id = activePresetId || 'preset_' + Date.now();
-            presets[id] = { name, scope, props };
+            presets[id] = normalizePreset({ name, scope, props });
 
             saveAllPresets().done(() => {
                 window.sscToast(`Preset "${name}" enregistré !`);
