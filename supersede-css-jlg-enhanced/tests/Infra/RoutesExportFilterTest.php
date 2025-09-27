@@ -251,6 +251,34 @@ if (!is_array($allData) || !array_key_exists('ssc_custom_extra', $allData)) {
     exit(1);
 }
 
+$exportExplicitAll = $routes->exportConfig(new WP_REST_Request(['modules' => ['all']]));
+
+if (!$exportExplicitAll instanceof WP_REST_Response) {
+    fwrite(STDERR, 'Exporting with an explicit "all" module selection should return a WP_REST_Response.' . PHP_EOL);
+    exit(1);
+}
+
+$explicitAllData = $exportExplicitAll->get_data();
+
+if (!is_array($explicitAllData) || array_key_exists('ssc_custom_extra', $explicitAllData)) {
+    fwrite(STDERR, 'Explicit "all" module selection should filter out options that are not part of any module.' . PHP_EOL);
+    exit(1);
+}
+
+$expectedAllKeys = [
+    'ssc_settings',
+    'ssc_presets',
+    'ssc_tokens_css',
+    'ssc_tokens_registry',
+];
+
+foreach ($expectedAllKeys as $expectedKey) {
+    if (!array_key_exists($expectedKey, $explicitAllData)) {
+        fwrite(STDERR, 'Explicit "all" module selection should keep whitelisted option ' . $expectedKey . '.' . PHP_EOL);
+        exit(1);
+    }
+}
+
 $exportTokens = $routes->exportConfig(new WP_REST_Request(['modules' => ['tokens']]));
 
 if (!$exportTokens instanceof WP_REST_Response) {
