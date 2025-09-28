@@ -35,7 +35,17 @@ spl_autoload_register(function($class){
 if (!function_exists('ssc_get_cached_css')) {
     function ssc_get_cached_css(): string
     {
+        $cache_meta = get_option('ssc_css_cache_meta', []);
+        $cached_version = is_array($cache_meta) && isset($cache_meta['version'])
+            ? (string) $cache_meta['version']
+            : null;
+
         $cached = get_option('ssc_css_cache', false);
+
+        if ($cached_version !== SSC_VERSION) {
+            ssc_invalidate_css_cache();
+            $cached = false;
+        }
 
         if (is_string($cached)) {
             return $cached;
@@ -51,6 +61,9 @@ if (!function_exists('ssc_get_cached_css')) {
         $css_filtered = CssSanitizer::sanitize($css_combined);
 
         update_option('ssc_css_cache', $css_filtered, false);
+        update_option('ssc_css_cache_meta', [
+            'version' => SSC_VERSION,
+        ], false);
 
         return $css_filtered;
     }
@@ -60,10 +73,21 @@ if (!function_exists('ssc_invalidate_css_cache')) {
     function ssc_invalidate_css_cache(): void
     {
         delete_option('ssc_css_cache');
+        delete_option('ssc_css_cache_meta');
     }
 }
 
 add_action('plugins_loaded', function(){
+    $cache_meta = get_option('ssc_css_cache_meta', []);
+    $cached_version = is_array($cache_meta) && isset($cache_meta['version'])
+        ? (string) $cache_meta['version']
+        : null;
+
+    if ($cached_version !== SSC_VERSION) {
+        ssc_invalidate_css_cache();
+        ssc_get_cached_css();
+    }
+
     if (is_admin()) {
         new SSC\Admin\Admin();
     }
