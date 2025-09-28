@@ -2,12 +2,19 @@
     // Fonction pour déclencher le téléchargement d'un fichier
     function downloadFile(filename, content, mimeType) {
         const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
+        a.href = url;
         a.download = filename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+        const revoke = () => URL.revokeObjectURL(url);
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(revoke);
+        } else {
+            setTimeout(revoke, 0);
+        }
     }
 
     $(document).ready(function() {
