@@ -106,20 +106,29 @@
     function generateGlowCSS() {
         if (!activePresetId || !presets[activePresetId]) return;
         const p = presets[activePresetId];
-        
+        const rawSelector = typeof p.className === 'string' ? p.className.trim() : '';
+        const safeSelector = rawSelector
+            ? (rawSelector.startsWith('.')
+                ? '.' + CSS.escape(rawSelector.slice(1))
+                : CSS.escape(rawSelector))
+            : '';
+        const sanitizedToken = rawSelector.startsWith('.') ? rawSelector.slice(1) : rawSelector;
+        const cleanedToken = sanitizedToken.replace(/[^\w-]/g, '');
+        const previewClassToken = cleanedToken ? CSS.escape(cleanedToken) : '';
+
         $('#ssc-glow-speed-val').text(p.speed + 's');
         $('#ssc-glow-thickness-val').text(p.thickness + 'px');
-        $('#ssc-glow-how-to-use-class').text(p.className);
+        $('#ssc-glow-how-to-use-class').text(safeSelector);
 
-        const css = `
+        const css = safeSelector ? `
 /* Preset: ${p.name} */
-${p.className} {
+${safeSelector} {
   position: relative;
   width: fit-content;
   border-radius: 50%;
   isolation: isolate;
 }
-${p.className}::before {
+${safeSelector}::before {
   content: '';
   position: absolute;
   z-index: -1;
@@ -128,18 +137,28 @@ ${p.className}::before {
   background: conic-gradient(from var(--angle), ${p.color1}, ${p.color2}, ${p.color1});
   animation: ssc-comet-spin ${p.speed}s linear infinite;
   filter: blur(8px);
-}`;
-        
+}` : '';
+
         $('#ssc-glow-css-output').text(css.trim());
 
-        $('style#ssc-glow-live-style').remove();
-        $(`<style id="ssc-glow-live-style">
-            @property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
-            @keyframes ssc-comet-spin { to { --angle: 360deg; } }
-            ${css}
-        </style>`).appendTo('head');
+        const baseCss = "@property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }\n" +
+            "@keyframes ssc-comet-spin { to { --angle: 360deg; } }" +
+            (css ? "\n" + css : '');
+        const newStyle = document.createElement('style');
+        newStyle.id = 'ssc-glow-live-style';
+        newStyle.textContent = baseCss;
+        const existingStyle = document.getElementById('ssc-glow-live-style');
+        if (existingStyle && existingStyle.parentNode) {
+            existingStyle.parentNode.replaceChild(newStyle, existingStyle);
+        } else {
+            document.head.appendChild(newStyle);
+        }
 
-        $('#ssc-glow-preview-container').attr('class', p.className.substring(1));
+        if (previewClassToken) {
+            $('#ssc-glow-preview-container').attr('class', previewClassToken);
+        } else {
+            $('#ssc-glow-preview-container').removeAttr('class');
+        }
     }
 
     $(document).ready(function() {
