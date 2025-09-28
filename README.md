@@ -28,6 +28,19 @@ Supersede CSS JLG (Enhanced) is a visual toolkit for building CSS effects in Wor
 4. Use the **Token Manager** to add or edit CSS tokens; reference tokens within your custom styles.
 5. Export or import presets as needed from the built‑in tools.
 
+## Hooks
+
+### `ssc_required_capability`
+
+Filter the capability required to access the Supersede CSS admin pages and REST API endpoints. By default the plugin uses
+`manage_options`, but site administrators can delegate access with a simple filter:
+
+```php
+add_filter('ssc_required_capability', function () {
+    return 'edit_theme_options';
+});
+```
+
 ## License
 
 Supersede CSS JLG (Enhanced) is released under the [GPLv2 or later](https://www.gnu.org/licenses/gpl-2.0.html).

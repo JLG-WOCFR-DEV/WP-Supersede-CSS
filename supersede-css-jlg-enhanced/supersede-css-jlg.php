@@ -32,6 +32,27 @@ spl_autoload_register(function($class){
     }
 });
 
+if (!function_exists('ssc_get_required_capability')) {
+    /**
+     * Returns the capability required to access Supersede CSS features.
+     *
+     * Developers can override the default capability (`manage_options`) by
+     * hooking into the `ssc_required_capability` filter.
+     *
+     * @return string
+     */
+    function ssc_get_required_capability(): string
+    {
+        $capability = apply_filters('ssc_required_capability', 'manage_options');
+
+        if (!is_string($capability) || $capability === '') {
+            $capability = 'manage_options';
+        }
+
+        return $capability;
+    }
+}
+
 if (!function_exists('ssc_get_cached_css')) {
     function ssc_get_cached_css(): string
     {

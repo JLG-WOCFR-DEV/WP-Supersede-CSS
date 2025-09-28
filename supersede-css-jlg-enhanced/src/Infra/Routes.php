@@ -1164,7 +1164,9 @@ final class Routes {
             );
         }
 
-        if (!current_user_can('manage_options')) {
+        $required_capability = \ssc_get_required_capability();
+
+        if (!current_user_can($required_capability)) {
             return new \WP_Error(
                 'rest_forbidden',
                 __('You are not allowed to access this endpoint.', 'supersede-css-jlg'),
