@@ -10,7 +10,7 @@ final class Admin
 
     public function __construct() {
         $this->slug = 'supersede-css-jlg';
-        $this->cap  = 'manage_options';
+        $this->cap  = \ssc_get_required_capability();
 
         add_action('admin_menu', [$this, 'menu']);
         add_action('admin_enqueue_scripts', [$this, 'assets']);
