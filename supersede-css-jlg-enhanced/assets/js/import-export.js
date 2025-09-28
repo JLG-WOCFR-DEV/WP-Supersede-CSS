@@ -7,13 +7,19 @@
         a.href = url;
         a.download = filename;
         document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
         const revoke = () => URL.revokeObjectURL(url);
-        if (typeof requestAnimationFrame === 'function') {
-            requestAnimationFrame(revoke);
-        } else {
-            setTimeout(revoke, 0);
+
+        try {
+            a.click();
+        } finally {
+            if (a.parentNode) {
+                a.parentNode.removeChild(a);
+            }
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(revoke);
+            } else {
+                setTimeout(revoke, 0);
+            }
         }
     }
 
