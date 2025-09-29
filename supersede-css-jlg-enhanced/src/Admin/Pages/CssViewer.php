@@ -14,9 +14,19 @@ class CssViewer extends AbstractPage
 
     public function render(): void
     {
+        $active_css = get_option('ssc_active_css', self::EMPTY_MESSAGE);
+        if (!is_string($active_css)) {
+            $active_css = self::EMPTY_MESSAGE;
+        }
+
+        $tokens_css = get_option('ssc_tokens_css', self::EMPTY_MESSAGE);
+        if (!is_string($tokens_css)) {
+            $tokens_css = self::EMPTY_MESSAGE;
+        }
+
         $this->render_view('css-viewer', [
-            'active_css' => get_option('ssc_active_css', self::EMPTY_MESSAGE),
-            'tokens_css' => get_option('ssc_tokens_css', self::EMPTY_MESSAGE),
+            'active_css' => $active_css,
+            'tokens_css' => $tokens_css,
         ]);
     }
 }
