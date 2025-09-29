@@ -37,6 +37,16 @@ if (!function_exists('sanitize_textarea_field')) {
     }
 }
 
+if (!function_exists('wp_get_current_user')) {
+    function wp_get_current_user()
+    {
+        return (object) [
+            'ID' => 1,
+            'user_login' => 'tester',
+        ];
+    }
+}
+
 if (!function_exists('wp_kses')) {
     function wp_kses(string $string, array $allowed_html = []): string
     {
@@ -176,6 +186,7 @@ if (!function_exists('update_option')) {
 
 require_once __DIR__ . '/../../src/Support/CssSanitizer.php';
 require_once __DIR__ . '/../../src/Support/TokenRegistry.php';
+require_once __DIR__ . '/../../src/Infra/CssRevisions.php';
 require_once __DIR__ . '/../../src/Infra/Routes.php';
 
 $routesReflection = new ReflectionClass(Routes::class);
@@ -205,6 +216,35 @@ if (!array_key_exists('ssc_active_css', $ssc_options_store)) {
 
 if (array_key_exists('ssc_tokens_css', $ssc_options_store)) {
     fwrite(STDERR, 'Unexpected CSS stored under ssc_tokens_css.' . PHP_EOL);
+    exit(1);
+}
+
+$revisionsAfterFirstSave = $ssc_options_store['ssc_css_revisions'] ?? null;
+
+if (!is_array($revisionsAfterFirstSave)) {
+    fwrite(STDERR, 'Expected CSS revisions to be recorded after saving CSS.' . PHP_EOL);
+    exit(1);
+}
+
+if (count($revisionsAfterFirstSave) !== 1) {
+    fwrite(STDERR, 'Expected a single revision entry after the first CSS save.' . PHP_EOL);
+    exit(1);
+}
+
+$firstRevision = $revisionsAfterFirstSave[0];
+
+if (($firstRevision['option'] ?? null) !== 'ssc_active_css') {
+    fwrite(STDERR, 'First revision should be associated with the active CSS option.' . PHP_EOL);
+    exit(1);
+}
+
+if (($firstRevision['css'] ?? null) !== $ssc_options_store['ssc_active_css']) {
+    fwrite(STDERR, 'Revision CSS should match the stored active CSS.' . PHP_EOL);
+    exit(1);
+}
+
+if (($firstRevision['user'] ?? null) !== 'tester') {
+    fwrite(STDERR, 'Revisions should record the acting user.' . PHP_EOL);
     exit(1);
 }
 
@@ -272,6 +312,32 @@ if ($ssc_options_store['ssc_tokens_registry'] !== $expectedRegistry) {
 
 if ($ssc_options_store['ssc_tokens_css'] !== $expectedRegistryCss) {
     fwrite(STDERR, 'Saving CSS tokens should persist normalized CSS output that retains all tokens.' . PHP_EOL);
+    exit(1);
+}
+
+$revisionsAfterTokens = $ssc_options_store['ssc_css_revisions'] ?? [];
+
+if (!is_array($revisionsAfterTokens) || count($revisionsAfterTokens) < 2) {
+    fwrite(STDERR, 'Expected token saves to append a new revision entry.' . PHP_EOL);
+    exit(1);
+}
+
+$latestRevision = $revisionsAfterTokens[0];
+
+if (($latestRevision['option'] ?? null) !== 'ssc_tokens_css') {
+    fwrite(STDERR, 'Latest revision should correspond to the tokens CSS option.' . PHP_EOL);
+    exit(1);
+}
+
+if (($latestRevision['css'] ?? null) !== $expectedRegistryCss) {
+    fwrite(STDERR, 'Latest revision should contain the normalized tokens CSS.' . PHP_EOL);
+    exit(1);
+}
+
+$secondRevision = $revisionsAfterTokens[1] ?? null;
+
+if (!is_array($secondRevision) || ($secondRevision['option'] ?? null) !== 'ssc_active_css') {
+    fwrite(STDERR, 'Active CSS revision should remain available after saving tokens.' . PHP_EOL);
     exit(1);
 }
 

@@ -264,6 +264,10 @@ final class Routes {
             update_option($option_name, $css_to_store, false);
         }
 
+        if ($css_to_store !== $existing_css) {
+            CssRevisions::record($option_name, $css_to_store);
+        }
+
         if (class_exists('\SSC\Infra\Logger')) {
             \SSC\Infra\Logger::add('css_saved', ['size' => strlen($css_to_store) . ' bytes', 'option' => $option_name]);
         }
