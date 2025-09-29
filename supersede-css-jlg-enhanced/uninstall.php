@@ -21,6 +21,7 @@ $ssc_options_to_delete = [
     'ssc_css_cache', // Ajouté
     'ssc_avatar_glow_presets', // Ajouté
     'ssc_optimization_settings', // Ajouté
+    'ssc_css_revisions', // Historique des révisions CSS
 ];
 
 // Supprime les options du site courant

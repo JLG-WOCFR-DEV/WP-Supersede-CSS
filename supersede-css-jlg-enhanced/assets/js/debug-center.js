@@ -64,10 +64,50 @@
                 window.sscToast('Tout le CSS a été réinitialisé !');
                 btn.text('Réinitialiser tout le CSS').prop('disabled', false);
                 // Optionnellement, recharger la page pour voir les changements
-                // location.reload(); 
+                // location.reload();
             }).fail(() => {
                 window.sscToast('Erreur lors de la réinitialisation.');
                 btn.text('Réinitialiser tout le CSS').prop('disabled', false);
+            });
+        });
+
+        $('.ssc-revision-restore').on('click', function() {
+            if (typeof SSC === 'undefined' || !SSC.rest || !SSC.rest.root) {
+                window.sscToast('L’API REST est indisponible.');
+                return;
+            }
+
+            const btn = $(this);
+            const revisionId = btn.data('revision');
+            const optionName = btn.data('option') || '';
+
+            if (!revisionId) {
+                window.sscToast('Révision introuvable.');
+                return;
+            }
+
+            const confirmationMessage = optionName
+                ? `Restaurer la révision pour « ${optionName} » ?\nCette opération remplacera le CSS actuel.`
+                : "Restaurer cette révision ?\nCette opération remplacera le CSS actuel.";
+
+            if (!confirm(confirmationMessage)) {
+                return;
+            }
+
+            const originalText = btn.text();
+            btn.prop('disabled', true).text('Restauration…');
+
+            $.ajax({
+                url: SSC.rest.root + 'css-revisions/' + encodeURIComponent(revisionId) + '/restore',
+                method: 'POST',
+                data: { _wpnonce: SSC.rest.nonce },
+                beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
+            }).done(() => {
+                window.sscToast('Révision restaurée. Actualisation de la page…');
+                setTimeout(() => location.reload(), 800);
+            }).fail(() => {
+                window.sscToast('Impossible de restaurer cette révision.');
+                btn.prop('disabled', false).text(originalText);
             });
         });
     });

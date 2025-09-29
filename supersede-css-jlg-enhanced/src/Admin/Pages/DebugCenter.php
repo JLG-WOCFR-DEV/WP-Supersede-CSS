@@ -3,6 +3,7 @@
 namespace SSC\Admin\Pages;
 
 use SSC\Admin\AbstractPage;
+use SSC\Support\CssRevisions;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -21,6 +22,7 @@ class DebugCenter extends AbstractPage
                 'php_version'       => phpversion(),
             ],
             'log_entries' => $log_entries,
+            'css_revisions' => CssRevisions::all(),
         ]);
     }
 }

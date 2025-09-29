@@ -1,8 +1,13 @@
 <?php declare(strict_types=1);
 namespace SSC\Infra;
 
+use SSC\Support\CssRevisions;
 use SSC\Support\CssSanitizer;
 use SSC\Support\TokenRegistry;
+
+if (!class_exists('\\SSC\\Support\\CssRevisions') && is_readable(__DIR__ . '/../Support/CssRevisions.php')) {
+    require_once __DIR__ . '/../Support/CssRevisions.php';
+}
 
 if (!defined('ABSPATH')) { exit; }
 
@@ -167,6 +172,12 @@ final class Routes {
             'permission_callback' => [$this, 'authorizeRequest'],
             'callback' => [$this, 'importConfig'],
         ]);
+
+        register_rest_route('ssc/v1', '/css-revisions/(?P<revision>[A-Za-z0-9_-]+)/restore', [
+            'methods' => 'POST',
+            'permission_callback' => [$this, 'authorizeRequest'],
+            'callback' => [$this, 'restoreCssRevision'],
+        ]);
     }
 
     public function saveCss(\WP_REST_Request $request): \WP_REST_Response {
@@ -264,6 +275,13 @@ final class Routes {
             update_option($option_name, $css_to_store, false);
         }
 
+        $revisionContext = [];
+        if ($option_name === 'ssc_active_css') {
+            $revisionContext['segments'] = $sanitized_segments;
+        }
+
+        CssRevisions::record($option_name, $css_to_store, $revisionContext);
+
         if (class_exists('\SSC\Infra\Logger')) {
             \SSC\Infra\Logger::add('css_saved', ['size' => strlen($css_to_store) . ' bytes', 'option' => $option_name]);
         }
@@ -272,6 +290,44 @@ final class Routes {
             \ssc_invalidate_css_cache();
         }
         return new \WP_REST_Response(['ok' => true], 200);
+    }
+
+    public function restoreCssRevision(\WP_REST_Request $request): \WP_REST_Response
+    {
+        $revisionId = $request->get_param('revision');
+        if (!is_string($revisionId)) {
+            return new \WP_REST_Response([
+                'ok' => false,
+                'message' => __('Invalid revision identifier.', 'supersede-css-jlg'),
+            ], 400);
+        }
+
+        $restored = CssRevisions::restore($revisionId);
+        if ($restored === null) {
+            return new \WP_REST_Response([
+                'ok' => false,
+                'message' => __('Revision not found.', 'supersede-css-jlg'),
+            ], 404);
+        }
+
+        $context = [];
+        if (($restored['option'] ?? '') === 'ssc_active_css' && isset($restored['segments']) && is_array($restored['segments'])) {
+            $context['segments'] = $restored['segments'];
+        }
+
+        CssRevisions::record($restored['option'], $restored['css'], $context);
+
+        if (class_exists('\SSC\Infra\Logger')) {
+            \SSC\Infra\Logger::add('css_revision_restored', [
+                'revision' => $restored['id'],
+                'option' => $restored['option'],
+            ]);
+        }
+
+        return new \WP_REST_Response([
+            'ok' => true,
+            'revision' => $restored['id'],
+        ], 200);
     }
 
     public function healthCheck(): \WP_REST_Response {
