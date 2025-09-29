@@ -9,6 +9,8 @@ if (!defined('ABSPATH')) { exit; }
 final class Routes {
     private const IMPORT_MAX_DEPTH = 20;
     private const IMPORT_MAX_ITEMS = 5000;
+    /** @var list<string> */
+    private array $importDuplicateWarnings = [];
     private const IMPORT_HANDLERS = [
         'ssc_active_css' => 'sanitizeImportCss',
         'ssc_tokens_css' => 'sanitizeImportCss',
@@ -721,10 +723,15 @@ final class Routes {
             }
 
             $handler = self::IMPORT_HANDLERS[$optionName];
+            $this->resetImportDuplicateWarnings();
             $sanitizedValue = $this->$handler($value);
+            $duplicateWarnings = $this->consumeImportDuplicateWarnings();
 
             if ($sanitizedValue === null) {
                 $skipped[] = $optionName;
+                foreach ($duplicateWarnings as $duplicatePath) {
+                    $skipped[] = sprintf('%s (duplicate key: %s)', $optionName, $duplicatePath);
+                }
                 continue;
             }
 
@@ -735,12 +742,18 @@ final class Routes {
                     \ssc_invalidate_css_cache();
                 }
                 $applied[] = $optionName;
+                foreach ($duplicateWarnings as $duplicatePath) {
+                    $skipped[] = sprintf('%s (duplicate key: %s)', $optionName, $duplicatePath);
+                }
                 continue;
             }
 
             if ($optionName === 'ssc_tokens_registry') {
                 if (!is_array($sanitizedValue)) {
                     $skipped[] = $optionName;
+                    foreach ($duplicateWarnings as $duplicatePath) {
+                        $skipped[] = sprintf('%s (duplicate key: %s)', $optionName, $duplicatePath);
+                    }
                     continue;
                 }
 
@@ -749,6 +762,9 @@ final class Routes {
                     \ssc_invalidate_css_cache();
                 }
                 $applied[] = $optionName;
+                foreach ($duplicateWarnings as $duplicatePath) {
+                    $skipped[] = sprintf('%s (duplicate key: %s)', $optionName, $duplicatePath);
+                }
                 continue;
             }
 
@@ -757,6 +773,9 @@ final class Routes {
                 \ssc_invalidate_css_cache();
             }
             $applied[] = $optionName;
+            foreach ($duplicateWarnings as $duplicatePath) {
+                $skipped[] = sprintf('%s (duplicate key: %s)', $optionName, $duplicatePath);
+            }
         }
 
         return [
@@ -817,7 +836,7 @@ final class Routes {
     /**
      * @param mixed $value
      */
-    private function sanitizeImportArray($value, int $depth = 0, ?\SplObjectStorage $objectStack = null, ?int &$itemBudget = null): ?array
+    private function sanitizeImportArray($value, int $depth = 0, ?\SplObjectStorage $objectStack = null, ?int &$itemBudget = null, string $parentPath = ''): ?array
     {
         if (!is_array($value)) {
             return null;
@@ -847,6 +866,11 @@ final class Routes {
                 continue;
             }
 
+            if (array_key_exists($sanitizedKey, $sanitized)) {
+                $this->recordImportDuplicateWarning($this->formatDuplicateKeyPath($parentPath, $sanitizedKey));
+                continue;
+            }
+
             if ($itemBudget <= 0) {
                 break;
             }
@@ -858,7 +882,13 @@ final class Routes {
                     continue;
                 }
 
-                $nested = $this->sanitizeImportArray($item, $depth + 1, $objectStack, $itemBudget);
+                $nested = $this->sanitizeImportArray(
+                    $item,
+                    $depth + 1,
+                    $objectStack,
+                    $itemBudget,
+                    $this->formatDuplicateKeyPath($parentPath, $sanitizedKey)
+                );
                 if ($nested === null) {
                     continue;
                 }
@@ -894,7 +924,13 @@ final class Routes {
                 $objectStack->attach($item);
                 $objectVars = get_object_vars($item);
                 if (is_array($objectVars) && $objectVars !== []) {
-                    $nested = $this->sanitizeImportArray($objectVars, $depth + 1, $objectStack, $itemBudget);
+                    $nested = $this->sanitizeImportArray(
+                        $objectVars,
+                        $depth + 1,
+                        $objectStack,
+                        $itemBudget,
+                        $this->formatDuplicateKeyPath($parentPath, $sanitizedKey)
+                    );
                     if ($nested !== null) {
                         $objectStack->detach($item);
                         $sanitized[$sanitizedKey] = $nested;
@@ -925,6 +961,42 @@ final class Routes {
         }
 
         return $sanitized;
+    }
+
+    private function resetImportDuplicateWarnings(): void
+    {
+        $this->importDuplicateWarnings = [];
+    }
+
+    private function recordImportDuplicateWarning(string $path): void
+    {
+        if ($path === '') {
+            return;
+        }
+
+        $this->importDuplicateWarnings[] = $path;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function consumeImportDuplicateWarnings(): array
+    {
+        if ($this->importDuplicateWarnings === []) {
+            return [];
+        }
+
+        $warnings = array_values(array_unique($this->importDuplicateWarnings));
+        $this->importDuplicateWarnings = [];
+
+        return $warnings;
+    }
+
+    private function formatDuplicateKeyPath(string $parentPath, int|string $key): string
+    {
+        $keyPart = (string) $key;
+
+        return $parentPath === '' ? $keyPart : $parentPath . '.' . $keyPart;
     }
 
     /**

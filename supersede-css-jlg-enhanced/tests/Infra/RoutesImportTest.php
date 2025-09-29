@@ -144,6 +144,16 @@ if (!function_exists('wp_allowed_protocols')) {
     }
 }
 
+if (!function_exists('wp_get_current_user')) {
+    function wp_get_current_user()
+    {
+        return (object) [
+            'ID' => 1,
+            'user_login' => 'tester',
+        ];
+    }
+}
+
 if (!function_exists('absint')) {
     function absint($value)
     {
@@ -471,6 +481,51 @@ if ($ssc_options_store['ssc_settings'] !== $expectedSettings) {
 
 if (!is_array($objectImportResult) || !in_array('ssc_settings', $objectImportResult['applied'] ?? [], true)) {
     fwrite(STDERR, "Object payload import should be reported as applied." . PHP_EOL);
+    exit(1);
+}
+
+$ssc_options_store['ssc_settings'] = [];
+
+$duplicateKeyPayload = [
+    'options' => [
+        'ssc_settings' => [
+            'Name One' => 'First Value',
+            'name-one' => 'Second Value',
+        ],
+    ],
+];
+
+$duplicateKeyResponse = $routes->importConfig(new WP_REST_Request([], $duplicateKeyPayload));
+
+if (!$duplicateKeyResponse instanceof WP_REST_Response) {
+    fwrite(STDERR, "Duplicate key import should return a REST response." . PHP_EOL);
+    exit(1);
+}
+
+$duplicateKeyData = $duplicateKeyResponse->get_data();
+
+if (!is_array($duplicateKeyData) || ($duplicateKeyData['ok'] ?? null) !== true) {
+    fwrite(STDERR, "Duplicate key import should succeed with ok=true." . PHP_EOL);
+    exit(1);
+}
+
+if (!in_array('ssc_settings', $duplicateKeyData['applied'] ?? [], true)) {
+    fwrite(STDERR, "Duplicate key import should still apply the settings option." . PHP_EOL);
+    exit(1);
+}
+
+$expectedDuplicateMessage = 'ssc_settings (duplicate key: nameone)';
+
+if (!in_array($expectedDuplicateMessage, $duplicateKeyData['skipped'] ?? [], true)) {
+    fwrite(STDERR, "Duplicate key import should report the normalized key in the skipped list." . PHP_EOL);
+    exit(1);
+}
+
+$storedSettings = $ssc_options_store['ssc_settings'] ?? null;
+
+if (!is_array($storedSettings) || $storedSettings !== ['nameone' => 'First Value']) {
+    fwrite(STDERR, "Duplicate key import should keep the first occurrence of the normalized key." . PHP_EOL);
+    fwrite(STDERR, 'Actual settings: ' . json_encode($storedSettings) . PHP_EOL);
     exit(1);
 }
 
