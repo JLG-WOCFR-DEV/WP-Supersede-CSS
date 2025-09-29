@@ -410,7 +410,8 @@ final class Routes {
         if (!is_array($payload)) {
             $rawTokens = $request->get_param('tokens');
             if (is_string($rawTokens)) {
-                $decoded = json_decode($rawTokens, true);
+                // Mirror savePresets() by unslashing the raw payload before decoding JSON.
+                $decoded = json_decode(wp_unslash($rawTokens), true);
                 $payload = ['tokens' => $decoded];
             } elseif (is_array($rawTokens)) {
                 $payload = ['tokens' => $rawTokens];
