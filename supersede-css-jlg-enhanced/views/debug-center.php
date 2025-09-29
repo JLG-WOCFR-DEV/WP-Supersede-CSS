@@ -4,9 +4,11 @@ if (!defined('ABSPATH')) {
 }
 /** @var array{plugin_version?:string,wordpress_version?:string,php_version?:string} $system_info */
 /** @var array<int,array<string,mixed>> $log_entries */
+/** @var array<int,array<string,mixed>> $css_revisions */
 $plugin_version    = $system_info['plugin_version'] ?? __('N/A', 'supersede-css-jlg');
 $wordpress_version = $system_info['wordpress_version'] ?? '';
 $php_version       = $system_info['php_version'] ?? '';
+$css_revisions     = isset($css_revisions) && is_array($css_revisions) ? $css_revisions : [];
 ?>
 <div class="ssc-wrap ssc-debug-center">
     <h1><?php echo esc_html__('Supersede CSS — Debug Center', 'supersede-css-jlg'); ?></h1>
@@ -52,6 +54,97 @@ $php_version       = $system_info['php_version'] ?? '';
          );
          ?>
          <p id="ssc-danger-desc" class="description"><?php echo wp_kses_post($danger_desc); ?></p>
+    </div>
+
+    <div class="ssc-panel" style="margin-top: 16px;">
+        <h2><?php echo esc_html__('Révisions CSS enregistrées', 'supersede-css-jlg'); ?></h2>
+        <p class="description" style="margin-bottom: 12px;">
+            <?php echo esc_html__('Chaque sauvegarde conserve une version du CSS avec horodatage et auteur. Utilisez cette liste pour restaurer un état précédent en un clic.', 'supersede-css-jlg'); ?>
+        </p>
+        <?php if (!empty($css_revisions)) : ?>
+            <table class="widefat striped">
+                <thead>
+                    <tr>
+                        <th><?php esc_html_e('Horodatage (UTC)', 'supersede-css-jlg'); ?></th>
+                        <th><?php esc_html_e('Option', 'supersede-css-jlg'); ?></th>
+                        <th><?php esc_html_e('Auteur', 'supersede-css-jlg'); ?></th>
+                        <th><?php esc_html_e('Taille', 'supersede-css-jlg'); ?></th>
+                        <th><?php esc_html_e('Détails', 'supersede-css-jlg'); ?></th>
+                        <th><?php esc_html_e('Actions', 'supersede-css-jlg'); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($css_revisions as $revision) :
+                        $revision_id   = isset($revision['id']) ? (string) $revision['id'] : '';
+                        $option_name   = isset($revision['option']) ? (string) $revision['option'] : '';
+                        $timestamp     = isset($revision['timestamp']) ? (string) $revision['timestamp'] : '';
+                        $author        = isset($revision['author']) ? (string) $revision['author'] : '';
+                        $css_source    = isset($revision['css']) ? (string) $revision['css'] : '';
+                        $css_length    = strlen($css_source);
+                        $segments_data = [];
+                        if (isset($revision['segments']) && is_array($revision['segments'])) {
+                            foreach (['desktop', 'tablet', 'mobile'] as $segmentKey) {
+                                $segments_data[$segmentKey] = isset($revision['segments'][$segmentKey]) && is_string($revision['segments'][$segmentKey])
+                                    ? (string) $revision['segments'][$segmentKey]
+                                    : '';
+                            }
+                        }
+                        $hasSegments = false;
+                        foreach ($segments_data as $segmentValue) {
+                            if ($segmentValue !== '') {
+                                $hasSegments = true;
+                                break;
+                            }
+                        }
+                        ?>
+                        <tr>
+                            <td><?php echo esc_html($timestamp); ?></td>
+                            <td><code><?php echo esc_html($option_name); ?></code></td>
+                            <td><?php echo esc_html($author); ?></td>
+                            <td><?php echo esc_html(number_format_i18n($css_length)); ?></td>
+                            <td>
+                                <details>
+                                    <summary><?php echo esc_html(sprintf(__('Afficher le CSS (%d caractères)', 'supersede-css-jlg'), $css_length)); ?></summary>
+                                    <pre class="ssc-code" style="max-height:200px; overflow:auto; margin-top:8px;"><?php echo esc_html($css_source); ?></pre>
+                                    <?php if ($hasSegments) : ?>
+                                        <div style="margin-top: 10px;">
+                                            <strong><?php esc_html_e('Segments responsives', 'supersede-css-jlg'); ?>:</strong>
+                                            <ul style="margin: 6px 0 0 16px;">
+                                                <?php
+                                                $segmentLabels = [
+                                                    'desktop' => __('Bureau', 'supersede-css-jlg'),
+                                                    'tablet' => __('Tablette', 'supersede-css-jlg'),
+                                                    'mobile' => __('Mobile', 'supersede-css-jlg'),
+                                                ];
+                                                foreach ($segmentLabels as $segmentKey => $segmentLabel) :
+                                                    $segmentValue = $segments_data[$segmentKey] ?? '';
+                                                    ?>
+                                                    <li>
+                                                        <strong><?php echo esc_html($segmentLabel); ?>:</strong>
+                                                        <code><?php echo esc_html($segmentValue); ?></code>
+                                                    </li>
+                                                <?php endforeach; ?>
+                                            </ul>
+                                        </div>
+                                    <?php endif; ?>
+                                </details>
+                            </td>
+                            <td>
+                                <button
+                                    class="button button-secondary ssc-revision-restore"
+                                    data-revision="<?php echo esc_attr($revision_id); ?>"
+                                    data-option="<?php echo esc_attr($option_name); ?>"
+                                >
+                                    <?php esc_html_e('Restaurer', 'supersede-css-jlg'); ?>
+                                </button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php else : ?>
+            <p><?php esc_html_e('Aucune révision enregistrée pour le moment.', 'supersede-css-jlg'); ?></p>
+        <?php endif; ?>
     </div>
 
     <div class="ssc-panel" style="margin-top: 16px;">
