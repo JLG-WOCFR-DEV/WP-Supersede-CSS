@@ -882,7 +882,7 @@ final class Routes {
             }
 
             if (is_string($item)) {
-                $sanitized[$sanitizedKey] = $this->sanitizeImportStringValue($item);
+                $sanitized[$sanitizedKey] = $this->sanitizeImportStringValue($item, $depth, $objectStack, $itemBudget);
                 continue;
             }
 
@@ -917,11 +917,11 @@ final class Routes {
                     $encoded = '';
                 }
 
-                $sanitized[$sanitizedKey] = $this->sanitizeImportStringValue($encoded);
+                $sanitized[$sanitizedKey] = $this->sanitizeImportStringValue($encoded, $depth, $objectStack, $itemBudget);
                 continue;
             }
 
-            $sanitized[$sanitizedKey] = $this->sanitizeImportStringValue((string) $item);
+            $sanitized[$sanitizedKey] = $this->sanitizeImportStringValue((string) $item, $depth, $objectStack, $itemBudget);
         }
 
         return $sanitized;
@@ -964,7 +964,7 @@ final class Routes {
         return $sanitized !== '' ? $sanitized : null;
     }
 
-    private function sanitizeImportStringValue(string $value): string
+    private function sanitizeImportStringValue(string $value, int $depth = 0, ?\SplObjectStorage $objectStack = null, ?int &$itemBudget = null): string
     {
         if (function_exists('wp_check_invalid_utf8')) {
             $value = wp_check_invalid_utf8($value);
@@ -982,7 +982,7 @@ final class Routes {
             $decoded = json_decode($trimmed, true);
 
             if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                $sanitized = $this->sanitizeImportArray($decoded);
+                $sanitized = $this->sanitizeImportArray($decoded, $depth + 1, $objectStack, $itemBudget);
 
                 if ($sanitized !== null) {
                     $jsonOptions = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
@@ -998,6 +998,8 @@ final class Routes {
                     if (is_string($encoded)) {
                         $value = $encoded;
                     }
+                } else {
+                    $value = '';
                 }
             }
         }
