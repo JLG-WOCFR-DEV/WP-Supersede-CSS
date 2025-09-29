@@ -1,4 +1,28 @@
 (function($) {
+    const fallbackI18n = {
+        __: (text) => text,
+        sprintf: (format, ...args) => {
+            let index = 0;
+            return format.replace(/%([0-9]+\$)?[sd]/g, (match, position) => {
+                if (position) {
+                    const explicitIndex = parseInt(position, 10) - 1;
+                    return typeof args[explicitIndex] !== 'undefined' ? args[explicitIndex] : '';
+                }
+                const value = typeof args[index] !== 'undefined' ? args[index] : '';
+                index += 1;
+                return value;
+            });
+        },
+    };
+
+    const hasI18n = typeof window !== 'undefined' && window.wp && window.wp.i18n;
+    const { __, sprintf } = hasI18n ? window.wp.i18n : fallbackI18n;
+
+    if (!hasI18n) {
+        // eslint-disable-next-line no-console
+        console.warn(__('wp.i18n is not available. Falling back to untranslated strings.', 'supersede-css-jlg'));
+    }
+
     // Fonction pour déclencher le téléchargement d'un fichier
     function downloadFile(filename, content, mimeType) {
         const blob = new Blob([content], { type: mimeType });
@@ -44,8 +68,8 @@
             }
 
             const message = context === 'import'
-                ? 'Veuillez sélectionner au moins un ensemble à importer.'
-                : 'Veuillez sélectionner au moins un ensemble à exporter.';
+                ? __('Veuillez sélectionner au moins un ensemble à importer.', 'supersede-css-jlg')
+                : __('Veuillez sélectionner au moins un ensemble à exporter.', 'supersede-css-jlg');
 
             if (typeof window.sscToast === 'function' && context !== 'import') {
                 window.sscToast(message);
@@ -66,7 +90,7 @@
                 return;
             }
 
-            btn.text('Exportation...').prop('disabled', true);
+            btn.text(__('Exportation...', 'supersede-css-jlg')).prop('disabled', true);
 
             $.ajax({
                 url: SSC.rest.root + 'export-config',
@@ -76,18 +100,18 @@
             }).done(response => {
                 const jsonContent = JSON.stringify(response, null, 2);
                 downloadFile('supersede-config-export.json', jsonContent, 'application/json');
-                window.sscToast('Configuration exportée !');
+                window.sscToast(__('Configuration exportée !', 'supersede-css-jlg'));
             }).fail(() => {
-                window.sscToast("Erreur lors de l'exportation de la configuration.");
+                window.sscToast(__("Erreur lors de l'exportation de la configuration.", 'supersede-css-jlg'));
             }).always(() => {
-                btn.text('Exporter Config (.json)').prop('disabled', false);
+                btn.text(__('Exporter Config (.json)', 'supersede-css-jlg')).prop('disabled', false);
             });
         });
 
         // Exporter uniquement le CSS actif (.css)
         $('#ssc-export-css').on('click', function() {
             const btn = $(this);
-            btn.text('Exportation...').prop('disabled', true);
+            btn.text(__('Exportation...', 'supersede-css-jlg')).prop('disabled', true);
 
             $.ajax({
                 url: SSC.rest.root + 'export-css',
@@ -96,11 +120,11 @@
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
             }).done(response => {
                 downloadFile('supersede-styles.css', response.css, 'text/css');
-                window.sscToast('CSS exporté !');
+                window.sscToast(__('CSS exporté !', 'supersede-css-jlg'));
             }).fail(() => {
-                window.sscToast("Erreur lors de l'exportation du CSS.");
+                window.sscToast(__("Erreur lors de l'exportation du CSS.", 'supersede-css-jlg'));
             }).always(() => {
-                btn.text('Exporter CSS (.css)').prop('disabled', false);
+                btn.text(__('Exporter CSS (.css)', 'supersede-css-jlg')).prop('disabled', false);
             });
         });
 
@@ -140,17 +164,17 @@
 
             const file = importInput[0]?.files?.[0];
             if (!file) {
-                handleImportError('Veuillez sélectionner un fichier JSON à importer.');
+                handleImportError(__('Veuillez sélectionner un fichier JSON à importer.', 'supersede-css-jlg'));
                 return;
             }
 
             const reader = new FileReader();
-            importBtn.text('Importation...').prop('disabled', true);
+            importBtn.text(__('Importation...', 'supersede-css-jlg')).prop('disabled', true);
             setImportMessage('', '');
 
             reader.onerror = () => {
-                handleImportError("Impossible de lire le fichier sélectionné.");
-                importBtn.text('Importer').prop('disabled', false);
+                handleImportError(__("Impossible de lire le fichier sélectionné.", 'supersede-css-jlg'));
+                importBtn.text(__('Importer', 'supersede-css-jlg')).prop('disabled', false);
             };
 
             reader.onload = () => {
@@ -158,8 +182,8 @@
                 try {
                     parsed = JSON.parse(reader.result);
                 } catch (error) {
-                    handleImportError('Le fichier importé ne contient pas un JSON valide.');
-                    importBtn.text('Importer').prop('disabled', false);
+                    handleImportError(__('Le fichier importé ne contient pas un JSON valide.', 'supersede-css-jlg'));
+                    importBtn.text(__('Importer', 'supersede-css-jlg')).prop('disabled', false);
                     return;
                 }
 
@@ -173,20 +197,20 @@
                     const applied = Array.isArray(response.applied) ? response.applied.length : 0;
                     const skipped = Array.isArray(response.skipped) ? response.skipped.length : 0;
                     const message = skipped > 0
-                        ? `Import terminé : ${applied} option(s) appliquée(s), ${skipped} ignorée(s).`
-                        : `Import terminé : ${applied} option(s) appliquée(s).`;
+                        ? sprintf(__('Import terminé : %1$d option(s) appliquée(s), %2$d ignorée(s).', 'supersede-css-jlg'), applied, skipped)
+                        : sprintf(__('Import terminé : %1$d option(s) appliquée(s).', 'supersede-css-jlg'), applied);
 
                     setImportMessage('success', message);
                     if (typeof window.sscToast === 'function') {
-                        window.sscToast('Configuration importée !');
+                        window.sscToast(__('Configuration importée !', 'supersede-css-jlg'));
                     }
                     importInput.val('');
                 }).fail(jqXHR => {
                     const errorMessage = jqXHR?.responseJSON?.message
-                        || "Erreur lors de l'importation de la configuration.";
+                        || __("Erreur lors de l'importation de la configuration.", 'supersede-css-jlg');
                     handleImportError(errorMessage);
                 }).always(() => {
-                    importBtn.text('Importer').prop('disabled', false);
+                    importBtn.text(__('Importer', 'supersede-css-jlg')).prop('disabled', false);
                 });
             };
 

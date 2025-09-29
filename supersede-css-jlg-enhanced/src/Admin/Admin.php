@@ -234,7 +234,7 @@ final class Admin
                 $path = 'assets/js/' . $handle . '.js';
                 if (is_file(SSC_PLUGIN_DIR . $path)) {
                     $dependencies = ['jquery'];
-                    if ($handle === 'utilities') {
+                    if (in_array($handle, ['utilities', 'import-export'], true)) {
                         $dependencies[] = 'wp-i18n';
                     }
 
@@ -242,7 +242,7 @@ final class Admin
 
                     wp_enqueue_script($script_handle, SSC_PLUGIN_URL . $path, $dependencies, SSC_VERSION, true);
 
-                    if ($handle === 'utilities' && function_exists('wp_set_script_translations')) {
+                    if (in_array($handle, ['utilities', 'import-export'], true) && function_exists('wp_set_script_translations')) {
                         wp_set_script_translations(
                             $script_handle,
                             'supersede-css-jlg',

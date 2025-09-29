@@ -6,6 +6,10 @@ if (!defined('ABSPATH')) {
 }
 
 $modules = Routes::getConfigModules();
+
+if (function_exists('wp_set_script_translations')) {
+    wp_set_script_translations('ssc-import-export', 'supersede-css-jlg', SSC_PLUGIN_DIR . 'languages');
+}
 ?>
 <div class="ssc-app ssc-fullwidth">
     <h2><?php esc_html_e('Import / Export', 'supersede-css-jlg'); ?></h2>
