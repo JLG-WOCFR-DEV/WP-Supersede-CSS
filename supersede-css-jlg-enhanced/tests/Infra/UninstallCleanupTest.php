@@ -48,3 +48,4 @@ if (!function_exists('assertOptionDeleted')) {
 }
 
 assertOptionDeleted('ssc_css_cache', $ssc_deleted_options);
+assertOptionDeleted('ssc_css_cache_meta', $ssc_deleted_options);
