@@ -61,18 +61,6 @@ if (function_exists('wp_localize_script')) {
             <h3><?php esc_html_e('🎨 Éditeur Visuel de Tokens', 'supersede-css-jlg'); ?></h3>
             <p><?php esc_html_e('Gérez vos tokens sous forme de fiches structurées : nom technique, valeur, type de champ, description et groupe d\'appartenance. Chaque catégorie est listée séparément pour garder une vision claire de votre système de design.', 'supersede-css-jlg'); ?></p>
 
-            <style>
-                .ssc-token-builder { display: flex; flex-direction: column; gap: 16px; }
-                .ssc-token-group { border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; background: #fff; }
-                .ssc-token-group h4 { margin: 0 0 8px; }
-                .ssc-token-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
-                .ssc-token-field { display: flex; flex-direction: column; gap: 4px; flex: 1 1 180px; min-width: 180px; }
-                .ssc-token-field__label { font-weight: 600; font-size: 13px; }
-                .ssc-token-field-input { width: 100%; }
-                .ssc-token-field textarea { resize: vertical; }
-                .ssc-token-empty { margin: 0; font-style: italic; }
-            </style>
-
             <div class="ssc-token-toolbar" style="margin-bottom:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                 <button id="ssc-token-add" class="button"><?php esc_html_e('+ Ajouter un Token', 'supersede-css-jlg'); ?></button>
             </div>
