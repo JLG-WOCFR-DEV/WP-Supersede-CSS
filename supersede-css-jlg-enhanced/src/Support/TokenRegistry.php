@@ -111,10 +111,6 @@ final class TokenRegistry
 
         self::persistCss($normalized);
 
-        if (function_exists('\ssc_invalidate_css_cache')) {
-            \ssc_invalidate_css_cache();
-        }
-
         return $normalized;
     }
 
@@ -463,6 +459,10 @@ final class TokenRegistry
     {
         $css = self::tokensToCss($tokens);
         update_option(self::OPTION_CSS, $css, false);
+
+        if (function_exists('\ssc_invalidate_css_cache')) {
+            \ssc_invalidate_css_cache();
+        }
     }
 
     private static function guessTypeFromValue(string $value): string

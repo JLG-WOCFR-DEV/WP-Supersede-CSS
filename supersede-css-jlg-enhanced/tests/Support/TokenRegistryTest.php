@@ -53,6 +53,20 @@ $ssc_options_store = [];
 
 global $ssc_options_store;
 
+/** @var int $ssc_css_invalidation_calls */
+$ssc_css_invalidation_calls = 0;
+
+global $ssc_css_invalidation_calls;
+
+if (!function_exists('ssc_invalidate_css_cache')) {
+    function ssc_invalidate_css_cache(): void
+    {
+        global $ssc_css_invalidation_calls;
+
+        $ssc_css_invalidation_calls++;
+    }
+}
+
 if (!function_exists('get_option')) {
     function get_option($name, $default = false)
     {
@@ -113,6 +127,31 @@ if (!isset($ssc_options_store['ssc_tokens_css']) || !is_string($ssc_options_stor
 
 if (strpos($ssc_options_store['ssc_tokens_css'], '--BrandPrimary') === false) {
     fwrite(STDERR, 'Persisted CSS should contain the original token casing.' . PHP_EOL);
+    exit(1);
+}
+
+if ($ssc_css_invalidation_calls !== 1) {
+    fwrite(STDERR, 'TokenRegistry::saveRegistry should invalidate the CSS cache once.' . PHP_EOL);
+    exit(1);
+}
+
+$cssInvalidationsBeforeRefresh = $ssc_css_invalidation_calls;
+unset($ssc_options_store['ssc_tokens_css']);
+
+$refreshedRegistry = TokenRegistry::getRegistry();
+
+if ($ssc_css_invalidation_calls !== $cssInvalidationsBeforeRefresh + 1) {
+    fwrite(STDERR, 'TokenRegistry::getRegistry should invalidate the CSS cache when CSS needs regeneration.' . PHP_EOL);
+    exit(1);
+}
+
+if ($refreshedRegistry === [] || $refreshedRegistry[0]['name'] !== '--BrandPrimary') {
+    fwrite(STDERR, 'TokenRegistry::getRegistry should return the stored tokens after regenerating CSS.' . PHP_EOL);
+    exit(1);
+}
+
+if (!isset($ssc_options_store['ssc_tokens_css']) || strpos($ssc_options_store['ssc_tokens_css'], '--BrandPrimary') === false) {
+    fwrite(STDERR, 'TokenRegistry::getRegistry should regenerate CSS when missing.' . PHP_EOL);
     exit(1);
 }
 
