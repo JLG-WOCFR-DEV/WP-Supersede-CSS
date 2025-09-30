@@ -28,6 +28,31 @@ Supersede CSS JLG (Enhanced) is a visual toolkit for building CSS effects in Wor
 4. Use the **Token Manager** to add or edit CSS tokens; reference tokens within your custom styles.
 5. Export or import presets as needed from the built‑in tools.
 
+## UI Tests
+
+An end-to-end Playwright scenario validates the real token manager UI against a disposable WordPress instance started with `@wordpress/env`.
+
+### Prerequisites
+
+- Docker running locally (required by `@wordpress/env`).
+- Node.js 18+.
+
+### Install dependencies
+
+```
+cd supersede-css-jlg-enhanced
+npm install
+npx playwright install --with-deps chromium
+```
+
+### Run the UI test suite
+
+```
+npx playwright test
+```
+
+The command automatically boots `wp-env`, runs the tests, then stops and destroys the containers. You can also manage the environment manually with `npm run env:start`, `npm run env:stop`, and `npm run env:destroy`.
+
 ## Hooks
 
 ### `ssc_required_capability`

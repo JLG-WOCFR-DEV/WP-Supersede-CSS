@@ -1,23 +1,71 @@
-const path = require('path');
 const { test, expect } = require('@playwright/test');
 
-const pluginRoot = path.resolve(__dirname, '..', '..');
-const restRoot = 'https://example.test/wp-json/ssc/v1/';
+const ADMIN_PATH = '/wp-admin/admin.php?page=supersede-css-jlg-tokens';
+const DEFAULT_USERNAME = process.env.WP_USERNAME || 'admin';
+const DEFAULT_PASSWORD = process.env.WP_PASSWORD || 'password';
 
-function generateCss(tokens) {
-  if (!tokens.length) {
-    return ':root {\n}\n';
+async function authenticate(page, adminUrl, credentials) {
+  const loginUrl = `/wp-login.php?redirect_to=${encodeURIComponent(adminUrl)}`;
+  await page.goto(loginUrl, { waitUntil: 'domcontentloaded' });
+
+  const usernameInput = page.locator('#user_login');
+  if (await usernameInput.isVisible()) {
+    await usernameInput.fill(credentials.username);
+    await page.locator('#user_pass').fill(credentials.password);
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'networkidle' }),
+      page.locator('#wp-submit').click(),
+    ]);
   }
-  const lines = tokens.map((token) => `    ${token.name}: ${token.value};`);
-  return `:root {\n${lines.join('\n')}\n}`;
+
+  await page.goto(adminUrl, { waitUntil: 'networkidle' });
+}
+
+async function waitForPluginReady(page) {
+  await page.waitForSelector('#ssc-token-builder');
+  await page.waitForSelector('#ssc-tokens-preview-style');
+  await page.waitForFunction(() => {
+    return Boolean(
+      window.SSC &&
+        window.SSC.rest &&
+        window.SSC.rest.root &&
+        window.SSC.rest.nonce &&
+        window.SSC_TOKENS_DATA
+    );
+  });
+
+  return page.evaluate(() => ({
+    restRoot: window.SSC.rest.root,
+    nonce: window.SSC.rest.nonce,
+  }));
+}
+
+async function seedTokens(page, tokensEndpoint, nonce, tokens) {
+  const response = await page.request.post(tokensEndpoint, {
+    headers: {
+      'Content-Type': 'application/json',
+      'X-WP-Nonce': nonce,
+    },
+    data: { tokens },
+  });
+
+  expect(response.ok()).toBeTruthy();
 }
 
 test.describe('Token manager admin UI', () => {
-  test('adds, edits and deletes tokens with live CSS preview updates', async ({ page }) => {
-    const jqueryPath = require.resolve('jquery/dist/jquery.min.js');
-    const tokensScriptPath = path.resolve(pluginRoot, 'assets/js/tokens.js');
+  test('adds, edits and deletes tokens with live CSS preview updates', async ({ page }, testInfo) => {
+    const baseURL = testInfo.project.use.baseURL || 'http://localhost:8889';
+    const adminTokensUrl = new URL(ADMIN_PATH, baseURL).toString();
 
-    let serverTokens = [
+    await authenticate(page, adminTokensUrl, {
+      username: DEFAULT_USERNAME,
+      password: DEFAULT_PASSWORD,
+    });
+
+    let { restRoot, nonce } = await waitForPluginReady(page);
+    let tokensEndpoint = new URL('tokens', restRoot).toString();
+
+    const initialTokens = [
       {
         name: '--primary-color',
         value: '#123456',
@@ -27,143 +75,86 @@ test.describe('Token manager admin UI', () => {
       },
     ];
 
-    await page.route(restRoot + 'tokens', async (route) => {
-      const request = route.request();
-      if (request.method() === 'GET') {
-        await route.fulfill({
-          contentType: 'application/json',
-          body: JSON.stringify({
-            tokens: serverTokens,
-            css: generateCss(serverTokens),
-          }),
-        });
-        return;
-      }
+    await seedTokens(page, tokensEndpoint, nonce, initialTokens);
 
-      if (request.method() === 'POST') {
-        const payload = request.postDataJSON() || {};
-        if (Array.isArray(payload.tokens)) {
-          serverTokens = payload.tokens;
-        }
-        await route.fulfill({
-          contentType: 'application/json',
-          body: JSON.stringify({
-            tokens: serverTokens,
-            css: generateCss(serverTokens),
-          }),
-        });
-        return;
-      }
-
-      await route.fallback();
-    });
-
-    await page.setContent(`
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <title>Tokens Admin Test</title>
-        </head>
-        <body>
-          <div class="ssc-app ssc-fullwidth">
-            <div class="ssc-token-toolbar">
-              <button id="ssc-token-add" class="button">Add token</button>
-            </div>
-            <div id="ssc-token-builder" class="ssc-token-builder" aria-live="polite"></div>
-            <textarea id="ssc-tokens" rows="10" class="large-text" readonly></textarea>
-            <div class="ssc-actions">
-              <button id="ssc-tokens-save" class="button button-primary">Save tokens</button>
-              <button id="ssc-tokens-copy" class="button">Copy CSS</button>
-            </div>
-            <style id="ssc-tokens-preview-style"></style>
-            <div id="ssc-tokens-preview"></div>
-          </div>
-        </body>
-      </html>
-    `, { waitUntil: 'domcontentloaded' });
-
-    await page.evaluate(({ restEndpoint, initialTokens }) => {
-      window.SSC = {
-        rest: {
-          root: restEndpoint,
-          nonce: 'ui-test-nonce',
-        },
-      };
-      window.SSC_TOKENS_DATA = {
-        tokens: initialTokens,
-        css: '',
-        types: {
-          color: { label: 'Colour', input: 'color' },
-          text: { label: 'Text', input: 'text' },
-        },
-        i18n: {
-          addToken: 'Add token',
-          emptyState: 'No tokens yet',
-          groupLabel: 'Group',
-          nameLabel: 'Name',
-          valueLabel: 'Value',
-          typeLabel: 'Type',
-          descriptionLabel: 'Description',
-          deleteLabel: 'Delete',
-          saveSuccess: 'Tokens saved',
-          saveError: 'Unable to save tokens',
-        },
-      };
-      window.sscToast = () => {};
-    }, { restEndpoint: restRoot, initialTokens: serverTokens });
-
-    await page.addScriptTag({ path: jqueryPath });
-    await page.addScriptTag({ path: tokensScriptPath });
+    await page.reload({ waitUntil: 'networkidle' });
+    ({ restRoot, nonce } = await waitForPluginReady(page));
+    tokensEndpoint = new URL('tokens', restRoot).toString();
 
     const builder = page.locator('#ssc-token-builder');
     const rows = builder.locator('.ssc-token-row');
     const previewStyle = page.locator('#ssc-tokens-preview-style');
     const cssTextarea = page.locator('#ssc-tokens');
 
-    await expect(rows).toHaveCount(1);
-    let currentCss = await previewStyle.evaluate((el) => el.textContent || '');
-    expect(currentCss).toContain('--primary-color: #123456;');
+    await expect(rows).toHaveCount(initialTokens.length);
+    await expect(previewStyle).toContainText('--primary-color: #123456;');
+    let cssValue = await cssTextarea.inputValue();
+    expect(cssValue).toContain('--primary-color: #123456;');
 
     await page.locator('#ssc-token-add').click();
-    await expect(rows).toHaveCount(2);
+    await expect(rows).toHaveCount(initialTokens.length + 1);
 
-    const newRow = builder.locator('.ssc-token-row').last();
-    await newRow.locator('.token-name').fill('spacing_small');
-    await newRow.locator('.token-name').blur();
-    await expect(newRow.locator('.token-name')).toHaveValue('--spacing_small');
-    await newRow.locator('.token-type').selectOption('text');
-    const valueInput = newRow.locator('.token-value');
-    await valueInput.fill('1rem');
+    const lastRow = rows.last();
+    await lastRow.locator('.token-name').fill('spacing_small');
+    await lastRow.locator('.token-name').blur();
+    await expect(lastRow.locator('.token-name')).toHaveValue('--spacing_small');
 
-    currentCss = await previewStyle.evaluate((el) => el.textContent || '');
-    expect(currentCss).toContain('--spacing_small: 1rem;');
+    await lastRow.locator('.token-type').selectOption('text');
+    await expect(lastRow.locator('.token-value')).toBeVisible();
+    await lastRow.locator('.token-value').fill('1rem');
+    await lastRow.locator('.token-value').blur();
 
-    const saveResponse = page.waitForResponse((response) =>
-      response.url() === restRoot + 'tokens' && response.request().method() === 'POST'
+    await expect(previewStyle).toContainText('--spacing_small: 1rem;');
+    cssValue = await cssTextarea.inputValue();
+    expect(cssValue).toContain('--spacing_small: 1rem;');
+
+    const saveResponse = page.waitForResponse(
+      (response) =>
+        response.url().startsWith(tokensEndpoint) &&
+        response.request().method() === 'POST'
     );
     await page.locator('#ssc-tokens-save').click();
-    await saveResponse;
-    expect(serverTokens.length).toBe(2);
-    expect(serverTokens[1].name).toBe('--spacing_small');
+    const saved = await saveResponse;
+    expect(saved.ok()).toBeTruthy();
 
-    await newRow.locator('.token-value').fill('2rem');
-    currentCss = await previewStyle.evaluate((el) => el.textContent || '');
-    expect(currentCss).toContain('--spacing_small: 2rem;');
+    await expect(rows).toHaveCount(initialTokens.length + 1);
 
-    await builder.locator('.ssc-token-row').last().locator('.token-delete').click();
-    await expect(rows).toHaveCount(1);
-    currentCss = await previewStyle.evaluate((el) => el.textContent || '');
-    expect(currentCss).not.toContain('--spacing_small');
+    const updatedRow = rows.last();
+    await updatedRow.locator('.token-value').fill('2rem');
+    await updatedRow.locator('.token-value').blur();
 
-    const deleteSave = page.waitForResponse((response) =>
-      response.url() === restRoot + 'tokens' && response.request().method() === 'POST'
+    await expect(previewStyle).toContainText('--spacing_small: 2rem;');
+    cssValue = await cssTextarea.inputValue();
+    expect(cssValue).toContain('--spacing_small: 2rem;');
+
+    await updatedRow.locator('.token-delete').click();
+    await expect(rows).toHaveCount(initialTokens.length);
+
+    await expect(previewStyle).not.toContainText('--spacing_small');
+    cssValue = await cssTextarea.inputValue();
+    expect(cssValue).not.toContain('--spacing_small');
+
+    const deleteSave = page.waitForResponse(
+      (response) =>
+        response.url().startsWith(tokensEndpoint) &&
+        response.request().method() === 'POST'
     );
     await page.locator('#ssc-tokens-save').click();
-    await deleteSave;
+    const deleteResult = await deleteSave;
+    expect(deleteResult.ok()).toBeTruthy();
 
-    expect(serverTokens.length).toBe(1);
-    currentCss = await previewStyle.evaluate((el) => el.textContent || '');
-    expect(currentCss).toContain('--primary-color: #123456;');
-    await expect(cssTextarea).toHaveValue(/--primary-color: #123456;/);
+    const finalResponse = await page.request.get(tokensEndpoint, {
+      headers: {
+        'X-WP-Nonce': nonce,
+      },
+    });
+    expect(finalResponse.ok()).toBeTruthy();
+    const finalJson = await finalResponse.json();
+    expect(finalJson.tokens).toHaveLength(1);
+    expect(finalJson.tokens[0].name).toBe('--primary-color');
+    expect(finalJson.tokens[0].value).toBe('#123456');
+    expect(finalJson.tokens[0].type).toBe('color');
+    expect(finalJson.css).toContain('--primary-color: #123456;');
+    expect(finalJson.css).not.toContain('--spacing_small');
   });
 });
