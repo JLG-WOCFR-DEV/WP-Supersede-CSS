@@ -760,6 +760,8 @@ final class Routes {
     {
         $applied = [];
         $skipped = [];
+        $deferredValues = [];
+        $deferredDuplicateWarnings = [];
 
         foreach ($options as $name => $value) {
             if (!is_string($name)) {
@@ -792,35 +794,14 @@ final class Routes {
             }
 
             if ($optionName === 'ssc_tokens_css') {
-                $tokens = TokenRegistry::convertCssToRegistry($sanitizedValue);
-                TokenRegistry::saveRegistry($tokens);
-                if (function_exists('\ssc_invalidate_css_cache')) {
-                    \ssc_invalidate_css_cache();
-                }
-                $applied[] = $optionName;
-                foreach ($duplicateWarnings as $duplicatePath) {
-                    $skipped[] = sprintf('%s (duplicate key: %s)', $optionName, $duplicatePath);
-                }
+                $deferredValues[$optionName] = $sanitizedValue;
+                $deferredDuplicateWarnings[$optionName] = $duplicateWarnings;
                 continue;
             }
 
             if ($optionName === 'ssc_tokens_registry') {
-                if (!is_array($sanitizedValue)) {
-                    $skipped[] = $optionName;
-                    foreach ($duplicateWarnings as $duplicatePath) {
-                        $skipped[] = sprintf('%s (duplicate key: %s)', $optionName, $duplicatePath);
-                    }
-                    continue;
-                }
-
-                TokenRegistry::saveRegistry($sanitizedValue);
-                if (function_exists('\ssc_invalidate_css_cache')) {
-                    \ssc_invalidate_css_cache();
-                }
-                $applied[] = $optionName;
-                foreach ($duplicateWarnings as $duplicatePath) {
-                    $skipped[] = sprintf('%s (duplicate key: %s)', $optionName, $duplicatePath);
-                }
+                $deferredValues[$optionName] = $sanitizedValue;
+                $deferredDuplicateWarnings[$optionName] = $duplicateWarnings;
                 continue;
             }
 
@@ -830,6 +811,52 @@ final class Routes {
             }
             $applied[] = $optionName;
             foreach ($duplicateWarnings as $duplicatePath) {
+                $skipped[] = sprintf('%s (duplicate key: %s)', $optionName, $duplicatePath);
+            }
+        }
+
+        $finalRegistry = null;
+        $registryProvided = array_key_exists('ssc_tokens_registry', $deferredValues);
+        $cssProvided = array_key_exists('ssc_tokens_css', $deferredValues);
+        $normalizedRegistry = null;
+
+        if ($registryProvided) {
+            /** @var array<int, array{name: string, value: string, type: string, description: string, group: string}> $registryValue */
+            $registryValue = $deferredValues['ssc_tokens_registry'];
+            $normalizedRegistry = TokenRegistry::normalizeRegistry($registryValue);
+        }
+
+        if ($cssProvided) {
+            /** @var string $cssValue */
+            $cssValue = $deferredValues['ssc_tokens_css'];
+            $existingMetadata = $normalizedRegistry ?? TokenRegistry::getRegistry();
+            $tokensFromCss = TokenRegistry::convertCssToRegistry($cssValue);
+            $finalRegistry = TokenRegistry::mergeMetadata($tokensFromCss, $existingMetadata);
+
+            if (!in_array('ssc_tokens_css', $applied, true)) {
+                $applied[] = 'ssc_tokens_css';
+            }
+
+            if ($registryProvided && !in_array('ssc_tokens_registry', $applied, true)) {
+                $applied[] = 'ssc_tokens_registry';
+            }
+        } elseif ($normalizedRegistry !== null) {
+            $finalRegistry = $normalizedRegistry;
+
+            if (!in_array('ssc_tokens_registry', $applied, true)) {
+                $applied[] = 'ssc_tokens_registry';
+            }
+        }
+
+        if ($finalRegistry !== null) {
+            TokenRegistry::saveRegistry($finalRegistry);
+            if (function_exists('\ssc_invalidate_css_cache')) {
+                \ssc_invalidate_css_cache();
+            }
+        }
+
+        foreach ($deferredDuplicateWarnings as $optionName => $warnings) {
+            foreach ($warnings as $duplicatePath) {
                 $skipped[] = sprintf('%s (duplicate key: %s)', $optionName, $duplicatePath);
             }
         }
