@@ -74,3 +74,13 @@ Supersede CSS JLG (Enhanced) is released under the [GPLv2 or later](https://www.
 
 Contributions are welcome! Fork the project, create a branch with your feature or fix, then submit a pull request. For major changes, please open an issue first to discuss what you'd like to change.
 
+## Tests
+
+Run the automated test suite from the plugin directory:
+
+```bash
+cd supersede-css-jlg-enhanced
+composer install
+vendor/bin/phpunit
+```
+

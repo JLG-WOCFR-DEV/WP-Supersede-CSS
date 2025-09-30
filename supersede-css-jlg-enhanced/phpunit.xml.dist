@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="tests/bootstrap.php" colors="true" beStrictAboutTestsThatDoNotTestAnything="true">
+    <php>
+        <env name="WP_PHPUNIT__TESTS_CONFIG" value="tests/wp-tests-config.php"/>
+    </php>
+    <testsuites>
+        <testsuite name="Infra">
+            <directory>tests/Infra</directory>
+        </testsuite>
+        <testsuite name="Support">
+            <directory>tests/Support</directory>
+        </testsuite>
+    </testsuites>
+    <coverage processUncoveredFiles="true">
+        <include>
+            <directory suffix=".php">src</directory>
+        </include>
+    </coverage>
+</phpunit>
