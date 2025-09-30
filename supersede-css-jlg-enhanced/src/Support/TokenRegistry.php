@@ -214,8 +214,30 @@ final class TokenRegistry
             }
 
             $before = $declarationStart - 1;
-            while ($before >= 0 && ctype_space($css[$before])) {
-                $before--;
+            while ($before >= 0) {
+                $character = $css[$before];
+
+                if (ctype_space($character)) {
+                    $before--;
+                    continue;
+                }
+
+                if ($character === '/' && $before > 0 && $css[$before - 1] === '*') {
+                    $before -= 2;
+
+                    while ($before >= 0) {
+                        if ($css[$before] === '/' && ($before + 1) < $length && $css[$before + 1] === '*') {
+                            $before--;
+                            break;
+                        }
+
+                        $before--;
+                    }
+
+                    continue;
+                }
+
+                break;
             }
 
             if ($before >= 0 && !in_array($css[$before], ['{', ';'], true)) {

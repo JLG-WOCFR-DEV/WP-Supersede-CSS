@@ -242,3 +242,25 @@ if (strpos($roundTripCss, '--spacing_small') === false) {
     fwrite(STDERR, 'tokensToCss should keep underscores after round-trip.' . PHP_EOL);
     exit(1);
 }
+
+$ssc_options_store = [];
+
+$cssWithLeadingComment = '/* initial token */ --comment-prefixed: 24px;';
+$registryFromCommentedCss = TokenRegistry::convertCssToRegistry($cssWithLeadingComment);
+
+if ($registryFromCommentedCss === [] || $registryFromCommentedCss[0]['name'] !== '--comment-prefixed') {
+    fwrite(STDERR, 'convertCssToRegistry should parse tokens after comment delimiters.' . PHP_EOL);
+    exit(1);
+}
+
+TokenRegistry::saveRegistry($registryFromCommentedCss);
+
+if (!isset($ssc_options_store['ssc_tokens_registry']) || !is_array($ssc_options_store['ssc_tokens_registry'])) {
+    fwrite(STDERR, 'saveRegistry should persist tokens parsed after leading comments.' . PHP_EOL);
+    exit(1);
+}
+
+if (!isset($ssc_options_store['ssc_tokens_css']) || strpos($ssc_options_store['ssc_tokens_css'], '--comment-prefixed') === false) {
+    fwrite(STDERR, 'Persisted CSS should include tokens parsed after leading comments.' . PHP_EOL);
+    exit(1);
+}
