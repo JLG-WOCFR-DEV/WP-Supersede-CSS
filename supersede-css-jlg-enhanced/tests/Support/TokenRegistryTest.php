@@ -264,3 +264,25 @@ if (!isset($ssc_options_store['ssc_tokens_css']) || strpos($ssc_options_store['s
     fwrite(STDERR, 'Persisted CSS should include tokens parsed after leading comments.' . PHP_EOL);
     exit(1);
 }
+
+$ssc_options_store = [];
+
+$annotatedCss = '/* note */ --my-token: value;';
+$annotatedRegistry = TokenRegistry::convertCssToRegistry($annotatedCss);
+
+if ($annotatedRegistry === [] || $annotatedRegistry[0]['name'] !== '--my-token') {
+    fwrite(STDERR, 'convertCssToRegistry should capture tokens defined after annotated comments.' . PHP_EOL);
+    exit(1);
+}
+
+TokenRegistry::saveRegistry($annotatedRegistry);
+
+if (!isset($ssc_options_store['ssc_tokens_registry']) || !is_array($ssc_options_store['ssc_tokens_registry'])) {
+    fwrite(STDERR, 'saveRegistry should persist tokens that follow annotated comments.' . PHP_EOL);
+    exit(1);
+}
+
+if (!isset($ssc_options_store['ssc_tokens_css']) || strpos($ssc_options_store['ssc_tokens_css'], '--my-token:value') === false) {
+    fwrite(STDERR, 'Persisted CSS should retain tokens declared after annotated comments.' . PHP_EOL);
+    exit(1);
+}
