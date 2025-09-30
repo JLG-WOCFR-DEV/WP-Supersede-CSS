@@ -213,14 +213,21 @@ final class TokenRegistry
                 break;
             }
 
-            $before = $declarationStart - 1;
-            while ($before >= 0 && ctype_space($css[$before])) {
-                $before--;
+            $prefix = substr($css, 0, $declarationStart);
+            $prefixWithoutComments = preg_replace('#/\*[^*]*\*+(?:[^/*][^*]*\*+)*/#', ' ', $prefix);
+
+            if (!is_string($prefixWithoutComments)) {
+                $prefixWithoutComments = $prefix;
             }
 
-            if ($before >= 0 && !in_array($css[$before], ['{', ';'], true)) {
-                $cursor = $declarationStart + 2;
-                continue;
+            $prefixWithoutComments = rtrim($prefixWithoutComments);
+
+            if ($prefixWithoutComments !== '') {
+                $lastCharacter = substr($prefixWithoutComments, -1);
+                if ($lastCharacter !== '{' && $lastCharacter !== ';') {
+                    $cursor = $declarationStart + 2;
+                    continue;
+                }
             }
 
             $name = '--';

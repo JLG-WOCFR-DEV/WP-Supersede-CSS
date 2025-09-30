@@ -186,6 +186,36 @@ if ($mergedTokens[1]['type'] !== 'text' || $mergedTokens[1]['group'] !== 'Legacy
     exit(1);
 }
 
+$ssc_options_store = [
+    'ssc_tokens_css' => <<<'CSS'
+:root {
+    /* note */ --commented-token: 42px;
+}
+CSS
+];
+
+$importedWithComment = TokenRegistry::getRegistry();
+
+if ($importedWithComment === [] || $importedWithComment[0]['name'] !== '--commented-token') {
+    fwrite(STDERR, 'getRegistry should import tokens that follow a CSS comment.' . PHP_EOL);
+    exit(1);
+}
+
+if ($importedWithComment[0]['value'] !== '42px') {
+    fwrite(STDERR, 'Imported token values should be preserved when comments precede declarations.' . PHP_EOL);
+    exit(1);
+}
+
+if (!isset($ssc_options_store['ssc_tokens_registry']) || !is_array($ssc_options_store['ssc_tokens_registry'])) {
+    fwrite(STDERR, 'Imported tokens should be persisted to the registry option when comments are present.' . PHP_EOL);
+    exit(1);
+}
+
+if (strpos((string) ($ssc_options_store['ssc_tokens_css'] ?? ''), '--commented-token') === false) {
+    fwrite(STDERR, 'Imported tokens should be persisted back to CSS even when comments precede them.' . PHP_EOL);
+    exit(1);
+}
+
 $ssc_options_store = [];
 
 $underscoredTokens = [
