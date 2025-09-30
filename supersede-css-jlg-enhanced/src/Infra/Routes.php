@@ -793,7 +793,12 @@ final class Routes {
 
             if ($optionName === 'ssc_tokens_css') {
                 $tokens = TokenRegistry::convertCssToRegistry($sanitizedValue);
-                TokenRegistry::saveRegistry($tokens);
+                $existingRegistry = get_option('ssc_tokens_registry', []);
+                if (!is_array($existingRegistry)) {
+                    $existingRegistry = [];
+                }
+                $tokensWithMetadata = TokenRegistry::mergeMetadata($tokens, $existingRegistry);
+                TokenRegistry::saveRegistry($tokensWithMetadata);
                 if (function_exists('\ssc_invalidate_css_cache')) {
                     \ssc_invalidate_css_cache();
                 }
