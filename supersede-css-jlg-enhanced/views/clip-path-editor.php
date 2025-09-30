@@ -4,23 +4,6 @@ if (!defined('ABSPATH')) {
 }
 /** @var string $preview_background */
 ?>
-<style>
-    #ssc-clip-preview-wrapper {
-        display: grid;
-        place-items: center;
-        padding: 24px;
-        background: var(--ssc-bg);
-        border-radius: 8px;
-    }
-    #ssc-clip-preview {
-        background-image: url('<?php echo esc_url($preview_background); ?>');
-        background-size: cover;
-        background-position: center;
-        height: 300px;
-        width: 300px;
-        transition: all 0.3s ease;
-    }
-</style>
 <div class="ssc-app ssc-fullwidth">
     <h2><?php esc_html_e('✂️ Générateur de Formes (Clip-Path)', 'supersede-css-jlg'); ?></h2>
     <p><?php esc_html_e('Découpez vos conteneurs et images dans des formes géométriques pour des designs plus dynamiques.', 'supersede-css-jlg'); ?></p>
@@ -45,7 +28,7 @@ if (!defined('ABSPATH')) {
         <div class="ssc-pane">
              <h3><?php esc_html_e('Aperçu', 'supersede-css-jlg'); ?></h3>
              <div id="ssc-clip-preview-wrapper">
-                <div id="ssc-clip-preview"></div>
+                <div id="ssc-clip-preview" style="background-image: url('<?php echo esc_url($preview_background); ?>');"></div>
              </div>
         </div>
     </div>

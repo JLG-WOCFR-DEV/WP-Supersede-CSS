@@ -3,20 +3,6 @@ if (!defined('ABSPATH')) {
     exit;
 }
 ?>
-<style>
-    .ssc-ve-tabs { display: flex; border-bottom: 1px solid var(--ssc-border); margin-bottom: 16px; }
-    .ssc-ve-tab { padding: 10px 16px; cursor: pointer; border-bottom: 2px solid transparent; }
-    .ssc-ve-tab.active { color: var(--ssc-accent); border-bottom-color: var(--ssc-accent); font-weight: 600; }
-    .ssc-ve-panel { display: none; }
-    .ssc-ve-panel.active { display: block; }
-    .ssc-ve-preview-box { height: 300px; border-radius: 12px; border: 1px solid var(--ssc-border); overflow: hidden; position: relative; background: #000; }
-    #ssc-crt-canvas { width: 100%; height: 100%; }
-    .ssc-ecg-path { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: all 0.3s; }
-    #ssc-ecg-preview-container { position: relative; background: #0b1020; display: grid; place-items: center; }
-    #ssc-ecg-preview-svg { position: absolute; width: 100%; height: auto; }
-    #ssc-ecg-logo-preview { max-width: 100px; max-height: 100px; z-index: 5; }
-    .ssc-grid-three { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; }
-</style>
 <div class="ssc-app ssc-fullwidth">
     <h2><?php esc_html_e('🎬 Générateur d\'Effets Visuels', 'supersede-css-jlg'); ?></h2>
     <p><?php esc_html_e('Une collection d\'effets visuels avancés pour animer vos fonds, images et conteneurs.', 'supersede-css-jlg'); ?></p>

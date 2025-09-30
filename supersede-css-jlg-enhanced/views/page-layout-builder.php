@@ -4,13 +4,6 @@ if (!defined('ABSPATH')) {
 }
 /** @var string $tokens_page_url */
 ?>
-<style>
-    .ssc-layout-grid { display: grid; height: 400px; border: 2px dashed var(--ssc-accent); padding: 10px; border-radius: 8px; background: var(--ssc-bg); }
-    .ssc-layout-block { background: var(--ssc-card); border: 1px solid var(--ssc-border); border-radius: 4px; display: grid; place-items: center; font-weight: bold; }
-    .ssc-layout-preview-mobile { width: 375px; margin-left: auto; margin-right: auto; }
-    .ssc-tutorial-panel h4 { margin-top: 1.2em; margin-bottom: 0.5em; }
-    .ssc-tutorial-panel ul, .ssc-tutorial-panel ol { margin-left: 20px; }
-</style>
 <div class="ssc-app ssc-fullwidth">
     <h2><?php esc_html_e('📐 Maquettage de Page (CSS Grid)', 'supersede-css-jlg'); ?></h2>
     <p><?php esc_html_e('Préparez des mises en page complexes pour vos thèmes ou des sections spécifiques de vos pages.', 'supersede-css-jlg'); ?></p>

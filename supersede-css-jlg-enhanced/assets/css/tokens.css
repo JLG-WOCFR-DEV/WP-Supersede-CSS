@@ -1,0 +1,49 @@
+.ssc-token-builder {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.ssc-token-group {
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 12px;
+    background: #fff;
+}
+
+.ssc-token-group h4 {
+    margin: 0 0 8px;
+}
+
+.ssc-token-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.ssc-token-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1 1 180px;
+    min-width: 180px;
+}
+
+.ssc-token-field__label {
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.ssc-token-field-input {
+    width: 100%;
+}
+
+.ssc-token-field textarea {
+    resize: vertical;
+}
+
+.ssc-token-empty {
+    margin: 0;
+    font-style: italic;
+}

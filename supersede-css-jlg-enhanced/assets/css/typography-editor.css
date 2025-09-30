@@ -1,0 +1,11 @@
+#ssc-typo-preview {
+    transition: font-size 0.1s linear;
+}
+
+.ssc-typo-vp-slider-container {
+    width: 100%;
+    background: var(--ssc-bg);
+    padding: 10px;
+    border-radius: 8px;
+    margin-top: 10px;
+}

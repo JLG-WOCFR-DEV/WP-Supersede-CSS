@@ -7,17 +7,6 @@ if (!defined('ABSPATH')) {
 /** @var string $css_mobile */
 /** @var string $preview_url */
 ?>
-<style>
-    .ssc-editor-tabs { display: flex; border-bottom: 1px solid var(--ssc-border); }
-    .ssc-editor-tab { padding: 8px 16px; cursor: pointer; border-bottom: 2px solid transparent; }
-    .ssc-editor-tab.active { color: var(--ssc-accent); border-bottom-color: var(--ssc-accent); font-weight: 600; }
-    .ssc-editor-panel { display: none; height: 100%; }
-    .ssc-editor-panel.active { display: block; }
-    .ssc-tutorial-content { padding: 16px; }
-    .ssc-tutorial-content code { background: var(--ssc-bg); padding: 2px 6px; border-radius: 4px; }
-    #ssc-picker-overlay { position: absolute; inset: 0; background: rgba(79, 70, 229, 0.2); z-index: 9998; display: none; cursor: crosshair; }
-    #ssc-picker-tooltip { position: fixed; background: #0f172a; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; z-index: 9999; white-space: nowrap; display: none; }
-</style>
 <div class="ssc-wrap ssc-utilities-wrap">
     <div class="ssc-editor-layout">
         <div class="ssc-editor-column">

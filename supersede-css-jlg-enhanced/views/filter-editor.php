@@ -4,35 +4,6 @@ if (!defined('ABSPATH')) {
 }
 /** @var string $preview_background */
 ?>
-<style>
-    #ssc-filter-preview-bg {
-        background-image: url('<?php echo esc_url($preview_background); ?>');
-        background-size: cover;
-        border-radius: 12px;
-        padding: 24px;
-        display: grid;
-        place-items: center;
-    }
-    #ssc-filter-preview-box {
-        transition: all 0.2s ease-in-out;
-        width: 80%;
-        height: 250px;
-        color: white;
-        font-size: 24px;
-        font-weight: bold;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-        display: grid;
-        place-items: center;
-        border-radius: 16px;
-    }
-    .ssc-glassmorphism-preview {
-        background: rgba(255, 255, 255, 0.2);
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-        backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-    }
-</style>
 <div class="ssc-app ssc-fullwidth">
     <h2><?php esc_html_e('🎨 Éditeur de Filtres & Effets de Verre', 'supersede-css-jlg'); ?></h2>
     <p><?php esc_html_e('Appliquez des filtres visuels à vos images et conteneurs, ou créez un effet "Glassmorphism" tendance.', 'supersede-css-jlg'); ?></p>
@@ -56,7 +27,7 @@ if (!defined('ABSPATH')) {
         </div>
         <div class="ssc-pane">
             <h3><?php esc_html_e('Aperçu en Direct', 'supersede-css-jlg'); ?></h3>
-            <div id="ssc-filter-preview-bg">
+            <div id="ssc-filter-preview-bg" style="background-image: url('<?php echo esc_url($preview_background); ?>');">
                 <div id="ssc-filter-preview-box">
                     <?php esc_html_e('Votre Contenu Ici', 'supersede-css-jlg'); ?>
                 </div>

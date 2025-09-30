@@ -229,6 +229,16 @@ final class Admin
             $this->slug.'-typography'       => ['typography-editor'],
         ];
 
+        $styles_by_page = [
+            $this->slug.'-utilities'        => ['utilities'],
+            $this->slug.'-layout-builder'   => ['page-layout-builder'],
+            $this->slug.'-tokens'           => ['tokens'],
+            $this->slug.'-effects'          => ['visual-effects'],
+            $this->slug.'-filters'          => ['filter-editor'],
+            $this->slug.'-clip-path'        => ['clip-path-editor'],
+            $this->slug.'-typography'       => ['typography-editor'],
+        ];
+
         if (isset($scripts_by_page[$page])) {
             foreach ($scripts_by_page[$page] as $handle) {
                 $path = 'assets/js/' . $handle . '.js';
@@ -249,6 +259,15 @@ final class Admin
                             SSC_PLUGIN_DIR . 'languages'
                         );
                     }
+                }
+            }
+        }
+
+        if (isset($styles_by_page[$page])) {
+            foreach ($styles_by_page[$page] as $handle) {
+                $path = 'assets/css/' . $handle . '.css';
+                if (is_file(SSC_PLUGIN_DIR . $path)) {
+                    wp_enqueue_style('ssc-' . $handle . '-style', SSC_PLUGIN_URL . $path, [], SSC_VERSION);
                 }
             }
         }

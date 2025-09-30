@@ -3,10 +3,6 @@ if (!defined('ABSPATH')) {
     exit;
 }
 ?>
-<style>
-    #ssc-typo-preview { transition: font-size 0.1s linear; }
-    .ssc-typo-vp-slider-container { width: 100%; background: var(--ssc-bg); padding: 10px; border-radius: 8px; margin-top: 10px; }
-</style>
 <div class="ssc-app ssc-fullwidth">
     <h2><?php esc_html_e('📏 Typographie Fluide (Clamp)', 'supersede-css-jlg'); ?></h2>
     <p><?php esc_html_e('Générez du texte qui s\'adapte parfaitement à toutes les tailles d\'écran, sans "sauts" disgracieux.', 'supersede-css-jlg'); ?></p>
