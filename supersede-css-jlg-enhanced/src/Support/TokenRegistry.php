@@ -237,12 +237,30 @@ final class TokenRegistry
                     continue;
                 }
 
+                if ($character === '/' && ($before + 1) < $length && $css[$before + 1] === '*') {
+                    $before--;
+                    continue;
+                }
+
+                if ($character === '*' && $before > 0 && $css[$before - 1] === '/') {
+                    $before -= 2;
+                    continue;
+                }
+
+                if ($character === '*' && ($before + 1) < $length && $css[$before + 1] === '/') {
+                    $before--;
+                    continue;
+                }
+
                 break;
             }
 
-            if ($before >= 0 && !in_array($css[$before], ['{', ';'], true)) {
-                $cursor = $declarationStart + 2;
-                continue;
+            if ($before >= 0) {
+                $prefixCharacter = $css[$before];
+                if ($prefixCharacter !== '{' && $prefixCharacter !== ';') {
+                    $cursor = $declarationStart + 2;
+                    continue;
+                }
             }
 
             $name = '--';
