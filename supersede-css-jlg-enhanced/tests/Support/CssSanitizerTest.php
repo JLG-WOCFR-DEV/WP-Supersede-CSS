@@ -79,6 +79,14 @@ class CssSanitizerTest extends WP_UnitTestCase
         $this->assertStringNotContainsString('behavior', $sanitizedKeyframes);
     }
 
+    public function test_text_wrap_and_text_size_adjust_are_preserved(): void
+    {
+        $css = '.hero { text-wrap: balance; text-size-adjust: 100%; }';
+        $sanitized = CssSanitizer::sanitize($css);
+
+        $this->assertSame('.hero {text-wrap:balance; text-size-adjust:100%}', $sanitized);
+    }
+
     public function test_import_rules_and_quoted_exploit_handling(): void
     {
         $cssWithDanglingImport = "@import url(\"foo.css\")\nbody { color: red; }";
