@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 
+use PHPUnit\Framework\TestCase;
 use SSC\Infra\Routes;
 
 if (!defined('ABSPATH')) {
@@ -40,11 +41,15 @@ if (!class_exists('WP_REST_Request')) {
         /** @var array<string, string> */
         private array $headers;
 
+        /** @var array<string, mixed> */
+        private array $json;
+
         /**
          * @param array<string, mixed> $params
          * @param array<string, string> $headers
+         * @param array<string, mixed>|null $json
          */
-        public function __construct(array $params = [], array $headers = [])
+        public function __construct(array $params = [], array $headers = [], ?array $json = null)
         {
             $this->params = $params;
             $this->headers = [];
@@ -52,6 +57,8 @@ if (!class_exists('WP_REST_Request')) {
             foreach ($headers as $key => $value) {
                 $this->headers[strtolower($key)] = $value;
             }
+
+            $this->json = $json ?? [];
         }
 
         public function get_param(string $key)
@@ -64,6 +71,14 @@ if (!class_exists('WP_REST_Request')) {
             $lowerKey = strtolower($key);
 
             return $this->headers[$lowerKey] ?? '';
+        }
+
+        /**
+         * @return array<string, mixed>
+         */
+        public function get_json_params(): array
+        {
+            return $this->json;
         }
     }
 }
@@ -98,6 +113,8 @@ if (!function_exists('current_user_can')) {
 if (!function_exists('__')) {
     function __(string $text, string $domain = ''): string
     {
+        unset($domain);
+
         return $text;
     }
 }
@@ -105,46 +122,60 @@ if (!function_exists('__')) {
 if (!function_exists('apply_filters')) {
     function apply_filters(string $hook, $value)
     {
+        unset($hook);
+
         return $value;
     }
 }
 
-require_once __DIR__ . '/../../src/Infra/Routes.php';
-
-$routesReflection = new ReflectionClass(Routes::class);
-$routes = $routesReflection->newInstanceWithoutConstructor();
-
 global $current_user_can_manage_options;
 $current_user_can_manage_options = true;
 
-$validNonceRequest = new WP_REST_Request(['_wpnonce' => 'valid-nonce']);
-$result = $routes->authorizeRequest($validNonceRequest);
+final class RoutesAuthorizationTest extends TestCase
+{
+    private Routes $routes;
 
-if ($result !== true) {
-    fwrite(STDERR, 'Expected request with a valid nonce to be authorized.' . PHP_EOL);
-    exit(1);
-}
+    protected function setUp(): void
+    {
+        parent::setUp();
 
-$browserRequest = new WP_REST_Request();
-$result = $routes->authorizeRequest($browserRequest);
+        $reflection = new \ReflectionClass(Routes::class);
+        $this->routes = $reflection->newInstanceWithoutConstructor();
 
-if (!$result instanceof WP_Error || $result->get_error_message() !== 'Invalid nonce.') {
-    fwrite(STDERR, 'Expected browser-style request without nonce to be rejected.' . PHP_EOL);
-    exit(1);
-}
+        global $current_user_can_manage_options;
+        $current_user_can_manage_options = true;
+    }
 
-$authenticatedRequest = new WP_REST_Request([], ['Authorization' => 'Basic Zm9vOmJhcg==']);
-$result = $routes->authorizeRequest($authenticatedRequest);
+    public function testAuthorizeRequestWithValidNonce(): void
+    {
+        $request = new WP_REST_Request(['_wpnonce' => 'valid-nonce']);
+        $this->assertTrue($this->routes->authorizeRequest($request));
+    }
 
-if ($result !== true) {
-    fwrite(STDERR, 'Expected authenticated header request without nonce to be accepted.' . PHP_EOL);
-    exit(1);
-}
+    public function testAuthorizeRequestWithoutNonceFromBrowserIsRejected(): void
+    {
+        $browserRequest = new WP_REST_Request();
+        $result = $this->routes->authorizeRequest($browserRequest);
 
-$current_user_can_manage_options = false;
-$result = $routes->authorizeRequest($authenticatedRequest);
+        $this->assertInstanceOf(WP_Error::class, $result);
+        $this->assertSame('Invalid nonce.', $result->get_error_message());
+    }
 
-if (!$result instanceof WP_Error || $result->get_error_message() !== 'You are not allowed to access this endpoint.') {
-    fwrite(STDERR, 'Expected capability check to run for authenticated requests.' . PHP_EOL);
-    exit(1);
+    public function testAuthorizeRequestAcceptsAuthenticatedHeader(): void
+    {
+        $authenticatedRequest = new WP_REST_Request([], ['Authorization' => 'Basic Zm9vOmJhcg==']);
+        $this->assertTrue($this->routes->authorizeRequest($authenticatedRequest));
+    }
+
+    public function testAuthorizeRequestChecksCapabilities(): void
+    {
+        global $current_user_can_manage_options;
+        $current_user_can_manage_options = false;
+
+        $authenticatedRequest = new WP_REST_Request([], ['Authorization' => 'Basic Zm9vOmJhcg==']);
+        $result = $this->routes->authorizeRequest($authenticatedRequest);
+
+        $this->assertInstanceOf(WP_Error::class, $result);
+        $this->assertSame('You are not allowed to access this endpoint.', $result->get_error_message());
+    }
 }

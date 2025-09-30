@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 
+use PHPUnit\Framework\TestCase;
 use SSC\Support\CssSanitizer;
 
 if (!defined('ABSPATH')) {
@@ -9,6 +10,8 @@ if (!defined('ABSPATH')) {
 if (!function_exists('wp_kses')) {
     function wp_kses(string $string, array $allowed_html = []): string
     {
+        unset($allowed_html);
+
         return strip_tags($string);
     }
 }
@@ -16,6 +19,8 @@ if (!function_exists('wp_kses')) {
 if (!function_exists('wp_kses_bad_protocol')) {
     function wp_kses_bad_protocol(string $string, array $allowed_protocols): string
     {
+        unset($allowed_protocols);
+
         return $string;
     }
 }
@@ -50,289 +55,264 @@ if (!function_exists('absint')) {
     }
 }
 
-require_once __DIR__ . '/../../src/Support/CssSanitizer.php';
-
-function assertSameResult(string $expected, string $actual, string $message): void
+final class CssSanitizerTest extends TestCase
 {
-    if ($expected !== $actual) {
-        fwrite(STDERR, $message . PHP_EOL);
-        fwrite(STDERR, 'Expected: ' . $expected . PHP_EOL);
-        fwrite(STDERR, 'Actual:   ' . $actual . PHP_EOL);
-        exit(1);
+    public function testBehaviorPropertyIsRemovedFromRuleBlocks(): void
+    {
+        $cssWithLiteralBrace = '.foo::before { content: "{"; behavior: url(http://evil); }';
+        $sanitizedWithLiteralBrace = CssSanitizer::sanitize($cssWithLiteralBrace);
+
+        $this->assertSame(
+            '.foo::before {content:"{"}',
+            $sanitizedWithLiteralBrace,
+            'Literal brace content should be preserved while behavior is removed.'
+        );
+        $this->assertStringNotContainsString('behavior', $sanitizedWithLiteralBrace);
+
+        $cssWithDoubleBrace = '.foo::before { content: "{}"; behavior: url(http://evil); }';
+        $sanitizedWithDoubleBrace = CssSanitizer::sanitize($cssWithDoubleBrace);
+
+        $this->assertSame(
+            '.foo::before {content:"{}"}',
+            $sanitizedWithDoubleBrace,
+            'Double brace content should remain intact while behavior is stripped.'
+        );
+        $this->assertStringNotContainsString('behavior', $sanitizedWithDoubleBrace);
+    }
+
+    public function testCustomPropertySnippetsPreserveScrollBehavior(): void
+    {
+        $css = ':root { --snippet: scroll-behavior: smooth; color: red; }';
+        $sanitized = CssSanitizer::sanitize($css);
+
+        $this->assertMatchesRegularExpression('/scroll-behavior:\\s*smooth/', $sanitized);
+    }
+
+    public function testFontFaceDeclarationsRemoveUnsafeUrls(): void
+    {
+        $fontFaceCss = "@font-face { font-family: 'Custom'; src: url('https://example.com/font.woff2') format('woff2'), url('data:font/woff2;base64,AAAA'), url('javascript:alert(1)'); font-display: swap; unicode-range: U+000-5FF; }";
+        $sanitizedFontFace = CssSanitizer::sanitize($fontFaceCss);
+
+        $this->assertSame(
+            "@font-face {font-family:'Custom'; src:url('https://example.com/font.woff2') format('woff2'), url('data:font/woff2;base64,AAAA'); font-display:swap; unicode-range:U+000-5FF}",
+            $sanitizedFontFace
+        );
+        $this->assertStringNotContainsString('javascript', $sanitizedFontFace);
+        $this->assertStringNotContainsString(',;', $sanitizedFontFace);
+
+        $this->assertSame(
+            "@font-face {src:url('https://example.com/good.woff2') format('woff2')}",
+            CssSanitizer::sanitize("@font-face { src: url('javascript:alert(1)') format('woff2'), url('https://example.com/good.woff2') format('woff2'); }")
+        );
+    }
+
+    public function testMultiBackgroundUrlsAreFiltered(): void
+    {
+        $css = "body { background-image: url('javascript:alert(1)'), url('https://example.com/safe.png'), url('data:image/png;base64,AAAA'); }";
+        $sanitized = CssSanitizer::sanitize($css);
+
+        $this->assertSame(
+            "body {background-image:url('https://example.com/safe.png'), url('data:image/png;base64,AAAA')}",
+            $sanitized
+        );
+        $this->assertStringNotContainsString('javascript:alert(1)', $sanitized);
+
+        $imageSetCss = 'div { background-image: image-set(url("javascript:alert(1)") 1x type("image/png"), url("https://example.com/safe.png") 2x type("image/png")); }';
+        $sanitizedImageSet = CssSanitizer::sanitize($imageSetCss);
+
+        $this->assertSame(
+            'div {background-image:image-set(url("https://example.com/safe.png") 2x type("image/png"))}',
+            $sanitizedImageSet
+        );
+    }
+
+    public function testAtRulesAreSanitized(): void
+    {
+        $mediaCss = '@media screen and (min-width: 600px) { .foo { color: red; behavior: url(http://evil); } }';
+        $this->assertSame(
+            '@media screen and (min-width: 600px) {.foo {color:red}}',
+            CssSanitizer::sanitize($mediaCss)
+        );
+
+        $supportsCss = '@supports (display: grid) { .grid { display: grid; behavior: url(https://evil); } }';
+        $this->assertSame(
+            '@supports (display: grid) {.grid {display:grid}}',
+            CssSanitizer::sanitize($supportsCss)
+        );
+
+        $keyframesCss = '@keyframes spin { from { transform: rotate(0deg); behavior: url(https://evil); } 50% { transform: rotate(180deg); } to { transform: rotate(360deg); } }';
+        $this->assertSame(
+            '@keyframes spin {from {transform:rotate(0deg)} 50% {transform:rotate(180deg)} to {transform:rotate(360deg)}}',
+            CssSanitizer::sanitize($keyframesCss)
+        );
+    }
+
+    public function testDanglingImportsAreDiscarded(): void
+    {
+        $cssWithDanglingImport = "@import url(\"foo.css\")\nbody { color: red; }";
+        $this->assertSame(
+            'body {color:red}',
+            CssSanitizer::sanitize($cssWithDanglingImport)
+        );
+
+        $cssWithoutTerminator = '@import url("https://example.com/style.css")' . PHP_EOL . 'body { color: red; }';
+        $this->assertSame(
+            'body {color:red}',
+            CssSanitizer::sanitize($cssWithoutTerminator)
+        );
+    }
+
+    public function testQuotedExploitIsNeutralized(): void
+    {
+        $quotedExploit = '.foo { content: "</style><script>alert(1)</script>"; color: blue; } .bar { color: __SSC_CSS_TOKEN_0__; }';
+        $sanitized = CssSanitizer::sanitize($quotedExploit);
+
+        $this->assertStringNotContainsString('</style>', $sanitized);
+        $this->assertStringNotContainsString('<script', $sanitized);
+        $this->assertStringNotContainsString('__SSC_CSS_TOKEN_', $sanitized);
+    }
+
+    public function testPresetSanitizationRejectsInvalidScopes(): void
+    {
+        $presetWithBraceSelector = CssSanitizer::sanitizePresetCollection([
+            'dangerous' => [
+                'name' => 'Danger',
+                'scope' => '.foo { color: red; }',
+                'props' => [
+                    'color' => 'red',
+                ],
+            ],
+        ]);
+
+        $this->assertSame('', $presetWithBraceSelector['dangerous']['scope']);
+
+        $presetWithDirectiveSelector = CssSanitizer::sanitizePresetCollection([
+            [
+                'name' => 'Directive',
+                'scope' => '@media (min-width: 600px)',
+                'props' => [
+                    'color' => 'blue',
+                ],
+            ],
+        ]);
+
+        $this->assertSame('', $presetWithDirectiveSelector['preset_0']['scope']);
+    }
+
+    public function testSanitizeUrlsKeepsLiteralMentions(): void
+    {
+        $sanitizeUrls = $this->getSanitizeUrlsMethod();
+
+        $this->assertSame(
+            'content: "url(foo)"',
+            $sanitizeUrls->invoke(null, 'content: "url(foo)"')
+        );
+
+        $this->assertSame(
+            "content: 'url(bar)'",
+            $sanitizeUrls->invoke(null, "content: 'url(bar)'")
+        );
+
+        $this->assertSame(
+            '/* url(foo) inside comment */',
+            $sanitizeUrls->invoke(null, '/* url(foo) inside comment */')
+        );
+    }
+
+    public function testSanitizeUrlsNormalizesSpacingAndRejectsDangerousProtocols(): void
+    {
+        $sanitizeUrls = $this->getSanitizeUrlsMethod();
+
+        $this->assertSame(
+            'background: url("https://example.com/image.png")',
+            $sanitizeUrls->invoke(null, 'background: url(https://example.com/image.png)')
+        );
+
+        $this->assertSame(
+            'background:url("https://example.com/image.png")',
+            $sanitizeUrls->invoke(null, 'background:url ( "https://example.com/image.png" )')
+        );
+
+        $this->assertSame(
+            'background:)',
+            $sanitizeUrls->invoke(null, 'background: url(javascript:alert(1))')
+        );
+    }
+
+    public function testSanitizeUrlsRejectsEscapedDangerousProtocols(): void
+    {
+        $sanitizeUrls = $this->getSanitizeUrlsMethod();
+
+        $this->assertSame(
+            'background:',
+            $sanitizeUrls->invoke(null, "background:url ( '\\6a\\61\\76\\61\\73\\63\\72\\69\\70\\74:alert(1)' )")
+        );
+
+        $this->assertSame(
+            'background:',
+            $sanitizeUrls->invoke(null, 'background: url("\\6a\\61\\76\\61\\73\\63\\72\\69\\70\\74:alert(1)")')
+        );
+
+        $this->assertStringNotContainsString(
+            '__SSC_CSS_TOKEN_',
+            $sanitizeUrls->invoke(null, '__SSC_CSS_TOKEN_0__')
+        );
+    }
+
+    public function testDanglingBlocksStripUnsafeDeclarations(): void
+    {
+        $danglingBlockCss = 'body { width: expression(alert(1))';
+        $sanitizedDanglingBlock = CssSanitizer::sanitize($danglingBlockCss);
+
+        $this->assertStringNotContainsString('expression', $sanitizedDanglingBlock);
+        $this->assertStringNotContainsString('width', $sanitizedDanglingBlock);
+    }
+
+    public function testSanitizeImportsNormalizesAndSkipsLiterals(): void
+    {
+        $sanitizeImports = $this->getSanitizeImportsMethod();
+
+        $this->assertStringNotContainsString(
+            '__SSC_CSS_TOKEN_',
+            $sanitizeImports->invoke(null, '@import url(https://example.com); __SSC_CSS_TOKEN_1__')
+        );
+
+        $this->assertSame(
+            '@import url("https://example.com/style.css");',
+            $sanitizeImports->invoke(null, '@import "https://example.com/style.css";')
+        );
+
+        $this->assertSame(
+            '@import url("https://example.com/style.css");',
+            $sanitizeImports->invoke(null, '@import/*comment*/ url("https://example.com/style.css");')
+        );
+
+        $this->assertSame(
+            'content: "@import url(foo)"',
+            $sanitizeImports->invoke(null, 'content: "@import url(foo)"')
+        );
+
+        $this->assertSame(
+            '--example: "@import url(foo)"',
+            $sanitizeImports->invoke(null, '--example: "@import url(foo)"')
+        );
+    }
+
+    private function getSanitizeUrlsMethod(): ReflectionMethod
+    {
+        $reflection = new ReflectionClass(CssSanitizer::class);
+        $sanitizeUrls = $reflection->getMethod('sanitizeUrls');
+        $sanitizeUrls->setAccessible(true);
+
+        return $sanitizeUrls;
+    }
+
+    private function getSanitizeImportsMethod(): ReflectionMethod
+    {
+        $reflection = new ReflectionClass(CssSanitizer::class);
+        $sanitizeImports = $reflection->getMethod('sanitizeImports');
+        $sanitizeImports->setAccessible(true);
+
+        return $sanitizeImports;
     }
 }
-
-function assertNotContains(string $needle, string $haystack, string $message): void
-{
-    if (strpos($haystack, $needle) !== false) {
-        fwrite(STDERR, $message . PHP_EOL);
-        exit(1);
-    }
-}
-
-$cssWithLiteralBrace = '.foo::before { content: "{"; behavior: url(http://evil); }';
-$sanitizedWithLiteralBrace = CssSanitizer::sanitize($cssWithLiteralBrace);
-
-assertSameResult(
-    '.foo::before {content:"{"}',
-    $sanitizedWithLiteralBrace,
-    'Literal brace content should be preserved while behavior is removed.'
-);
-
-assertNotContains('behavior', $sanitizedWithLiteralBrace, 'Behavior property should be stripped.');
-
-$cssWithDoubleBrace = '.foo::before { content: "{}"; behavior: url(http://evil); }';
-$sanitizedWithDoubleBrace = CssSanitizer::sanitize($cssWithDoubleBrace);
-
-assertSameResult(
-    '.foo::before {content:"{}"}',
-    $sanitizedWithDoubleBrace,
-    'Double brace content should remain intact and behavior removed.'
-);
-
-assertNotContains('behavior', $sanitizedWithDoubleBrace, 'Behavior property should not survive in the sanitized CSS.');
-
-$customPropertyWithScrollBehavior = ':root { --snippet: scroll-behavior: smooth; color: red; }';
-$sanitizedCustomProperty = CssSanitizer::sanitize($customPropertyWithScrollBehavior);
-
-if (preg_match('/scroll-behavior:\s*smooth/', $sanitizedCustomProperty) !== 1) {
-    fwrite(STDERR, 'Custom property snippets should preserve scroll-behavior declarations.' . PHP_EOL);
-    fwrite(STDERR, 'Sanitized CSS: ' . $sanitizedCustomProperty . PHP_EOL);
-    exit(1);
-}
-
-$fontFaceCss = "@font-face { font-family: 'Custom'; src: url('https://example.com/font.woff2') format('woff2'), url('data:font/woff2;base64,AAAA'), url('javascript:alert(1)'); font-display: swap; unicode-range: U+000-5FF; }";
-$sanitizedFontFace = CssSanitizer::sanitize($fontFaceCss);
-
-assertSameResult(
-    "@font-face {font-family:'Custom'; src:url('https://example.com/font.woff2') format('woff2'), url('data:font/woff2;base64,AAAA'); font-display:swap; unicode-range:U+000-5FF}",
-    $sanitizedFontFace,
-    'Font-face declarations should keep src/font-display/unicode-range values while preserving safe URLs.'
-);
-
-assertNotContains('javascript', $sanitizedFontFace, 'Dangerous javascript URLs should be stripped from font-face declarations.');
-assertNotContains(',;', $sanitizedFontFace, 'Sanitized font-face declarations should not contain trailing comma-semicolon sequences.');
-
-$multiBackgroundCss = "body { background-image: url('javascript:alert(1)'), url('https://example.com/safe.png'), url('data:image/png;base64,AAAA'); }";
-$sanitizedMultiBackground = CssSanitizer::sanitize($multiBackgroundCss);
-
-assertSameResult(
-    "body {background-image:url('https://example.com/safe.png'), url('data:image/png;base64,AAAA')}",
-    $sanitizedMultiBackground,
-    'Background images with multiple URLs should drop rejected entries without leaving stray commas.'
-);
-
-assertNotContains('javascript:alert(1)', $sanitizedMultiBackground, 'Rejected background-image URLs should not remain in the sanitized output.');
-
-$mediaCss = '@media screen and (min-width: 600px) { .foo { color: red; behavior: url(http://evil); } }';
-$sanitizedMedia = CssSanitizer::sanitize($mediaCss);
-
-assertSameResult(
-    '@media screen and (min-width: 600px) {.foo {color:red}}',
-    $sanitizedMedia,
-    '@media blocks should survive sanitation with their nested declarations cleaned.'
-);
-
-assertNotContains('behavior', $sanitizedMedia, '@media nested declarations should not retain disallowed properties.');
-
-$supportsCss = '@supports (display: grid) { .grid { display: grid; behavior: url(https://evil); } }';
-$sanitizedSupports = CssSanitizer::sanitize($supportsCss);
-
-assertSameResult(
-    '@supports (display: grid) {.grid {display:grid}}',
-    $sanitizedSupports,
-    '@supports blocks should retain nested rules after sanitation.'
-);
-
-assertNotContains('behavior', $sanitizedSupports, '@supports nested declarations should remove disallowed properties.');
-
-$keyframesCss = '@keyframes spin { from { transform: rotate(0deg); behavior: url(https://evil); } 50% { transform: rotate(180deg); } to { transform: rotate(360deg); } }';
-$sanitizedKeyframes = CssSanitizer::sanitize($keyframesCss);
-
-assertSameResult(
-    '@keyframes spin {from {transform:rotate(0deg)} 50% {transform:rotate(180deg)} to {transform:rotate(360deg)}}',
-    $sanitizedKeyframes,
-    '@keyframes blocks should keep their keyframe selectors and sanitized declarations.'
-);
-
-assertNotContains('behavior', $sanitizedKeyframes, '@keyframes nested declarations should strip disallowed properties.');
-
-$cssWithDanglingImport = "@import url(\"foo.css\")\nbody { color: red; }";
-$sanitizedDanglingImport = CssSanitizer::sanitize($cssWithDanglingImport);
-
-assertSameResult(
-    'body {color:red}',
-    $sanitizedDanglingImport,
-    '@import rules without a semicolon should be discarded while preserving subsequent blocks.'
-);
-
-$quotedExploit = '.foo { content: "</style><script>alert(1)</script>"; color: blue; } .bar { color: __SSC_CSS_TOKEN_0__; }';
-$sanitizedExploit = CssSanitizer::sanitize($quotedExploit);
-
-assertNotContains('</style>', $sanitizedExploit, 'Sanitized CSS should not reintroduce closing style tags.');
-assertNotContains('<script', $sanitizedExploit, 'Sanitized CSS should not reintroduce script tags.');
-assertNotContains('__SSC_CSS_TOKEN_', $sanitizedExploit, 'Sanitized CSS should not leak sanitizer placeholders.');
-
-$presetWithBraceSelector = CssSanitizer::sanitizePresetCollection([
-    'dangerous' => [
-        'name' => 'Danger',
-        'scope' => '.foo { color: red; }',
-        'props' => [
-            'color' => 'red',
-        ],
-    ],
-]);
-
-assertSameResult(
-    '',
-    $presetWithBraceSelector['dangerous']['scope'],
-    'Selectors containing braces should be rejected during preset sanitation.'
-);
-
-$presetWithDirectiveSelector = CssSanitizer::sanitizePresetCollection([
-    [
-        'name' => 'Directive',
-        'scope' => '@media (min-width: 600px)',
-        'props' => [
-            'color' => 'blue',
-        ],
-    ],
-]);
-
-assertSameResult(
-    '',
-    $presetWithDirectiveSelector['preset_0']['scope'],
-    'Selectors using directives should be rejected during preset sanitation.'
-);
-
-$reflection = new ReflectionClass(CssSanitizer::class);
-$sanitizeUrls = $reflection->getMethod('sanitizeUrls');
-$sanitizeUrls->setAccessible(true);
-
-assertSameResult(
-    'content: "url(foo)"',
-    $sanitizeUrls->invoke(null, 'content: "url(foo)"'),
-    'Quoted string literals containing url(...) should be preserved during URL sanitization.'
-);
-
-assertSameResult(
-    "content: 'url(bar)'",
-    $sanitizeUrls->invoke(null, "content: 'url(bar)'"),
-    'Single-quoted literals that mention url(...) should remain unchanged.'
-);
-
-assertSameResult(
-    '/* url(foo) inside comment */',
-    $sanitizeUrls->invoke(null, '/* url(foo) inside comment */'),
-    'Comments containing url(...) should not trigger URL normalization.'
-);
-
-assertSameResult(
-    'background: url("https://example.com/image.png")',
-    $sanitizeUrls->invoke(null, 'background: url(https://example.com/image.png)'),
-    'Actual url() tokens should continue to be normalized to safe values.'
-);
-
-assertSameResult(
-    'background:url("https://example.com/image.png")',
-    $sanitizeUrls->invoke(null, 'background:url ( "https://example.com/image.png" )'),
-    'URL sanitizer should allow insignificant whitespace between the keyword and the opening parenthesis.'
-);
-
-assertSameResult(
-    'background:)',
-    $sanitizeUrls->invoke(null, 'background: url(javascript:alert(1))'),
-    'Dangerous url() tokens should keep being stripped.'
-);
-
-assertSameResult(
-    'background:',
-    $sanitizeUrls->invoke(null, "background:url ( '\\6a\\61\\76\\61\\73\\63\\72\\69\\70\\74:alert(1)' )"),
-    'Whitespace before the url parenthesis should not allow escaped dangerous protocols.'
-);
-
-assertSameResult(
-    'background:',
-    $sanitizeUrls->invoke(null, 'background: url("\\6a\\61\\76\\61\\73\\63\\72\\69\\70\\74:alert(1)")'),
-    'CSS-escaped dangerous protocols inside url() should be decoded and removed.'
-);
-
-assertSameResult(
-    "@font-face {src:url('https://example.com/good.woff2') format('woff2')}",
-    CssSanitizer::sanitize("@font-face { src: url('javascript:alert(1)') format('woff2'), url('https://example.com/good.woff2') format('woff2'); }"),
-    'Rejected font-face src entries should remove their trailing descriptors.'
-);
-
-$imageSetCss = 'div { background-image: image-set(url("javascript:alert(1)") 1x type("image/png"), url("https://example.com/safe.png") 2x type("image/png")); }';
-$sanitizedImageSet = CssSanitizer::sanitize($imageSetCss);
-
-assertSameResult(
-    'div {background-image:image-set(url("https://example.com/safe.png") 2x type("image/png"))}',
-    $sanitizedImageSet,
-    'Rejected image-set entries should remove associated resolution and type descriptors.'
-);
-
-assertNotContains(
-    '__SSC_CSS_TOKEN_',
-    $sanitizeUrls->invoke(null, '__SSC_CSS_TOKEN_0__'),
-    'URL sanitizer should not expose sanitizer placeholder markers.'
-);
-
-$danglingBlockCss = 'body { width: expression(alert(1))';
-$sanitizedDanglingBlock = CssSanitizer::sanitize($danglingBlockCss);
-
-assertNotContains(
-    'expression',
-    $sanitizedDanglingBlock,
-    'Dangling blocks without a closing brace should not retain disallowed expressions.'
-);
-
-assertNotContains(
-    'width',
-    $sanitizedDanglingBlock,
-    'Dangling blocks without a closing brace should not keep unsafe declarations.'
-);
-
-$sanitizeImports = $reflection->getMethod('sanitizeImports');
-$sanitizeImports->setAccessible(true);
-
-assertNotContains(
-    '__SSC_CSS_TOKEN_',
-    $sanitizeImports->invoke(null, '@import url(https://example.com); __SSC_CSS_TOKEN_1__'),
-    'Import sanitizer should strip unknown sanitizer markers.'
-);
-
-assertSameResult(
-    '@import url("https://example.com/style.css");',
-    $sanitizeImports->invoke(null, '@import "https://example.com/style.css";'),
-    'Actual @import at-rules should keep being normalized to safe URLs.'
-);
-
-assertSameResult(
-    '@import url("https://example.com/style.css");',
-    $sanitizeImports->invoke(null, '@import/*comment*/ url("https://example.com/style.css");'),
-    'CSS comments adjacent to @import should be stripped before sanitization.'
-);
-
-assertSameResult(
-    'content: "@import url(foo)"',
-    $sanitizeImports->invoke(null, 'content: "@import url(foo)"'),
-    'Literal strings containing @import should remain untouched by the import sanitizer.'
-);
-
-assertSameResult(
-    '--example: "@import url(foo)"',
-    $sanitizeImports->invoke(null, '--example: "@import url(foo)"'),
-    'Custom property values containing @import should remain untouched by the import sanitizer.'
-);
-
-$cssWithDanglingImport = '@import url("https://example.com/style.css")' . PHP_EOL . 'body { color: red; }';
-$sanitizedDanglingImport = CssSanitizer::sanitize($cssWithDanglingImport);
-
-assertSameResult(
-    'body {color:red}',
-    $sanitizedDanglingImport,
-    'Dangling @import rules should be dropped while preserving subsequent rule blocks.'
-);
-
-echo "All CssSanitizer tests passed." . PHP_EOL;

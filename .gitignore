@@ -4,4 +4,6 @@ playwright-report/
 supersede-css-jlg-enhanced/playwright-report/
 test-results/
 supersede-css-jlg-enhanced/test-results/
+vendor/
+supersede-css-jlg-enhanced/vendor/
 .DS_Store

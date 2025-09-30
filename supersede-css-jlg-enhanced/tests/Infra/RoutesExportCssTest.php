@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 
+use PHPUnit\Framework\TestCase;
 use SSC\Infra\Routes;
 use SSC\Support\CssSanitizer;
 
@@ -10,6 +11,8 @@ if (!defined('ABSPATH')) {
 if (!function_exists('__')) {
     function __(string $text, string $domain = ''): string
     {
+        unset($domain);
+
         return $text;
     }
 }
@@ -85,51 +88,58 @@ if (!function_exists('get_option')) {
     }
 }
 
-require_once __DIR__ . '/../../src/Support/CssSanitizer.php';
-require_once __DIR__ . '/../../src/Infra/Routes.php';
-
-$routesReflection = new ReflectionClass(Routes::class);
-$routes = $routesReflection->newInstanceWithoutConstructor();
-
-$tokenCss = "<div>\n:root {\n    --primary-color: #123456;\n}\n</div>";
-$activeCss = "body { color: var(--primary-color); }<script>alert('oops');</script>";
-
-$ssc_options_store['ssc_tokens_css'] = $tokenCss;
-$ssc_options_store['ssc_active_css'] = $activeCss;
-
-$response = $routes->exportCss();
-
-if (!$response instanceof WP_REST_Response) {
-    fwrite(STDERR, 'Expected exportCss to return a WP_REST_Response.' . PHP_EOL);
-    exit(1);
+if (!function_exists('sanitize_text_field')) {
+    function sanitize_text_field($value)
+    {
+        return trim(strip_tags((string) $value));
+    }
 }
 
-$data = $response->get_data();
+final class RoutesExportCssTest extends TestCase
+{
+    private Routes $routes;
 
-if (!is_array($data) || !array_key_exists('css', $data)) {
-    fwrite(STDERR, 'Expected exportCss payload to include a css key.' . PHP_EOL);
-    exit(1);
-}
+    protected function setUp(): void
+    {
+        parent::setUp();
 
-$expectedCss = CssSanitizer::sanitize($tokenCss . "\n" . $activeCss);
+        global $ssc_options_store;
+        $ssc_options_store = [];
 
-if ($data['css'] !== $expectedCss) {
-    fwrite(STDERR, 'Expected exportCss to concatenate and sanitize token and active CSS.' . PHP_EOL);
-    exit(1);
-}
+        $reflection = new \ReflectionClass(Routes::class);
+        $this->routes = $reflection->newInstanceWithoutConstructor();
+    }
 
-unset($ssc_options_store['ssc_tokens_css'], $ssc_options_store['ssc_active_css']);
+    public function testExportCssConcatenatesAndSanitizesSources(): void
+    {
+        global $ssc_options_store;
 
-$response = $routes->exportCss();
+        $tokenCss = "<div>\n:root {\n    --primary-color: #123456;\n}\n</div>";
+        $activeCss = "body { color: var(--primary-color); }<script>alert('oops');</script>";
 
-if (!($response instanceof WP_REST_Response)) {
-    fwrite(STDERR, 'Expected exportCss fallback response to be a WP_REST_Response.' . PHP_EOL);
-    exit(1);
-}
+        $ssc_options_store['ssc_tokens_css'] = $tokenCss;
+        $ssc_options_store['ssc_active_css'] = $activeCss;
 
-$data = $response->get_data();
+        $response = $this->routes->exportCss();
 
-if (!is_array($data) || ($data['css'] ?? '') !== '/* Aucun CSS actif trouvé. */') {
-    fwrite(STDERR, 'Expected fallback message when both CSS sources are empty.' . PHP_EOL);
-    exit(1);
+        $this->assertInstanceOf(WP_REST_Response::class, $response);
+        $data = $response->get_data();
+
+        $this->assertIsArray($data);
+        $this->assertArrayHasKey('css', $data);
+
+        $expectedCss = CssSanitizer::sanitize($tokenCss . "\n" . $activeCss);
+        $this->assertSame($expectedCss, $data['css']);
+    }
+
+    public function testExportCssFallsBackWhenSourcesEmpty(): void
+    {
+        $response = $this->routes->exportCss();
+
+        $this->assertInstanceOf(WP_REST_Response::class, $response);
+        $data = $response->get_data();
+
+        $this->assertIsArray($data);
+        $this->assertSame('/* Aucun CSS actif trouvé. */', $data['css'] ?? null);
+    }
 }

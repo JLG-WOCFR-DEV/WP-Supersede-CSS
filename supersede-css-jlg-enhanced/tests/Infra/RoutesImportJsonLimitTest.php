@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 
+use PHPUnit\Framework\TestCase;
 use SSC\Infra\Routes;
 
 if (!defined('ABSPATH')) {
@@ -38,59 +39,51 @@ if (!function_exists('wp_kses')) {
     }
 }
 
-require_once __DIR__ . '/../../src/Support/CssSanitizer.php';
-require_once __DIR__ . '/../../src/Support/TokenRegistry.php';
-require_once __DIR__ . '/../../src/Infra/Logger.php';
-require_once __DIR__ . '/../../src/Infra/Routes.php';
+final class RoutesImportJsonLimitTest extends TestCase
+{
+    private Routes $routes;
 
-$routesReflection = new ReflectionClass(Routes::class);
-$routes = $routesReflection->newInstanceWithoutConstructor();
+    private ReflectionMethod $sanitizeImportArray;
 
-$sanitizeImportArray = $routesReflection->getMethod('sanitizeImportArray');
-$sanitizeImportArray->setAccessible(true);
+    private int $maxDepth;
 
-$maxDepthConst = $routesReflection->getReflectionConstant('IMPORT_MAX_DEPTH');
+    protected function setUp(): void
+    {
+        parent::setUp();
 
-if ($maxDepthConst === false) {
-    fwrite(STDERR, 'Unable to read import depth limit from Routes class.' . PHP_EOL);
-    exit(1);
-}
+        $reflection = new \ReflectionClass(Routes::class);
+        $this->routes = $reflection->newInstanceWithoutConstructor();
 
-$maxDepth = (int) $maxDepthConst->getValue();
+        $this->sanitizeImportArray = $reflection->getMethod('sanitizeImportArray');
+        $this->sanitizeImportArray->setAccessible(true);
 
-$payload = [];
-$cursor = &$payload;
-
-for ($i = 0; $i < $maxDepth; $i++) {
-    $key = 'layer_' . $i;
-    $cursor[$key] = [];
-    $cursor = &$cursor[$key];
-}
-
-$cursor['encoded'] = json_encode(['should' => 'fail'], JSON_UNESCAPED_SLASHES);
-
-$sanitized = $sanitizeImportArray->invoke($routes, $payload);
-
-if (!is_array($sanitized)) {
-    fwrite(STDERR, 'Sanitized payload should remain an array.' . PHP_EOL);
-    exit(1);
-}
-
-$cursor = $sanitized;
-
-for ($i = 0; $i < $maxDepth; $i++) {
-    $key = 'layer_' . $i;
-
-    if (!isset($cursor[$key]) || !is_array($cursor[$key])) {
-        fwrite(STDERR, 'Expected nested layers to be preserved during sanitization.' . PHP_EOL);
-        exit(1);
+        $this->maxDepth = (int) $reflection->getConstant('IMPORT_MAX_DEPTH');
     }
 
-    $cursor = $cursor[$key];
-}
+    public function testDeepJsonStringsAreRejectedWhenSanitizingImports(): void
+    {
+        $payload = [];
+        $cursor = &$payload;
 
-if (($cursor['encoded'] ?? null) !== '') {
-    fwrite(STDERR, 'JSON strings exceeding depth limit should be rejected when sanitizing imports.' . PHP_EOL);
-    exit(1);
-}
+        for ($i = 0; $i < $this->maxDepth; $i++) {
+            $key = 'layer_' . $i;
+            $cursor[$key] = [];
+            $cursor = &$cursor[$key];
+        }
 
+        $cursor['encoded'] = json_encode(['should' => 'fail'], JSON_UNESCAPED_SLASHES);
+
+        $sanitized = $this->sanitizeImportArray->invoke($this->routes, $payload);
+        $this->assertIsArray($sanitized);
+
+        $cursor = $sanitized;
+        for ($i = 0; $i < $this->maxDepth; $i++) {
+            $key = 'layer_' . $i;
+            $this->assertArrayHasKey($key, $cursor);
+            $this->assertIsArray($cursor[$key]);
+            $cursor = $cursor[$key];
+        }
+
+        $this->assertSame('', $cursor['encoded'] ?? null);
+    }
+}

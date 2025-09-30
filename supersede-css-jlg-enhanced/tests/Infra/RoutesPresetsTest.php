@@ -1,6 +1,8 @@
 <?php declare(strict_types=1);
 
+use PHPUnit\Framework\TestCase;
 use SSC\Infra\Routes;
+use SSC\Support\CssSanitizer;
 
 if (!defined('ABSPATH')) {
     define('ABSPATH', __DIR__);
@@ -157,8 +159,8 @@ if (!function_exists('get_option')) {
 if (!function_exists('update_option')) {
     function update_option($name, $value, $autoload = false)
     {
-        global $ssc_options_store;
         unset($autoload);
+        global $ssc_options_store;
 
         $ssc_options_store[$name] = $value;
 
@@ -166,134 +168,103 @@ if (!function_exists('update_option')) {
     }
 }
 
-require_once __DIR__ . '/../../src/Support/CssSanitizer.php';
-require_once __DIR__ . '/../../src/Infra/Routes.php';
+final class RoutesPresetsTest extends TestCase
+{
+    private Routes $routes;
 
-$routesReflection = new ReflectionClass(Routes::class);
-/** @var Routes $routes */
-$routes = $routesReflection->newInstanceWithoutConstructor();
+    protected function setUp(): void
+    {
+        parent::setUp();
 
-$legacyGlowPresets = [
-    ['label' => '<b>Legacy</b>', 'color' => '#FF00FF', 'intensity' => '25'],
-];
+        global $ssc_options_store;
+        $ssc_options_store = [];
 
-$legacyGlowRequest = new WP_REST_Request([
-    'presets' => json_encode($legacyGlowPresets, JSON_THROW_ON_ERROR),
-]);
+        $reflection = new \ReflectionClass(Routes::class);
+        $this->routes = $reflection->newInstanceWithoutConstructor();
+    }
 
-$legacyGlowResponse = $routes->saveAvatarGlowPresets($legacyGlowRequest);
+    public function testAvatarGlowPresetsFromQueryAreSanitized(): void
+    {
+        $legacyGlowPresets = [
+            ['label' => '<b>Legacy</b>', 'color' => '#FF00FF', 'intensity' => '25'],
+        ];
 
-if (!$legacyGlowResponse instanceof WP_REST_Response || $legacyGlowResponse->get_status() !== 200) {
-    fwrite(STDERR, 'Expected legacy avatar glow presets request to succeed.' . PHP_EOL);
-    exit(1);
+        $request = new WP_REST_Request([
+            'presets' => json_encode($legacyGlowPresets, JSON_THROW_ON_ERROR),
+        ]);
+
+        $response = $this->routes->saveAvatarGlowPresets($request);
+        $this->assertInstanceOf(WP_REST_Response::class, $response);
+        $this->assertSame(200, $response->get_status());
+
+        $expected = CssSanitizer::sanitizeAvatarGlowPresets($legacyGlowPresets);
+        $this->assertSame($expected, get_option('ssc_avatar_glow_presets', []));
+    }
+
+    public function testAvatarGlowPresetsFromJsonBodyOverwriteExisting(): void
+    {
+        $jsonGlowPresets = [
+            ['label' => 'JSON', 'color' => '#00FF00', 'intensity' => 10],
+        ];
+
+        $request = new WP_REST_Request([], [], ['presets' => $jsonGlowPresets]);
+        $response = $this->routes->saveAvatarGlowPresets($request);
+
+        $this->assertInstanceOf(WP_REST_Response::class, $response);
+        $this->assertSame(200, $response->get_status());
+
+        $expected = CssSanitizer::sanitizeAvatarGlowPresets($jsonGlowPresets);
+        $this->assertSame($expected, get_option('ssc_avatar_glow_presets', []));
+    }
+
+    public function testPresetCollectionFromQueryIsSanitized(): void
+    {
+        $legacyPresets = [
+            'first' => [
+                'selector' => 'body',
+                'styles' => '<script>alert(1)</script>color:red;margin-top: 10px;behavior:url(foo);',
+            ],
+        ];
+
+        $request = new WP_REST_Request([
+            'presets' => json_encode($legacyPresets, JSON_THROW_ON_ERROR),
+        ]);
+
+        $response = $this->routes->savePresets($request);
+
+        $this->assertInstanceOf(WP_REST_Response::class, $response);
+        $this->assertSame(200, $response->get_status());
+
+        $expected = CssSanitizer::sanitizePresetCollection($legacyPresets);
+        $this->assertSame($expected, get_option('ssc_presets', []));
+
+        $props = $expected['first']['props'] ?? [];
+        $this->assertSame('red', $props['color'] ?? null);
+        $this->assertSame('10px', $props['margin-top'] ?? null);
+        $this->assertArrayNotHasKey('behavior', $props);
+    }
+
+    public function testPresetCollectionFromJsonBodyOverwritesStoredPresets(): void
+    {
+        $jsonPresets = [
+            'second' => [
+                'selector' => '.example',
+                'styles' => 'color: blue; padding: 4px 8px; behavior:url(foo);',
+            ],
+        ];
+
+        $request = new WP_REST_Request([], [], ['presets' => $jsonPresets]);
+        $response = $this->routes->savePresets($request);
+
+        $this->assertInstanceOf(WP_REST_Response::class, $response);
+        $this->assertSame(200, $response->get_status());
+
+        $expected = CssSanitizer::sanitizePresetCollection($jsonPresets);
+        $this->assertSame($expected, get_option('ssc_presets', []));
+
+        $props = $expected['second']['props'] ?? [];
+        $this->assertSame('blue', $props['color'] ?? null);
+        $this->assertSame('4px 8px', $props['padding'] ?? null);
+        $this->assertArrayNotHasKey('behavior', $props);
+    }
 }
-
-$storedGlowPresets = get_option('ssc_avatar_glow_presets', []);
-$expectedGlowPresets = \SSC\Support\CssSanitizer::sanitizeAvatarGlowPresets($legacyGlowPresets);
-
-if ($storedGlowPresets !== $expectedGlowPresets) {
-    fwrite(STDERR, 'Legacy avatar glow presets should be decoded and sanitized.' . PHP_EOL);
-    exit(1);
-}
-
-$jsonGlowPresets = [
-    ['label' => 'JSON', 'color' => '#00FF00', 'intensity' => 10],
-];
-
-$jsonGlowRequest = new WP_REST_Request([], ['presets' => $jsonGlowPresets]);
-$jsonGlowResponse = $routes->saveAvatarGlowPresets($jsonGlowRequest);
-
-if (!$jsonGlowResponse instanceof WP_REST_Response || $jsonGlowResponse->get_status() !== 200) {
-    fwrite(STDERR, 'Expected JSON avatar glow presets request to succeed.' . PHP_EOL);
-    exit(1);
-}
-
-$storedJsonGlowPresets = get_option('ssc_avatar_glow_presets', []);
-$expectedJsonGlow = \SSC\Support\CssSanitizer::sanitizeAvatarGlowPresets($jsonGlowPresets);
-
-if ($storedJsonGlowPresets !== $expectedJsonGlow) {
-    fwrite(STDERR, 'JSON avatar glow presets should overwrite existing presets after sanitization.' . PHP_EOL);
-    exit(1);
-}
-
-$legacyPresets = [
-    'first' => [
-        'selector' => 'body',
-        'styles' => '<script>alert(1)</script>color:red;margin-top: 10px;behavior:url(foo);',
-    ],
-];
-
-$legacyPresetsRequest = new WP_REST_Request([
-    'presets' => json_encode($legacyPresets, JSON_THROW_ON_ERROR),
-]);
-
-$legacyPresetsResponse = $routes->savePresets($legacyPresetsRequest);
-
-if (!$legacyPresetsResponse instanceof WP_REST_Response || $legacyPresetsResponse->get_status() !== 200) {
-    fwrite(STDERR, 'Expected legacy presets request to succeed.' . PHP_EOL);
-    exit(1);
-}
-
-$storedLegacyPresets = get_option('ssc_presets', []);
-$expectedLegacyPresets = \SSC\Support\CssSanitizer::sanitizePresetCollection($legacyPresets);
-
-if ($storedLegacyPresets !== $expectedLegacyPresets) {
-    fwrite(STDERR, 'Legacy presets should be decoded and sanitized.' . PHP_EOL);
-    exit(1);
-}
-
-$legacyProps = $expectedLegacyPresets['first']['props'] ?? [];
-if (!isset($legacyProps['color']) || $legacyProps['color'] !== 'red') {
-    fwrite(STDERR, 'Legacy preset styles should keep safe declarations.' . PHP_EOL);
-    exit(1);
-}
-
-if (!isset($legacyProps['margin-top']) || $legacyProps['margin-top'] !== '10px') {
-    fwrite(STDERR, 'Legacy preset styles should retain multiple declarations.' . PHP_EOL);
-    exit(1);
-}
-
-if (isset($legacyProps['behavior'])) {
-    fwrite(STDERR, 'Disallowed declarations should not survive legacy preset sanitization.' . PHP_EOL);
-    exit(1);
-}
-
-$jsonPresets = [
-    'second' => [
-        'selector' => '.example',
-        'styles' => 'color: blue; padding: 4px 8px; behavior:url(foo);',
-    ],
-];
-
-$jsonPresetsRequest = new WP_REST_Request([], ['presets' => $jsonPresets]);
-$jsonPresetsResponse = $routes->savePresets($jsonPresetsRequest);
-
-if (!$jsonPresetsResponse instanceof WP_REST_Response || $jsonPresetsResponse->get_status() !== 200) {
-    fwrite(STDERR, 'Expected JSON presets request to succeed.' . PHP_EOL);
-    exit(1);
-}
-
-$storedJsonPresets = get_option('ssc_presets', []);
-$expectedJsonPresets = \SSC\Support\CssSanitizer::sanitizePresetCollection($jsonPresets);
-
-if ($storedJsonPresets !== $expectedJsonPresets) {
-    fwrite(STDERR, 'JSON presets should overwrite existing presets after sanitization.' . PHP_EOL);
-    exit(1);
-}
-
-$jsonProps = $expectedJsonPresets['second']['props'] ?? [];
-if (!isset($jsonProps['color']) || $jsonProps['color'] !== 'blue') {
-    fwrite(STDERR, 'Imported preset styles should expose color declarations to the UI.' . PHP_EOL);
-    exit(1);
-}
-
-if (!isset($jsonProps['padding']) || $jsonProps['padding'] !== '4px 8px') {
-    fwrite(STDERR, 'Imported preset styles should keep shorthand declarations.' . PHP_EOL);
-    exit(1);
-}
-
-if (isset($jsonProps['behavior'])) {
-    fwrite(STDERR, 'Unsafe declarations must be stripped from imported presets.' . PHP_EOL);
-    exit(1);
-}
-

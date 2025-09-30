@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+
+      - name: Install Composer dependencies
+        working-directory: supersede-css-jlg-enhanced
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Node dependencies
+        working-directory: supersede-css-jlg-enhanced
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: supersede-css-jlg-enhanced
+        run: npx playwright install --with-deps
+
+      - name: Run PHP unit tests
+        working-directory: supersede-css-jlg-enhanced
+        run: composer test
+
+      - name: Run UI tests
+        working-directory: supersede-css-jlg-enhanced
+        run: npm run test:ui

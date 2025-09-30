@@ -1,6 +1,8 @@
 <?php declare(strict_types=1);
 
+use PHPUnit\Framework\TestCase;
 use SSC\Support\CssRevisions;
+use SSC\Support\CssSanitizer;
 
 if (!defined('ABSPATH')) {
     define('ABSPATH', __DIR__);
@@ -88,12 +90,7 @@ if (!function_exists('__')) {
 }
 
 /** @var array<string, mixed> $ssc_options_store */
-$ssc_options_store = [
-    'ssc_active_css' => 'body { color: blue; }',
-    'ssc_css_desktop' => 'body { color: blue; }',
-    'ssc_css_tablet' => '',
-    'ssc_css_mobile' => '',
-];
+$ssc_options_store = [];
 
 global $ssc_options_store;
 
@@ -125,6 +122,10 @@ if (!function_exists('delete_option')) {
 
         unset($ssc_options_store[$name]);
 
+        if (isset($GLOBALS['ssc_deleted_options']) && is_array($GLOBALS['ssc_deleted_options'])) {
+            $GLOBALS['ssc_deleted_options'][] = (string) $name;
+        }
+
         return true;
     }
 }
@@ -143,116 +144,104 @@ if (!function_exists('ssc_invalidate_css_cache')) {
     }
 }
 
-require_once __DIR__ . '/../../src/Support/CssSanitizer.php';
-require_once __DIR__ . '/../../src/Support/TokenRegistry.php';
-require_once __DIR__ . '/../../src/Support/CssRevisions.php';
+final class CssRevisionsTest extends TestCase
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
 
-$rawCss = "body { color: red; }<script>alert('oops');</script>";
-$rawSegments = [
-    'desktop' => 'body { color: red; }',
-    'tablet' => '<script>bad()</script>',
-    'mobile' => '',
-];
+        global $ssc_options_store, $ssc_cache_invalidations;
 
-CssRevisions::record('ssc_active_css', $rawCss, ['segments' => $rawSegments]);
-
-$revisions = CssRevisions::all();
-if (count($revisions) !== 1) {
-    fwrite(STDERR, 'A single revision should be available after recording once.' . PHP_EOL);
-    exit(1);
-}
-
-$revision = $revisions[0];
-
-if ($revision['author'] !== 'revision_tester') {
-    fwrite(STDERR, 'The recorded revision should persist the current user as author.' . PHP_EOL);
-    exit(1);
-}
-
-$expectedCss = \SSC\Support\CssSanitizer::sanitize($rawCss);
-if ($revision['css'] !== $expectedCss) {
-    fwrite(STDERR, 'The stored revision CSS should be sanitized.' . PHP_EOL);
-    exit(1);
-}
-
-$expectedSegments = [];
-foreach ($rawSegments as $key => $value) {
-    $expectedSegments[$key] = \SSC\Support\CssSanitizer::sanitize((string) $value);
-}
-
-foreach ($expectedSegments as $segmentKey => $sanitizedValue) {
-    $storedValue = $revision['segments'][$segmentKey] ?? null;
-    if ($storedValue !== $sanitizedValue) {
-        fwrite(STDERR, sprintf('The "%s" segment should be sanitized in the stored revision.', $segmentKey) . PHP_EOL);
-        exit(1);
+        $ssc_options_store = [
+            'ssc_active_css' => 'body { color: blue; }',
+            'ssc_css_desktop' => 'body { color: blue; }',
+            'ssc_css_tablet' => '',
+            'ssc_css_mobile' => '',
+            'ssc_css_revisions' => [],
+        ];
+        $ssc_cache_invalidations = 0;
     }
-}
 
-$revisionId = $revision['id'];
+    public function testRecordSanitizesInputAndRestoreRewritesOptions(): void
+    {
+        $rawCss = "body { color: red; }<script>alert('oops');</script>";
+        $rawSegments = [
+            'desktop' => 'body { color: red; }',
+            'tablet' => '<script>bad()</script>',
+            'mobile' => '',
+        ];
 
-update_option('ssc_active_css', 'body { color: green; }', false);
-update_option('ssc_css_desktop', 'body { color: green; }', false);
-update_option('ssc_css_tablet', 'body { color: green; }', false);
-update_option('ssc_css_mobile', 'body { color: green; }', false);
+        CssRevisions::record('ssc_active_css', $rawCss, ['segments' => $rawSegments]);
 
-$ssc_cache_invalidations = 0;
-$restored = CssRevisions::restore($revisionId);
+        $revisions = CssRevisions::all();
+        $this->assertCount(1, $revisions, 'A single revision should be available after recording once.');
 
-if ($restored === null) {
-    fwrite(STDERR, 'Restoring a known revision should return its payload.' . PHP_EOL);
-    exit(1);
-}
+        $revision = $revisions[0];
+        $this->assertSame('revision_tester', $revision['author']);
 
-if (get_option('ssc_active_css') !== $expectedCss) {
-    fwrite(STDERR, 'Restoring a revision should rewrite the main CSS option.' . PHP_EOL);
-    exit(1);
-}
+        $expectedCss = CssSanitizer::sanitize($rawCss);
+        $this->assertSame($expectedCss, $revision['css']);
 
-foreach ($expectedSegments as $segmentKey => $sanitizedValue) {
-    $optionName = [
-        'desktop' => 'ssc_css_desktop',
-        'tablet' => 'ssc_css_tablet',
-        'mobile' => 'ssc_css_mobile',
-    ][$segmentKey];
+        foreach ($rawSegments as $key => $value) {
+            $this->assertSame(
+                CssSanitizer::sanitize((string) $value),
+                $revision['segments'][$key] ?? null,
+                sprintf('The "%s" segment should be sanitized in the stored revision.', $key)
+            );
+        }
 
-    if (get_option($optionName) !== $sanitizedValue) {
-        fwrite(STDERR, sprintf('Restoring should rewrite the %s segment option.', $segmentKey) . PHP_EOL);
-        exit(1);
+        update_option('ssc_active_css', 'body { color: green; }', false);
+        update_option('ssc_css_desktop', 'body { color: green; }', false);
+        update_option('ssc_css_tablet', 'body { color: green; }', false);
+        update_option('ssc_css_mobile', 'body { color: green; }', false);
+
+        $restored = CssRevisions::restore($revision['id']);
+        $this->assertNotNull($restored, 'Restoring a known revision should return its payload.');
+        $this->assertSame($expectedCss, get_option('ssc_active_css'));
+
+        $expectedSegments = [
+            'desktop' => 'ssc_css_desktop',
+            'tablet' => 'ssc_css_tablet',
+            'mobile' => 'ssc_css_mobile',
+        ];
+
+        foreach ($expectedSegments as $segmentKey => $optionName) {
+            $this->assertSame(
+                CssSanitizer::sanitize((string) $rawSegments[$segmentKey]),
+                get_option($optionName),
+                sprintf('Restoring should rewrite the %s segment option.', $segmentKey)
+            );
+        }
+
+        global $ssc_cache_invalidations;
+        $this->assertGreaterThanOrEqual(1, $ssc_cache_invalidations, 'Restoring a revision should invalidate the CSS cache.');
     }
-}
 
-if ($ssc_cache_invalidations < 1) {
-    fwrite(STDERR, 'Restoring a revision should invalidate the CSS cache.' . PHP_EOL);
-    exit(1);
-}
+    public function testRevisionHistoryIsTrimmedToMaximumSize(): void
+    {
+        update_option('ssc_css_revisions', []);
 
-// Reset the revision store to validate the maximum retention count.
-update_option('ssc_css_revisions', []);
+        $ref = new ReflectionClass(CssRevisions::class);
+        $maxRevisions = (int) $ref->getConstant('MAX_REVISIONS');
 
-$ref = new ReflectionClass(CssRevisions::class);
-$maxRevisions = (int) $ref->getConstant('MAX_REVISIONS');
+        for ($i = 0; $i < $maxRevisions + 3; $i++) {
+            $css = sprintf('.test-%d { color: #%1$02d%1$02d%1$02d; }', $i % 99);
+            CssRevisions::record('ssc_active_css', $css, ['segments' => [
+                'desktop' => $css,
+                'tablet' => '',
+                'mobile' => '',
+            ]]);
+        }
 
-for ($i = 0; $i < $maxRevisions + 3; $i++) {
-    $css = sprintf('.test-%d { color: #%1$02d%1$02d%1$02d; }', $i % 99);
-    CssRevisions::record('ssc_active_css', $css, ['segments' => [
-        'desktop' => $css,
-        'tablet' => '',
-        'mobile' => '',
-    ]]);
-}
+        $stored = get_option('ssc_css_revisions', []);
+        $this->assertIsArray($stored);
+        $this->assertCount($maxRevisions, $stored, 'The revision history should be trimmed to the configured maximum size.');
 
-$stored = get_option('ssc_css_revisions', []);
+        $latest = CssRevisions::all()[0] ?? null;
+        $latestCss = sprintf('.test-%d { color: #%1$02d%1$02d%1$02d; }', ($maxRevisions + 2) % 99);
+        $expectedLatestCss = CssSanitizer::sanitize($latestCss);
 
-if (!is_array($stored) || count($stored) !== $maxRevisions) {
-    fwrite(STDERR, 'The revision history should be trimmed to the configured maximum size.' . PHP_EOL);
-    exit(1);
-}
-
-$latest = CssRevisions::all()[0] ?? null;
-$latestCss = sprintf('.test-%d { color: #%1$02d%1$02d%1$02d; }', ($maxRevisions + 2) % 99);
-$expectedLatestCss = \SSC\Support\CssSanitizer::sanitize($latestCss);
-
-if (!$latest || $latest['css'] !== $expectedLatestCss) {
-    fwrite(STDERR, 'The newest revision should be kept at the beginning of the stack.' . PHP_EOL);
-    exit(1);
+        $this->assertNotNull($latest);
+        $this->assertSame($expectedLatestCss, $latest['css'], 'The newest revision should be kept at the beginning of the stack.');
+    }
 }

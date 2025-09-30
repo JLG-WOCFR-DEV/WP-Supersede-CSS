@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 
+use PHPUnit\Framework\TestCase;
 use SSC\Infra\Routes;
 
 if (!defined('ABSPATH')) {
@@ -116,6 +117,8 @@ if (!function_exists('wp_check_invalid_utf8')) {
 if (!function_exists('__')) {
     function __(string $text, string $domain = ''): string
     {
+        unset($domain);
+
         return $text;
     }
 }
@@ -155,6 +158,7 @@ if (!function_exists('get_option')) {
 if (!function_exists('update_option')) {
     function update_option($name, $value, $autoload = false)
     {
+        unset($autoload);
         global $ssc_options_store;
 
         $ssc_options_store[$name] = $value;
@@ -166,6 +170,8 @@ if (!function_exists('update_option')) {
 /** @var array<string, mixed> $ssc_options_store */
 $ssc_options_store = [];
 
+global $ssc_options_store;
+
 if (!function_exists('wp_unslash')) {
     function wp_unslash($value)
     {
@@ -176,11 +182,14 @@ if (!function_exists('wp_unslash')) {
 if (!function_exists('apply_filters')) {
     function apply_filters(string $hook, $value)
     {
+        unset($hook);
+
         return $value;
     }
 }
 
-class DummyWpdb {
+class DummyWpdb
+{
     public string $options = 'wp_options';
 
     public string $last_error = '';
@@ -201,6 +210,8 @@ class DummyWpdb {
 
     public function prepare(string $query, string $value): string
     {
+        unset($value);
+
         return $query;
     }
 
@@ -223,121 +234,110 @@ class DummyWpdb {
     }
 }
 
-require_once __DIR__ . '/../../src/Infra/Routes.php';
+final class RoutesExportFilterTest extends TestCase
+{
+    private Routes $routes;
 
-global $wpdb;
-$wpdb = new DummyWpdb([
-    'ssc_settings' => ['color' => 'red'],
-    'ssc_presets' => ['hero' => ['id' => 'hero-1']],
-    'ssc_tokens_css' => ':root { --primary: #fff; }',
-    'ssc_tokens_registry' => [['name' => '--primary', 'value' => '#fff', 'type' => 'color']],
-    'ssc_custom_extra' => 'custom-value',
-]);
+    protected function setUp(): void
+    {
+        parent::setUp();
 
-$routesReflection = new ReflectionClass(Routes::class);
-$routes = $routesReflection->newInstanceWithoutConstructor();
+        global $ssc_options_store;
+        $ssc_options_store = [];
 
-$exportAll = $routes->exportConfig(new WP_REST_Request());
-
-if (!$exportAll instanceof WP_REST_Response) {
-    fwrite(STDERR, 'Exporting without module filters should return a WP_REST_Response.' . PHP_EOL);
-    exit(1);
-}
-
-$allData = $exportAll->get_data();
-
-if (!is_array($allData) || !array_key_exists('ssc_custom_extra', $allData)) {
-    fwrite(STDERR, 'Exporting all modules should keep custom options that are not mapped.' . PHP_EOL);
-    exit(1);
-}
-
-$exportExplicitAll = $routes->exportConfig(new WP_REST_Request(['modules' => ['all']]));
-
-if (!$exportExplicitAll instanceof WP_REST_Response) {
-    fwrite(STDERR, 'Exporting with an explicit "all" module selection should return a WP_REST_Response.' . PHP_EOL);
-    exit(1);
-}
-
-$explicitAllData = $exportExplicitAll->get_data();
-
-if (!is_array($explicitAllData) || array_key_exists('ssc_custom_extra', $explicitAllData)) {
-    fwrite(STDERR, 'Explicit "all" module selection should filter out options that are not part of any module.' . PHP_EOL);
-    exit(1);
-}
-
-$expectedAllKeys = [
-    'ssc_settings',
-    'ssc_presets',
-    'ssc_tokens_css',
-    'ssc_tokens_registry',
-];
-
-foreach ($expectedAllKeys as $expectedKey) {
-    if (!array_key_exists($expectedKey, $explicitAllData)) {
-        fwrite(STDERR, 'Explicit "all" module selection should keep whitelisted option ' . $expectedKey . '.' . PHP_EOL);
-        exit(1);
+        $reflection = new \ReflectionClass(Routes::class);
+        $this->routes = $reflection->newInstanceWithoutConstructor();
     }
-}
 
-$exportTokens = $routes->exportConfig(new WP_REST_Request(['modules' => ['tokens']]));
+    public function testExportingWithoutModuleFiltersKeepsCustomOptions(): void
+    {
+        global $wpdb;
+        $wpdb = new DummyWpdb([
+            'ssc_settings' => ['color' => 'red'],
+            'ssc_presets' => ['hero' => ['id' => 'hero-1']],
+            'ssc_tokens_css' => ':root { --primary: #fff; }',
+            'ssc_tokens_registry' => [['name' => '--primary', 'value' => '#fff', 'type' => 'color']],
+            'ssc_custom_extra' => 'custom-value',
+        ]);
 
-if (!$exportTokens instanceof WP_REST_Response) {
-    fwrite(STDERR, 'Exporting with module filters should return a WP_REST_Response.' . PHP_EOL);
-    exit(1);
-}
+        $response = $this->routes->exportConfig(new WP_REST_Request());
+        $this->assertInstanceOf(WP_REST_Response::class, $response);
 
-$tokenData = $exportTokens->get_data();
-
-if (!is_array($tokenData) || array_key_exists('ssc_settings', $tokenData) || array_key_exists('ssc_custom_extra', $tokenData)) {
-    fwrite(STDERR, 'Module filtering should exclude settings and custom options when only tokens are requested.' . PHP_EOL);
-    exit(1);
-}
-
-foreach (['ssc_tokens_css', 'ssc_tokens_registry'] as $expectedOption) {
-    if (!array_key_exists($expectedOption, $tokenData)) {
-        fwrite(STDERR, 'Token export should keep ' . $expectedOption . ' when filtering modules.' . PHP_EOL);
-        exit(1);
+        $data = $response->get_data();
+        $this->assertIsArray($data);
+        $this->assertArrayHasKey('ssc_custom_extra', $data);
     }
-}
 
-$ssc_options_store = [
-    'ssc_settings' => ['color' => 'blue'],
-    'ssc_presets' => ['existing' => true],
-];
+    public function testExplicitAllModuleSelectionFiltersUnmappedOptions(): void
+    {
+        global $wpdb;
+        $wpdb = new DummyWpdb([
+            'ssc_settings' => ['color' => 'red'],
+            'ssc_presets' => ['hero' => ['id' => 'hero-1']],
+            'ssc_tokens_css' => ':root { --primary: #fff; }',
+            'ssc_tokens_registry' => [['name' => '--primary', 'value' => '#fff', 'type' => 'color']],
+            'ssc_custom_extra' => 'custom-value',
+        ]);
 
-$importPayload = [
-    'options' => [
-        'ssc_settings' => ['color' => 'green', 'spacing' => 'large'],
-        'ssc_presets' => ['new' => ['id' => 'p-1']],
-    ],
-    'modules' => ['settings'],
-];
+        $response = $this->routes->exportConfig(new WP_REST_Request(['modules' => ['all']]));
+        $this->assertInstanceOf(WP_REST_Response::class, $response);
 
-$importResponse = $routes->importConfig(new WP_REST_Request([], $importPayload));
+        $data = $response->get_data();
+        $this->assertIsArray($data);
+        $this->assertArrayNotHasKey('ssc_custom_extra', $data);
 
-if (!$importResponse instanceof WP_REST_Response || $importResponse->get_status() !== 200) {
-    fwrite(STDERR, 'Importing with a valid module selection should succeed.' . PHP_EOL);
-    exit(1);
-}
+        foreach (['ssc_settings', 'ssc_presets', 'ssc_tokens_css', 'ssc_tokens_registry'] as $expectedKey) {
+            $this->assertArrayHasKey($expectedKey, $data);
+        }
+    }
 
-if ($ssc_options_store['ssc_settings']['color'] !== 'green') {
-    fwrite(STDERR, 'Filtered import should update settings.' . PHP_EOL);
-    exit(1);
-}
+    public function testModuleFilteringLimitsOptions(): void
+    {
+        global $wpdb;
+        $wpdb = new DummyWpdb([
+            'ssc_settings' => ['color' => 'red'],
+            'ssc_presets' => ['hero' => ['id' => 'hero-1']],
+            'ssc_tokens_css' => ':root { --primary: #fff; }',
+            'ssc_tokens_registry' => [['name' => '--primary', 'value' => '#fff', 'type' => 'color']],
+        ]);
 
-if ($ssc_options_store['ssc_presets'] !== ['existing' => true]) {
-    fwrite(STDERR, 'Filtered import should not touch presets when module is not selected.' . PHP_EOL);
-    exit(1);
-}
+        $response = $this->routes->exportConfig(new WP_REST_Request(['modules' => ['tokens']]));
+        $this->assertInstanceOf(WP_REST_Response::class, $response);
 
-$importData = $importResponse->get_data();
+        $data = $response->get_data();
+        $this->assertIsArray($data);
+        $this->assertArrayNotHasKey('ssc_settings', $data);
 
-if (!in_array('ssc_settings', $importData['applied'], true)) {
-    fwrite(STDERR, 'Filtered import should report settings as applied.' . PHP_EOL);
-    exit(1);
-}
+        foreach (['ssc_tokens_css', 'ssc_tokens_registry'] as $expectedOption) {
+            $this->assertArrayHasKey($expectedOption, $data);
+        }
+    }
 
-if (!in_array('ssc_presets', $importData['skipped'], true)) {
-    fwrite(STDERR, 'Filtered import should report presets as skipped.' . PHP_EOL);
-    exit(1);
+    public function testImportConfigAppliesOnlySelectedModules(): void
+    {
+        global $ssc_options_store;
+        $ssc_options_store = [
+            'ssc_settings' => ['color' => 'blue'],
+            'ssc_presets' => ['existing' => true],
+        ];
+
+        $payload = [
+            'options' => [
+                'ssc_settings' => ['color' => 'green', 'spacing' => 'large'],
+                'ssc_presets' => ['new' => ['id' => 'p-1']],
+            ],
+            'modules' => ['settings'],
+        ];
+
+        $response = $this->routes->importConfig(new WP_REST_Request([], [], $payload));
+        $this->assertInstanceOf(WP_REST_Response::class, $response);
+        $this->assertSame(200, $response->get_status());
+
+        $this->assertSame('green', $ssc_options_store['ssc_settings']['color']);
+        $this->assertSame(['existing' => true], $ssc_options_store['ssc_presets']);
+
+        $data = $response->get_data();
+        $this->assertContains('ssc_settings', $data['applied']);
+        $this->assertContains('ssc_presets', $data['skipped']);
+    }
 }

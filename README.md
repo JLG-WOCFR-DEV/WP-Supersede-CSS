@@ -49,3 +49,10 @@ Supersede CSS JLG (Enhanced) is released under the [GPLv2 or later](https://www.
 
 Contributions are welcome! Fork the project, create a branch with your feature or fix, then submit a pull request. For major changes, please open an issue first to discuss what you'd like to change.
 
+## Tests
+
+1. Install PHP dependencies with `composer install` inside `supersede-css-jlg-enhanced/`.
+2. Install front-end tooling with `npm install` inside `supersede-css-jlg-enhanced/`.
+3. Run the PHPUnit suite via `composer test`.
+4. Execute the UI regression tests with `npm run test:ui`.
+

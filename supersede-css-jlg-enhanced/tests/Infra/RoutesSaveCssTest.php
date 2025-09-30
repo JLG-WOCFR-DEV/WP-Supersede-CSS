@@ -1,6 +1,9 @@
 <?php declare(strict_types=1);
 
+use PHPUnit\Framework\TestCase;
 use SSC\Infra\Routes;
+use SSC\Support\CssSanitizer;
+use SSC\Support\TokenRegistry;
 
 if (!defined('ABSPATH')) {
     define('ABSPATH', __DIR__);
@@ -40,6 +43,8 @@ if (!function_exists('sanitize_textarea_field')) {
 if (!function_exists('wp_kses')) {
     function wp_kses(string $string, array $allowed_html = []): string
     {
+        unset($allowed_html);
+
         return strip_tags($string);
     }
 }
@@ -47,6 +52,8 @@ if (!function_exists('wp_kses')) {
 if (!function_exists('wp_kses_bad_protocol')) {
     function wp_kses_bad_protocol(string $string, array $allowed_protocols): string
     {
+        unset($allowed_protocols);
+
         return $string;
     }
 }
@@ -166,6 +173,7 @@ if (!function_exists('get_option')) {
 if (!function_exists('update_option')) {
     function update_option($name, $value, $autoload = false)
     {
+        unset($autoload);
         global $ssc_options_store;
 
         $ssc_options_store[$name] = $value;
@@ -174,155 +182,131 @@ if (!function_exists('update_option')) {
     }
 }
 
-require_once __DIR__ . '/../../src/Support/CssSanitizer.php';
-require_once __DIR__ . '/../../src/Support/TokenRegistry.php';
-require_once __DIR__ . '/../../src/Infra/Routes.php';
+final class RoutesSaveCssTest extends TestCase
+{
+    private Routes $routes;
 
-$routesReflection = new ReflectionClass(Routes::class);
-$routes = $routesReflection->newInstanceWithoutConstructor();
+    protected function setUp(): void
+    {
+        parent::setUp();
 
-$request = new WP_REST_Request([
-    'option_name' => ['unexpected'],
-    'css' => 'body { color: red; }',
-]);
+        global $ssc_options_store, $ssc_cache_invalidations;
+        $ssc_options_store = [];
+        $ssc_cache_invalidations = 0;
 
-$response = $routes->saveCss($request);
-
-if (!$response instanceof WP_REST_Response) {
-    fwrite(STDERR, 'Expected WP_REST_Response when saving CSS.' . PHP_EOL);
-    exit(1);
-}
-
-if ($response->get_status() !== 200) {
-    fwrite(STDERR, 'Expected response status 200 when option_name is not a string.' . PHP_EOL);
-    exit(1);
-}
-
-if (!array_key_exists('ssc_active_css', $ssc_options_store)) {
-    fwrite(STDERR, 'Expected CSS to be saved under the default option name.' . PHP_EOL);
-    exit(1);
-}
-
-if (array_key_exists('ssc_tokens_css', $ssc_options_store)) {
-    fwrite(STDERR, 'Unexpected CSS stored under ssc_tokens_css.' . PHP_EOL);
-    exit(1);
-}
-
-$initialRegistry = [
-    [
-        'name' => '--first-token',
-        'value' => '#abcdef',
-        'type' => 'color',
-        'description' => 'Existing color token.',
-        'group' => 'Palette',
-    ],
-    [
-        'name' => '--second-token',
-        'value' => '8px',
-        'type' => 'text',
-        'description' => 'Existing size token.',
-        'group' => 'Spacing',
-    ],
-];
-
-\SSC\Support\TokenRegistry::saveRegistry($initialRegistry);
-
-$tokenCss = ":root {\n    --first-token: #123456;\n    --second-token: 1.5rem\n}";
-$tokenRequest = new WP_REST_Request([
-    'option_name' => 'ssc_tokens_css',
-    'css' => $tokenCss,
-]);
-
-$tokenResponse = $routes->saveCss($tokenRequest);
-
-if (!$tokenResponse instanceof WP_REST_Response || $tokenResponse->get_status() !== 200) {
-    fwrite(STDERR, 'Saving CSS tokens should return a successful WP_REST_Response.' . PHP_EOL);
-    exit(1);
-}
-
-$sanitizedTokenCss = \SSC\Support\CssSanitizer::sanitize($tokenCss);
-$convertedRegistry = \SSC\Support\TokenRegistry::convertCssToRegistry($sanitizedTokenCss);
-$normalizedInitial = \SSC\Support\TokenRegistry::normalizeRegistry($initialRegistry);
-$initialByName = [];
-
-foreach ($normalizedInitial as $existingToken) {
-    $initialByName[strtolower($existingToken['name'])] = $existingToken;
-}
-
-$expectedRegistry = [];
-
-foreach ($convertedRegistry as $token) {
-    $key = strtolower($token['name']);
-    if (isset($initialByName[$key])) {
-        $existingToken = $initialByName[$key];
-        $token['type'] = $existingToken['type'];
-        $token['group'] = $existingToken['group'];
-        $token['description'] = $existingToken['description'];
+        $reflection = new \ReflectionClass(Routes::class);
+        $this->routes = $reflection->newInstanceWithoutConstructor();
     }
 
-    $expectedRegistry[] = $token;
-}
+    public function testNonStringOptionNameDefaultsToActiveCss(): void
+    {
+        global $ssc_options_store;
 
-$expectedRegistryCss = \SSC\Support\TokenRegistry::tokensToCss($expectedRegistry);
+        $request = new WP_REST_Request([
+            'option_name' => ['unexpected'],
+            'css' => 'body { color: red; }',
+        ]);
 
-if ($ssc_options_store['ssc_tokens_registry'] !== $expectedRegistry) {
-    fwrite(STDERR, 'Saving CSS tokens should update the token registry using the sanitized declarations.' . PHP_EOL);
-    exit(1);
-}
+        $response = $this->routes->saveCss($request);
+        $this->assertInstanceOf(WP_REST_Response::class, $response);
+        $this->assertSame(200, $response->get_status());
 
-if ($ssc_options_store['ssc_tokens_css'] !== $expectedRegistryCss) {
-    fwrite(STDERR, 'Saving CSS tokens should persist normalized CSS output that retains all tokens.' . PHP_EOL);
-    exit(1);
-}
+        $this->assertArrayHasKey('ssc_active_css', $ssc_options_store);
+        $this->assertArrayNotHasKey('ssc_tokens_css', $ssc_options_store);
+    }
 
-$complexValueCss = ":root {\n    --with-semicolon: 'foo;bar';\n}";
-$sanitizedComplexValueCss = \SSC\Support\CssSanitizer::sanitize($complexValueCss);
-$complexValueRegistry = \SSC\Support\TokenRegistry::convertCssToRegistry($sanitizedComplexValueCss);
+    public function testSavingTokenCssUpdatesRegistryAndCss(): void
+    {
+        global $ssc_options_store;
 
-if (count($complexValueRegistry) !== 1) {
-    fwrite(STDERR, 'CSS token parsing should keep declarations with embedded semicolons.' . PHP_EOL);
-    exit(1);
-}
+        $initialRegistry = [
+            [
+                'name' => '--first-token',
+                'value' => '#abcdef',
+                'type' => 'color',
+                'description' => 'Existing color token.',
+                'group' => 'Palette',
+            ],
+            [
+                'name' => '--second-token',
+                'value' => '8px',
+                'type' => 'text',
+                'description' => 'Existing size token.',
+                'group' => 'Spacing',
+            ],
+        ];
 
-$complexValueToken = $complexValueRegistry[0];
+        TokenRegistry::saveRegistry($initialRegistry);
 
-if ($complexValueToken['value'] !== "'foo;bar'") {
-    fwrite(STDERR, 'CSS token parsing should keep the full value of declarations with embedded semicolons.' . PHP_EOL);
-    exit(1);
-}
+        $tokenCss = ":root {\n    --first-token: #123456;\n    --second-token: 1.5rem\n}";
+        $request = new WP_REST_Request([
+            'option_name' => 'ssc_tokens_css',
+            'css' => $tokenCss,
+        ]);
 
-$roundTripCss = \SSC\Support\TokenRegistry::tokensToCss($complexValueRegistry);
-$roundTripRegistry = \SSC\Support\TokenRegistry::convertCssToRegistry($roundTripCss);
+        $response = $this->routes->saveCss($request);
+        $this->assertInstanceOf(WP_REST_Response::class, $response);
+        $this->assertSame(200, $response->get_status());
 
-if ($roundTripRegistry !== $complexValueRegistry) {
-    fwrite(STDERR, 'Converting CSS tokens to the registry and back should preserve the full value.' . PHP_EOL);
-    exit(1);
-}
+        $sanitizedCss = CssSanitizer::sanitize($tokenCss);
+        $convertedRegistry = TokenRegistry::convertCssToRegistry($sanitizedCss);
+        $normalizedInitial = TokenRegistry::normalizeRegistry($initialRegistry);
 
-$legacyTabletCss = "body { color: red; }<script>alert('xss');</script>";
-$expectedSanitizedTabletCss = \SSC\Support\CssSanitizer::sanitize($legacyTabletCss);
+        $initialByName = [];
+        foreach ($normalizedInitial as $existingToken) {
+            $initialByName[strtolower($existingToken['name'])] = $existingToken;
+        }
 
-$ssc_options_store['ssc_css_tablet'] = $legacyTabletCss;
-$ssc_cache_invalidations = 0;
+        $expectedRegistry = [];
+        foreach ($convertedRegistry as $token) {
+            $key = strtolower($token['name']);
+            if (isset($initialByName[$key])) {
+                $existing = $initialByName[$key];
+                $token['type'] = $existing['type'];
+                $token['group'] = $existing['group'];
+                $token['description'] = $existing['description'];
+            }
+            $expectedRegistry[] = $token;
+        }
 
-$legacyRequest = new WP_REST_Request([
-    'option_name' => 'ssc_active_css',
-    'css' => 'body { color: blue; }',
-]);
+        $expectedCss = TokenRegistry::tokensToCss($expectedRegistry);
 
-$legacyResponse = $routes->saveCss($legacyRequest);
+        $this->assertSame($expectedRegistry, $ssc_options_store['ssc_tokens_registry']);
+        $this->assertSame($expectedCss, $ssc_options_store['ssc_tokens_css']);
+    }
 
-if (!$legacyResponse instanceof WP_REST_Response || $legacyResponse->get_status() !== 200) {
-    fwrite(STDERR, 'Saving CSS with legacy tablet data should return a successful WP_REST_Response.' . PHP_EOL);
-    exit(1);
-}
+    public function testTokenConversionPreservesValuesWithSemicolons(): void
+    {
+        $complexValueCss = ":root {\n    --with-semicolon: 'foo;bar';\n}";
+        $sanitized = CssSanitizer::sanitize($complexValueCss);
+        $registry = TokenRegistry::convertCssToRegistry($sanitized);
 
-if ($ssc_options_store['ssc_css_tablet'] !== $expectedSanitizedTabletCss) {
-    fwrite(STDERR, 'Implicit CSS sanitization should persist cleaned tablet CSS.' . PHP_EOL);
-    exit(1);
-}
+        $this->assertCount(1, $registry);
+        $this->assertSame("'foo;bar'", $registry[0]['value']);
 
-if ($ssc_cache_invalidations < 2) {
-    fwrite(STDERR, 'Implicit CSS sanitization should invalidate the cache when rewriting tablet CSS.' . PHP_EOL);
-    exit(1);
+        $roundTrip = TokenRegistry::convertCssToRegistry(TokenRegistry::tokensToCss($registry));
+        $this->assertSame($registry, $roundTrip);
+    }
+
+    public function testLegacyTabletCssIsSanitizedAndCacheInvalidated(): void
+    {
+        global $ssc_options_store, $ssc_cache_invalidations;
+
+        $legacyTabletCss = "body { color: red; }<script>alert('xss');</script>";
+        $ssc_options_store['ssc_css_tablet'] = $legacyTabletCss;
+        $ssc_cache_invalidations = 0;
+
+        $request = new WP_REST_Request([
+            'option_name' => 'ssc_active_css',
+            'css' => 'body { color: blue; }',
+        ]);
+
+        $response = $this->routes->saveCss($request);
+        $this->assertInstanceOf(WP_REST_Response::class, $response);
+        $this->assertSame(200, $response->get_status());
+
+        $expectedSanitizedTabletCss = CssSanitizer::sanitize($legacyTabletCss);
+        $this->assertSame($expectedSanitizedTabletCss, $ssc_options_store['ssc_css_tablet']);
+        $this->assertGreaterThanOrEqual(2, $ssc_cache_invalidations);
+    }
 }

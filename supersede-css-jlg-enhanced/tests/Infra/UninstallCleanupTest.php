@@ -1,5 +1,7 @@
 <?php declare(strict_types=1);
 
+use PHPUnit\Framework\TestCase;
+
 if (!defined('WP_UNINSTALL_PLUGIN')) {
     define('WP_UNINSTALL_PLUGIN', true);
 }
@@ -10,6 +12,8 @@ if (!defined('ABSPATH')) {
 
 /** @var list<string> $ssc_deleted_options */
 $ssc_deleted_options = [];
+
+global $ssc_deleted_options;
 
 if (!function_exists('delete_option')) {
     function delete_option(string $option_name): void
@@ -27,25 +31,21 @@ if (!function_exists('is_multisite')) {
     }
 }
 
-require __DIR__ . '/../../uninstall.php';
-
-if (!function_exists('assertOptionDeleted')) {
-    function assertOptionDeleted(string $option_name, array $deleted_options): void
+final class UninstallCleanupTest extends TestCase
+{
+    protected function setUp(): void
     {
-        if (!in_array($option_name, $deleted_options, true)) {
-            fwrite(
-                STDERR,
-                sprintf(
-                    'Failed asserting that option "%s" was deleted. Deleted options: %s' . PHP_EOL,
-                    $option_name,
-                    implode(', ', $deleted_options)
-                )
-            );
+        parent::setUp();
+        global $ssc_deleted_options;
+        $ssc_deleted_options = [];
+    }
 
-            exit(1);
-        }
+    public function testUninstallRemovesCachedOptions(): void
+    {
+        require __DIR__ . '/../../uninstall.php';
+
+        global $ssc_deleted_options;
+        $this->assertContains('ssc_css_cache', $ssc_deleted_options);
+        $this->assertContains('ssc_css_cache_meta', $ssc_deleted_options);
     }
 }
-
-assertOptionDeleted('ssc_css_cache', $ssc_deleted_options);
-assertOptionDeleted('ssc_css_cache_meta', $ssc_deleted_options);
