@@ -409,6 +409,81 @@ if ($ssc_options_store['ssc_tokens_css'] !== $expectedRegistryCss) {
     exit(1);
 }
 
+$ssc_options_store['ssc_tokens_registry'] = [];
+$ssc_options_store['ssc_tokens_css'] = '';
+
+$registryWithMetadata = [
+    [
+        'name' => '--brand-primary',
+        'value' => '#112233',
+        'type' => 'color',
+        'description' => 'Primary brand color',
+        'group' => 'Brand',
+    ],
+];
+
+$combinedImportResult = $applyMethod->invoke($routes, [
+    'ssc_tokens_registry' => $registryWithMetadata,
+    'ssc_tokens_css' => ":root {\n    --brand-primary: #112233;\n}",
+]);
+
+if (!is_array($combinedImportResult) || !in_array('ssc_tokens_registry', $combinedImportResult['applied'] ?? [], true) || !in_array('ssc_tokens_css', $combinedImportResult['applied'] ?? [], true)) {
+    fwrite(STDERR, "Combined registry and CSS imports should report both options as applied." . PHP_EOL);
+    exit(1);
+}
+
+$storedCombinedRegistry = $ssc_options_store['ssc_tokens_registry'];
+
+if (!is_array($storedCombinedRegistry) || count($storedCombinedRegistry) !== 1) {
+    fwrite(STDERR, "Combined registry and CSS imports should persist a single normalized token." . PHP_EOL);
+    exit(1);
+}
+
+$storedCombinedToken = $storedCombinedRegistry[0];
+
+if ($storedCombinedToken['type'] !== 'color' || $storedCombinedToken['group'] !== 'Brand' || $storedCombinedToken['description'] !== 'Primary brand color') {
+    fwrite(STDERR, "Registry metadata should survive subsequent CSS imports processed in the same payload." . PHP_EOL);
+    exit(1);
+}
+
+$ssc_options_store['ssc_tokens_registry'] = \SSC\Support\TokenRegistry::saveRegistry([
+    [
+        'name' => '--spacing-large',
+        'value' => '32px',
+        'type' => 'number',
+        'description' => 'Large spacing token',
+        'group' => 'Spacing',
+    ],
+]);
+
+$cssOnlyResult = $applyMethod->invoke($routes, [
+    'ssc_tokens_css' => ":root {\n    --spacing-large: 40px;\n}",
+]);
+
+if (!is_array($cssOnlyResult) || !in_array('ssc_tokens_css', $cssOnlyResult['applied'] ?? [], true)) {
+    fwrite(STDERR, "CSS-only imports should report the tokens CSS option as applied." . PHP_EOL);
+    exit(1);
+}
+
+$storedCssOnlyRegistry = $ssc_options_store['ssc_tokens_registry'];
+
+if (!is_array($storedCssOnlyRegistry) || count($storedCssOnlyRegistry) !== 1) {
+    fwrite(STDERR, "CSS-only imports should preserve the registry structure." . PHP_EOL);
+    exit(1);
+}
+
+$storedCssOnlyToken = $storedCssOnlyRegistry[0];
+
+if ($storedCssOnlyToken['value'] !== '40px') {
+    fwrite(STDERR, "CSS-only imports should update the token value from the CSS payload." . PHP_EOL);
+    exit(1);
+}
+
+if ($storedCssOnlyToken['type'] !== 'number' || $storedCssOnlyToken['group'] !== 'Spacing' || $storedCssOnlyToken['description'] !== 'Large spacing token') {
+    fwrite(STDERR, "CSS-only imports should retain metadata from the existing registry after merging." . PHP_EOL);
+    exit(1);
+}
+
 \SSC\Support\TokenRegistry::saveRegistry([
     [
         'name' => '--existing-token',
