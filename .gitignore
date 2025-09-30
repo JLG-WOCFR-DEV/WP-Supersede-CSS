@@ -1,5 +1,6 @@
 node_modules/
 supersede-css-jlg-enhanced/node_modules/
+supersede-css-jlg-enhanced/vendor/
 playwright-report/
 supersede-css-jlg-enhanced/playwright-report/
 test-results/
