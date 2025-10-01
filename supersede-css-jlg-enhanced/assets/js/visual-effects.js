@@ -1,4 +1,21 @@
 (function($) {
+    const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let forceMotionPreview = false;
+    let crtController = null;
+
+    function shouldReduceMotion() {
+        return reduceMotionQuery.matches && !forceMotionPreview;
+    }
+
+    function refreshMotionSensitivePreviews() {
+        if ($('#ssc-bg-type').length) {
+            generateBackgroundCSS();
+        }
+        if (crtController && typeof crtController.updateMotionState === 'function') {
+            crtController.updateMotionState();
+        }
+    }
+
     $(document).ready(function() {
         if (!$('.ssc-ve-tabs').length) return;
 
@@ -34,6 +51,7 @@
             if ($panel.length) {
                 $panel.addClass('active').removeAttr('hidden');
             }
+            refreshMotionSensitivePreviews();
         }
 
         $tabs.attr('tabindex', '-1');
@@ -73,18 +91,36 @@
             }
         });
 
-        initCRTEffect();
+        const $forceToggle = $('#ssc-ve-force-motion');
+        if ($forceToggle.length) {
+            forceMotionPreview = $forceToggle.is(':checked');
+            $forceToggle.on('change', function() {
+                forceMotionPreview = $(this).is(':checked');
+                refreshMotionSensitivePreviews();
+            });
+        }
+
+        const handleMotionPreferenceChange = () => refreshMotionSensitivePreviews();
+        if (typeof reduceMotionQuery.addEventListener === 'function') {
+            reduceMotionQuery.addEventListener('change', handleMotionPreferenceChange);
+        } else if (typeof reduceMotionQuery.addListener === 'function') {
+            reduceMotionQuery.addListener(handleMotionPreferenceChange);
+        }
+
+        crtController = initCRTEffect();
         initBackgrounds();
         initECG();
+        refreshMotionSensitivePreviews();
     });
 
     // --- Module 1: Effet CRT (Scanline) ---
     function initCRTEffect() {
         const canvas = document.getElementById('ssc-crt-canvas');
-        if (!canvas) return;
+        if (!canvas) return null;
         const ctx = canvas.getContext('2d');
         let time = 0;
-        
+        let animationFrame = null;
+
         const settings = {
             scanlineColor: '#00ff00', scanlineOpacity: 0.4, scanlineSpeed: 0.5,
             noiseIntensity: 0.1, chromaticAberration: 1
@@ -104,12 +140,14 @@
             return {r: +r, g: +g, b: +b};
         }
 
-        function draw() {
-            if (canvas.offsetWidth === 0) { requestAnimationFrame(draw); return; }
+        function renderFrame(advanceTime = true) {
+            if (canvas.offsetWidth === 0) {
+                return;
+            }
             canvas.width = canvas.offsetWidth;
             canvas.height = canvas.offsetHeight;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
+
             const imageData = ctx.createImageData(canvas.width, canvas.height);
             const data = imageData.data;
             for (let i = 0; i < data.length; i += 4) {
@@ -133,24 +171,63 @@
                     ctx.fillRect(offset, y, canvas.width, 2);
                 }
             });
-            
-            time += 0.016;
-            requestAnimationFrame(draw);
+
+            if (advanceTime) {
+                time += 0.016;
+            }
         }
 
-        $('.ssc-crt-control').on('input', function() { 
+        function draw() {
+            if (canvas.offsetWidth === 0) {
+                animationFrame = requestAnimationFrame(draw);
+                return;
+            }
+            renderFrame(true);
+            animationFrame = requestAnimationFrame(draw);
+        }
+
+        function start() {
+            if (animationFrame !== null) return;
+            draw();
+        }
+
+        function stop() {
+            if (animationFrame !== null) {
+                cancelAnimationFrame(animationFrame);
+                animationFrame = null;
+            }
+        }
+
+        function updateMotionState() {
+            if (shouldReduceMotion()) {
+                stop();
+                renderFrame(false);
+            } else {
+                start();
+            }
+        }
+
+        $('.ssc-crt-control').on('input', function() {
             const prop = this.id;
             const value = $(this).is('input[type="color"]') ? $(this).val() : parseFloat($(this).val());
             settings[prop] = value;
+            if (shouldReduceMotion()) {
+                renderFrame(false);
+            }
         });
-        draw();
+
+        updateMotionState();
+
+        return {
+            updateMotionState
+        };
     }
 
 
     // --- Module 2: Fonds Animés (Corrigé) ---
     function initBackgrounds() {
         if(!$('#ssc-bg-type').length) return;
-        
+
         // S'assurer que les keyframes des étoiles sont prêtes
         if (!$('style#ssc-stars-anim-style').length) {
             $('<style id="ssc-stars-anim-style">@keyframes ssc-stars-anim { from { transform: translateY(0px); } to { transform: translateY(-2000px); } }</style>').appendTo('head');
@@ -163,9 +240,7 @@
              $.ajax({ url: SSC.rest.root + 'save-css', method: 'POST', data: { css, append: true, _wpnonce: SSC.rest.nonce }, beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
              }).done(() => window.sscToast('Fond animé appliqué !'));
         });
-        
-        // Appel initial pour afficher l'aperçu par défaut
-        generateBackgroundCSS();
+
     }
 
     function generateBackgroundCSS() {
@@ -173,7 +248,9 @@
         $('#ssc-bg-controls-stars').toggle(type === 'stars');
         $('#ssc-bg-controls-gradient').toggle(type === 'gradient');
         let css = '', preview = $('#ssc-bg-preview');
+        const reduceMotion = shouldReduceMotion();
         preview.empty().removeAttr('style').css('animation', '').removeClass('ssc-bg-stars ssc-bg-gradient'); // Réinitialiser l'animation
+        $('style#ssc-stars-preview-style, style#ssc-gradient-preview-style').remove();
 
         if (type === 'stars') {
             const color = $('#starColor').val();
@@ -184,7 +261,7 @@
             for (let i = 0; i < count; i++) {
                 boxShadows.push(`${Math.random() * 2000}px ${Math.random() * 2000}px ${color}`);
             }
-            css = `${keyframes}
+            const baseCss = `${keyframes}
 .ssc-bg-stars {
   background: #000000;
   position: relative;
@@ -202,32 +279,46 @@
   animation: ssc-stars-anim ${animationDuration}s linear infinite;
 }
 `;
+            const reducedMotionBlock = `@media (prefers-reduced-motion: reduce) {
+  .ssc-bg-stars::after {
+    animation: none;
+    transform: translateY(0);
+  }
+}`;
+            css = `${baseCss}${reducedMotionBlock}`;
 
-            // Injecter le CSS généré pour l'aperçu
-            $('style#ssc-stars-preview-style').remove();
-            $(`<style id="ssc-stars-preview-style">${css}</style>`).appendTo('head');
+            const previewCss = reduceMotion ? css : baseCss;
+            $(`<style id="ssc-stars-preview-style">${previewCss}</style>`).appendTo('head');
 
             preview.addClass('ssc-bg-stars');
 
         } else if (type === 'gradient') {
-            $('style#ssc-stars-preview-style').remove();
             const speed = $('#gradientSpeed').val();
             const keyframes = `@keyframes ssc-gradient-anim { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }`;
 
-            // Injecter les keyframes pour que l'aperçu fonctionne
-            $('style#ssc-gradient-anim-style').remove();
-            $(`<style id="ssc-gradient-anim-style">${keyframes}</style>`).appendTo('head');
-
-            css = `${keyframes}
+            const baseCss = `${keyframes}
 .ssc-bg-gradient {
   background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
   background-size: 400% 400%;
   animation: ssc-gradient-anim ${speed}s ease infinite;
+}
+`;
+            const reducedMotionBlock = `@media (prefers-reduced-motion: reduce) {
+  .ssc-bg-gradient {
+    animation: none;
+    background-position: 50% 50%;
+  }
 }`;
+            css = `${baseCss}${reducedMotionBlock}`;
+
+            const previewCss = reduceMotion ? css : baseCss;
+            $(`<style id="ssc-gradient-preview-style">${previewCss}</style>`).appendTo('head');
+
             preview.css({
                 background: 'linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab)',
                 backgroundSize: '400% 400%',
-                animation: `ssc-gradient-anim ${speed}s ease infinite`
+                animation: reduceMotion ? 'none' : `ssc-gradient-anim ${speed}s ease infinite`,
+                backgroundPosition: reduceMotion ? '50% 50%' : ''
             });
         }
         $('#ssc-bg-css').text(css.trim());
@@ -237,7 +328,7 @@
     function initECG() {
         if(!$('#ssc-ecg-preset').length) return;
         const paths = { stable: "M0,30 L100,30 L110,18 L120,42 L130,26 L140,30 L240,30 L250,20 L260,40 L270,28 L280,30 L400,30", fast: "M0,30 L60,30 L70,8 L80,52 L90,18 L100,30 L160,30 L170,12 L180,48 L190,22 L200,30 L400,30", critical: "M0,30 L40,30 L50,5 L60,55 L70,15 L80,30 L120,30 L130,2 L140,58 L150,12 L160,30 L400,30" };
-        
+
         if (typeof wp !== 'undefined' && wp.media) {
             let frame;
             $('#ssc-ecg-upload-btn').on('click', function(e) {
@@ -250,7 +341,7 @@
                 frame.open();
             });
         }
-        
+
         function generateECGCSS() {
             const preset = $('#ssc-ecg-preset').val();
             const color = $('#ssc-ecg-color').val();

@@ -32,6 +32,16 @@ if (!defined('ABSPATH')) {
             <input type="range" id="ssc-tron-speed" min="1" max="30" value="10" step="1">
             <span id="ssc-tron-speed-val"><?php echo esc_html__('10s', 'supersede-css-jlg'); ?></span>
 
+            <div class="ssc-toggle" style="margin-top:16px;">
+                <label for="ssc-tron-force-motion" style="display:flex; gap:8px; align-items:center;">
+                    <input type="checkbox" id="ssc-tron-force-motion">
+                    <span><?php esc_html_e('Forcer l\'animation dans l\'aperçu (ignorer la préférence système)', 'supersede-css-jlg'); ?></span>
+                </label>
+                <p class="description" style="margin-top:4px;">
+                    <?php esc_html_e('Par défaut, Supersede respecte la préférence "Réduire les animations" et fige l\'aperçu lorsque cette option est active sur votre appareil.', 'supersede-css-jlg'); ?>
+                </p>
+            </div>
+
             <div class="ssc-actions" style="margin-top:24px; border-top: 1px solid var(--ssc-border); padding-top: 16px;">
                 <button id="ssc-tron-apply" class="button button-primary"><?php esc_html_e('Appliquer sur le site', 'supersede-css-jlg'); ?></button>
                 <button id="ssc-tron-copy" class="button"><?php esc_html_e('Copier le CSS', 'supersede-css-jlg'); ?></button>
@@ -51,6 +61,12 @@ if (!defined('ABSPATH')) {
                 <li><?php printf(wp_kses_post(__('Collez le code et renommez la classe principale, par exemple en %s.', 'supersede-css-jlg')), '<code>.ma-grille-bleue</code>'); ?></li>
                 <li><?php printf(wp_kses_post(__('Revenez ici, créez une autre variation, et répétez l\'opération avec un nouveau nom de classe (ex: %s).', 'supersede-css-jlg')), '<code>.ma-grille-rouge</code>'); ?></li>
             </ol>
+            <p class="description">
+                <?php esc_html_e('Le CSS généré inclut automatiquement @media (prefers-reduced-motion: reduce) afin de proposer une version statique aux visiteurs qui limitent les animations.', 'supersede-css-jlg'); ?>
+            </p>
+            <p class="description">
+                <?php esc_html_e('Activez la bascule ci-dessus pour tester l\'animation même si votre environnement applique cette préférence.', 'supersede-css-jlg'); ?>
+            </p>
 
             <pre id="ssc-tron-css" class="ssc-code"></pre>
         </div>

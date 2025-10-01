@@ -6,6 +6,15 @@ if (!defined('ABSPATH')) {
 <div class="ssc-app ssc-fullwidth">
     <h2><?php esc_html_e('🎬 Générateur d\'Effets Visuels', 'supersede-css-jlg'); ?></h2>
     <p><?php esc_html_e('Une collection d\'effets visuels avancés pour animer vos fonds, images et conteneurs.', 'supersede-css-jlg'); ?></p>
+    <div class="ssc-toggle" style="margin:16px 0;">
+        <label for="ssc-ve-force-motion" style="display:flex; gap:8px; align-items:center;">
+            <input type="checkbox" id="ssc-ve-force-motion">
+            <span><?php esc_html_e('Forcer les animations dans les aperçus (ignorer la préférence système)', 'supersede-css-jlg'); ?></span>
+        </label>
+        <p class="description" style="margin-top:4px;">
+            <?php esc_html_e('Supersede respecte automatiquement la préférence "Réduire les animations" en figeant les prévisualisations et les CSS générés lorsque cette option est active. Utilisez cette bascule pour tester les effets malgré tout.', 'supersede-css-jlg'); ?>
+        </p>
+    </div>
     <div class="ssc-ve-tabs" role="tablist" aria-label="<?php echo esc_attr__('Types d\'effets visuels', 'supersede-css-jlg'); ?>">
         <button type="button" class="ssc-ve-tab active" id="ssc-ve-tab-backgrounds" role="tab" aria-selected="true" aria-controls="ssc-ve-panel-backgrounds" data-tab="backgrounds"><?php esc_html_e('🌌 Fonds Animés', 'supersede-css-jlg'); ?></button>
         <button type="button" class="ssc-ve-tab" id="ssc-ve-tab-ecg" role="tab" aria-selected="false" aria-controls="ssc-ve-panel-ecg" data-tab="ecg"><?php esc_html_e('❤️ ECG / Battement de Cœur', 'supersede-css-jlg'); ?></button>
@@ -17,6 +26,7 @@ if (!defined('ABSPATH')) {
             <div class="ssc-pane">
                 <h3><?php esc_html_e('Paramètres de l\'effet CRT', 'supersede-css-jlg'); ?></h3>
                 <p class="description"><?php esc_html_e('Cet effet est purement décoratif et ne génère pas de CSS à exporter.', 'supersede-css-jlg'); ?></p>
+                <p class="description"><?php esc_html_e('Lorsque la préférence "Réduire les animations" est active, l\'aperçu se fige automatiquement pour respecter l\'accessibilité.', 'supersede-css-jlg'); ?></p>
                 <div class="ssc-grid-three">
                     <div><label><?php esc_html_e('Couleur Scanline', 'supersede-css-jlg'); ?></label><input type="color" class="ssc-crt-control" id="scanlineColor" value="#00ff00"></div>
                     <div><label><?php esc_html_e('Opacité Scanline', 'supersede-css-jlg'); ?></label><input type="range" class="ssc-crt-control" id="scanlineOpacity" min="0" max="1" value="0.4" step="0.05"></div>
@@ -71,6 +81,7 @@ if (!defined('ABSPATH')) {
                 <div id="ssc-bg-controls-stars"><label><?php esc_html_e('Couleur', 'supersede-css-jlg'); ?></label><input type="color" id="starColor" value="#FFFFFF"><label><?php esc_html_e('Nombre', 'supersede-css-jlg'); ?></label><input type="range" id="starCount" min="50" max="500" value="200" step="10"></div>
                 <div id="ssc-bg-controls-gradient" style="display:none;"><label><?php esc_html_e('Vitesse', 'supersede-css-jlg'); ?></label><input type="range" id="gradientSpeed" min="2" max="20" value="10" step="1"></div>
                  <pre id="ssc-bg-css" class="ssc-code"></pre>
+                <p class="description"><?php esc_html_e('Les animations générées incluent @media (prefers-reduced-motion: reduce) pour rester statiques chez les personnes sensibles aux mouvements.', 'supersede-css-jlg'); ?></p>
                 <button id="ssc-bg-apply" class="button button-primary"><?php esc_html_e('Appliquer', 'supersede-css-jlg'); ?></button>
             </div>
             <div class="ssc-pane">
