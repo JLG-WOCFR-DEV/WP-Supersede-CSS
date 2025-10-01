@@ -121,43 +121,63 @@
 /*
  * App-Like Experience for Supersede CSS Pages
  */
-body[class*="page_supersede-css-jlg"] {
-    overflow: hidden;
-}
-body[class*="page_supersede-css-jlg"] #wpadminbar,
-body[class*="page_supersede-css-jlg"] #adminmenumain,
-body[class*="page_supersede-css-jlg"] #wpfooter,
-body[class*="page_supersede-css-jlg"] .update-nag,
-body[class*="page_supersede-css-jlg"] .notice,
-body[class*="page_supersede-css-jlg"] #screen-meta-links,
-body[class*="page_supersede-css-jlg"] #screen-meta {
-    display: none !important;
-}
-body[class*="page_supersede-css-jlg"] #wpcontent {
-    margin-left: 0;
-    padding-left: 0;
-}
-body[class*="page_supersede-css-jlg"] #wpbody {
-    height: 100vh;
-    overflow-y: auto;
-    overflow-x: hidden;
-    background-color: var(--ssc-bg);
-}
-body[class*="page_supersede-css-jlg"] #wpbody-content {
-    padding-bottom: 0;
-    height: 100%;
-}
-body[class*="page_supersede-css-jlg"] .ssc-shell {
-    height: 100%;
+body[class*="page_supersede-css-jlg"] .ssc-viewport {
+    position: relative;
     display: flex;
     flex-direction: column;
+    gap: 0;
+    min-height: 100vh;
+    overflow: hidden;
+    background-color: var(--ssc-bg);
+    border-radius: 16px;
+    margin-top: 16px;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+    width: 100%;
+}
+body[class*="page_supersede-css-jlg"] .ssc-shell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: 0 16px 16px;
+}
+body[class*="page_supersede-css-jlg"] .ssc-shell > .ssc-topbar {
+    margin: 16px -16px 0;
+    border-radius: 16px 16px 0 0;
 }
 body[class*="page_supersede-css-jlg"] .ssc-layout {
-    flex-grow: 1;
+    flex: 1;
+    min-height: 0;
     overflow: hidden;
+    margin-top: 16px;
+    align-items: stretch;
 }
-body[class*="page_supersede-css-jlg"] .ssc-main-content {
+body[class*="page_supersede-css-jlg"] .ssc-layout .ssc-main-content {
     overflow-y: auto;
-    height: calc(100vh - 70px);
     padding-right: 16px;
+    min-height: 0;
+}
+@media (max-width: 960px) {
+    body[class*="page_supersede-css-jlg"] .ssc-viewport {
+        margin-top: 12px;
+        border-radius: 12px;
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+    }
+
+    body[class*="page_supersede-css-jlg"] .ssc-shell {
+        padding: 0 12px 12px;
+    }
+
+    body[class*="page_supersede-css-jlg"] .ssc-shell > .ssc-topbar {
+        margin: 12px -12px 0;
+    }
+
+    body[class*="page_supersede-css-jlg"] .ssc-layout {
+        margin-top: 12px;
+    }
+
+    body[class*="page_supersede-css-jlg"] .ssc-layout .ssc-main-content {
+        padding-right: 0;
+    }
 }

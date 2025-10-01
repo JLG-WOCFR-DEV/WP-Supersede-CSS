@@ -311,8 +311,9 @@ class Layout {
             ],
         ];
         ?>
-        <div class="ssc-shell">
-            <header class="ssc-topbar">
+        <div class="ssc-viewport">
+            <div class="ssc-shell">
+                <header class="ssc-topbar">
                 <a href="<?php echo esc_url(admin_url('index.php')); ?>" class="ssc-back-to-admin button" aria-label="Retourner sur le tableau de bord WordPress">
                     <span class="dashicons dashicons-arrow-left-alt" aria-hidden="true"></span>
                     <span class="ssc-topbar-label">WP Admin</span>
@@ -358,6 +359,7 @@ class Layout {
                 <main class="ssc-main-content">
                     <?php echo wp_kses( $page_content, self::allowed_tags() ); ?>
                 </main>
+            </div>
             </div>
         </div>
         <?php
