@@ -10,6 +10,11 @@ final class CssRevisions
     private const MAX_REVISIONS = 20;
 
     /**
+     * @var array<int, array{canonical: string, variants: array<int, string>, conflicts: array<int, array{name: string, value: string}>}>
+     */
+    private static $lastTokenDuplicates = [];
+
+    /**
      * @param array{segments?: array<string, mixed>} $context
      */
     public static function record(string $option, string $css, array $context = []): void
@@ -80,9 +85,9 @@ final class CssRevisions
     /**
      * Applies a stored revision and returns the normalized representation when the identifier exists.
      *
-     * @return array{id: string, option: string, css: string, timestamp: string, author: string, segments?: array<string, string>}|null
+     * @return array{id: string, option: string, css: string, timestamp: string, author: string, segments?: array<string, string>}|null|array{error: string, duplicates: array<int, array{canonical: string, variants: array<int, string>, conflicts: array<int, array{name: string, value: string}>}>, revision: array{id: string, option: string, css: string, timestamp: string, author: string, segments?: array<string, string>}}
      */
-    public static function restore(string $revisionId): ?array
+    public static function restore(string $revisionId)
     {
         $revisionId = sanitize_text_field($revisionId);
         if ($revisionId === '') {
@@ -94,7 +99,15 @@ final class CssRevisions
                 continue;
             }
 
-            self::applyRevision($revision);
+            self::$lastTokenDuplicates = [];
+            $restored = self::applyRevision($revision);
+            if ($restored === false) {
+                return [
+                    'error' => 'tokens_duplicates',
+                    'duplicates' => self::$lastTokenDuplicates,
+                    'revision' => $revision,
+                ];
+            }
 
             return $revision;
         }
@@ -105,18 +118,25 @@ final class CssRevisions
     /**
      * @param array{id: string, option: string, css: string, timestamp: string, author: string, segments?: array<string, string>} $revision
      */
-    private static function applyRevision(array $revision): void
+    private static function applyRevision(array $revision): bool
     {
         $option = $revision['option'];
         $css = $revision['css'];
 
         if ($option === 'ssc_tokens_css') {
-            $tokens = TokenRegistry::convertCssToRegistry($css);
+            $conversion = TokenRegistry::convertCssToRegistryDetailed($css);
+            if ($conversion['duplicates'] !== []) {
+                self::$lastTokenDuplicates = $conversion['duplicates'];
+                return false;
+            }
+
+            $tokens = $conversion['tokens'];
             $existingRegistry = TokenRegistry::getRegistry();
             $tokensWithMetadata = TokenRegistry::mergeMetadata($tokens, $existingRegistry);
             $savedTokens = TokenRegistry::saveRegistry($tokensWithMetadata);
             if ($savedTokens['duplicates'] !== []) {
-                return;
+                self::$lastTokenDuplicates = $savedTokens['duplicates'];
+                return false;
             }
             $css = TokenRegistry::tokensToCss($savedTokens['tokens']);
             update_option('ssc_tokens_css', $css, false);
@@ -146,6 +166,10 @@ final class CssRevisions
         if (function_exists('ssc_invalidate_css_cache')) {
             \ssc_invalidate_css_cache();
         }
+
+        self::$lastTokenDuplicates = [];
+
+        return true;
     }
 
     /**

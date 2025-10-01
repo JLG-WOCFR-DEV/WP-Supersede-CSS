@@ -125,11 +125,37 @@
                 method: 'POST',
                 data: { _wpnonce: SSC.rest.nonce },
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
-            }).done(() => {
-                window.sscToast(translate('restoreSuccess'));
-                setTimeout(() => location.reload(), 800);
-            }).fail(() => {
+            }).done(response => {
+                if (response && response.ok) {
+                    window.sscToast(translate('restoreSuccess'));
+                    setTimeout(() => location.reload(), 800);
+                    return;
+                }
+
                 window.sscToast(translate('restoreError'));
+                btn.prop('disabled', false).text(originalText);
+            }).fail(err => {
+                let message = translate('restoreError');
+                let duplicates = [];
+
+                if (err && err.responseJSON) {
+                    const payload = err.responseJSON;
+                    if (typeof payload.message === 'string' && payload.message.length) {
+                        message = payload.message;
+                    }
+
+                    if (payload.data && Array.isArray(payload.data.duplicates)) {
+                        duplicates = payload.data.duplicates;
+                    }
+                }
+
+                if (duplicates.length) {
+                    console.error('Duplicate tokens detected while restoring a revision:', duplicates);
+                } else {
+                    console.error('Revision restore error:', err);
+                }
+
+                window.sscToast(message);
                 btn.prop('disabled', false).text(originalText);
             });
         });
