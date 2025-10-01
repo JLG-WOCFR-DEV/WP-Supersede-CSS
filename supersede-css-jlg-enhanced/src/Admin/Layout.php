@@ -343,12 +343,17 @@ class Layout {
             <div class="ssc-shell-overlay" hidden></div>
             <div class="ssc-layout">
                 <aside>
-                    <nav class="ssc-sidebar" id="ssc-sidebar">
+                    <nav class="ssc-sidebar" id="ssc-sidebar" aria-label="<?php echo esc_attr__('Navigation Supersede CSS', 'supersede-css-jlg'); ?>">
                     <?php foreach ($menu_items as $group_label => $items): ?>
                         <div class="ssc-sidebar-group">
                             <h4 class="ssc-sidebar-heading"><?php echo esc_html($group_label); ?></h4>
                             <?php foreach ($items as $slug => $label): ?>
-                                <a href="<?php echo esc_url(admin_url('admin.php?page=' . $slug)); ?>" class="<?php echo esc_attr( $current_page_slug === $slug ? 'active' : '' ); ?>">
+                                <?php $is_active = ($current_page_slug === $slug); ?>
+                                <a
+                                    href="<?php echo esc_url(admin_url('admin.php?page=' . $slug)); ?>"
+                                    class="<?php echo esc_attr( $is_active ? 'active' : '' ); ?>"
+                                    <?php if ($is_active): ?>aria-current="page"<?php endif; ?>
+                                >
                                     <?php echo esc_html($label); ?>
                                 </a>
                             <?php endforeach; ?>

@@ -31,7 +31,8 @@ body.ssc-no-scroll{overflow:hidden}
 }
 
 .ssc-sidebar a{display:flex;gap:8px;align-items:center;padding:8px;border-radius:8px;color:var(--ssc-text);text-decoration:none;border:1px solid transparent}
-.ssc-sidebar a.active{background:rgba(165, 180, 252, 0.1);border-color:var(--ssc-border); color: var(--ssc-accent); font-weight: 600;}
+.ssc-sidebar a.active,
+.ssc-sidebar a[aria-current="page"]{background:rgba(165, 180, 252, 0.1);border-color:var(--ssc-border); color: var(--ssc-accent); font-weight: 600;}
 .ssc-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;align-items:flex-start;position:relative}
 .ssc-main-content { padding-left: 16px; }
 
