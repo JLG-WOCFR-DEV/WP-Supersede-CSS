@@ -1,14 +1,37 @@
 (function($) {
     $(document).ready(function() {
-        if (!$('#ssc-health-run').length) return;
+        const healthRunButton = $('#ssc-health-run');
+        if (!healthRunButton.length) return;
+
+        const l10n = window.sscDebugCenterL10n || {};
+        const domain = typeof l10n.domain === 'string' && l10n.domain.length ? l10n.domain : 'supersede-css-jlg';
+        const strings = l10n.strings && typeof l10n.strings === 'object' ? l10n.strings : {};
+        const wpI18n = window.wp && window.wp.i18n ? window.wp.i18n : null;
+        const hasI18n = !!(wpI18n && typeof wpI18n.__ === 'function');
+        const sprintf = hasI18n && typeof wpI18n.sprintf === 'function'
+            ? wpI18n.sprintf
+            : (message, ...args) => {
+                let index = 0;
+                return String(message).replace(/%s/g, () => {
+                    const replacement = args[index];
+                    index += 1;
+                    return typeof replacement === 'undefined' ? '' : String(replacement);
+                });
+            };
+
+        const translate = (key) => {
+            const fallback = Object.prototype.hasOwnProperty.call(strings, key) ? strings[key] : key;
+            return hasI18n ? wpI18n.__(fallback, domain) : fallback;
+        };
+
         const resultPane = $('#ssc-health-json');
 
         // Lancer le Health Check
-        $('#ssc-health-run').on('click', function() {
+        healthRunButton.on('click', function() {
             const btn = $(this);
-            btn.text('Vérification...').prop('disabled', true);
-            resultPane.text('Vérification en cours...');
-            
+            btn.text(translate('healthCheckCheckingLabel')).prop('disabled', true);
+            resultPane.text(translate('healthCheckRunningMessage'));
+
             $.ajax({
                 url: SSC.rest.root + 'health',
                 method: 'GET',
@@ -16,18 +39,18 @@
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
             }).done(response => {
                 resultPane.text(JSON.stringify(response, null, 2));
-                window.sscToast('Health Check terminé.');
+                window.sscToast(translate('healthCheckSuccessMessage'));
             }).fail(err => {
-                resultPane.text('Erreur lors du Health Check. Vérifiez la console du navigateur pour plus de détails.');
+                resultPane.text(translate('healthCheckErrorMessage'));
                 console.error('Health Check Error:', err);
             }).always(() => {
-                btn.text('Lancer Health Check').prop('disabled', false);
+                btn.text(translate('healthCheckRunLabel')).prop('disabled', false);
             });
         });
-        
+
         // Vider le journal d'activité
         $('#ssc-clear-log').on('click', function() {
-            if (!confirm("Voulez-vous vraiment effacer tout le journal d'activité ? Cette action est irréversible.")) return;
+            if (!confirm(translate('confirmClearLog'))) return;
 
             const btn = $(this);
             btn.prop('disabled', true);
@@ -38,22 +61,22 @@
                 data: { _wpnonce: SSC.rest.nonce },
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
             }).done(() => {
-                window.sscToast('Journal effacé ! La page va se recharger.');
+                window.sscToast(translate('clearLogSuccess'));
                 setTimeout(() => location.reload(), 1000);
             }).fail(() => {
-                window.sscToast('Erreur lors de la suppression du journal.');
+                window.sscToast(translate('clearLogError'));
                 btn.prop('disabled', false);
             });
         });
 
         // Réinitialiser tout le CSS
         $('#ssc-reset-all-css').on('click', function() {
-            if (!confirm("ATTENTION : Vous êtes sur le point de supprimer TOUT le CSS généré par Supersede. Cette action est irréversible.\n\nVoulez-vous vraiment continuer ?")) {
+            if (!confirm(translate('confirmResetAllCss'))) {
                 return;
             }
 
             const btn = $(this);
-            btn.text('Réinitialisation...').prop('disabled', true);
+            btn.text(translate('resetAllCssWorking')).prop('disabled', true);
 
             $.ajax({
                 url: SSC.rest.root + 'reset-all-css',
@@ -61,19 +84,19 @@
                 data: { _wpnonce: SSC.rest.nonce },
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
             }).done(() => {
-                window.sscToast('Tout le CSS a été réinitialisé !');
-                btn.text('Réinitialiser tout le CSS').prop('disabled', false);
+                window.sscToast(translate('resetAllCssSuccess'));
+                btn.text(translate('resetAllCssLabel')).prop('disabled', false);
                 // Optionnellement, recharger la page pour voir les changements
                 // location.reload();
             }).fail(() => {
-                window.sscToast('Erreur lors de la réinitialisation.');
-                btn.text('Réinitialiser tout le CSS').prop('disabled', false);
+                window.sscToast(translate('resetAllCssError'));
+                btn.text(translate('resetAllCssLabel')).prop('disabled', false);
             });
         });
 
         $('.ssc-revision-restore').on('click', function() {
             if (typeof SSC === 'undefined' || !SSC.rest || !SSC.rest.root) {
-                window.sscToast('L’API REST est indisponible.');
+                window.sscToast(translate('restUnavailable'));
                 return;
             }
 
@@ -82,20 +105,20 @@
             const optionName = btn.data('option') || '';
 
             if (!revisionId) {
-                window.sscToast('Révision introuvable.');
+                window.sscToast(translate('revisionNotFound'));
                 return;
             }
 
             const confirmationMessage = optionName
-                ? `Restaurer la révision pour « ${optionName} » ?\nCette opération remplacera le CSS actuel.`
-                : "Restaurer cette révision ?\nCette opération remplacera le CSS actuel.";
+                ? sprintf(translate('confirmRestoreRevisionWithOption'), optionName)
+                : translate('confirmRestoreRevision');
 
             if (!confirm(confirmationMessage)) {
                 return;
             }
 
             const originalText = btn.text();
-            btn.prop('disabled', true).text('Restauration…');
+            btn.prop('disabled', true).text(translate('restoreWorking'));
 
             $.ajax({
                 url: SSC.rest.root + 'css-revisions/' + encodeURIComponent(revisionId) + '/restore',
@@ -103,10 +126,10 @@
                 data: { _wpnonce: SSC.rest.nonce },
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
             }).done(() => {
-                window.sscToast('Révision restaurée. Actualisation de la page…');
+                window.sscToast(translate('restoreSuccess'));
                 setTimeout(() => location.reload(), 800);
             }).fail(() => {
-                window.sscToast('Impossible de restaurer cette révision.');
+                window.sscToast(translate('restoreError'));
                 btn.prop('disabled', false).text(originalText);
             });
         });
