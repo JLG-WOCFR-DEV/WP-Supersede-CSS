@@ -16,17 +16,23 @@ if (!defined('ABSPATH')) {
                     <button id="ssc-save-css" class="button button-primary"><?php echo esc_html__('Enregistrer le CSS', 'supersede-css-jlg'); ?></button>
                 </div>
             </div>
-            <div class="ssc-editor-tabs">
-                <div class="ssc-editor-tab active" data-tab="desktop"><?php esc_html_e('🖥️ Desktop', 'supersede-css-jlg'); ?></div>
-                <div class="ssc-editor-tab" data-tab="tablet"><?php esc_html_e('📲 Tablette', 'supersede-css-jlg'); ?></div>
-                <div class="ssc-editor-tab" data-tab="mobile"><?php esc_html_e('📱 Mobile', 'supersede-css-jlg'); ?></div>
-                <div class="ssc-editor-tab" data-tab="tutorial"><?php esc_html_e('💡 Tutoriel @media queries', 'supersede-css-jlg'); ?></div>
+            <div class="ssc-editor-tabs" role="tablist" aria-label="<?php echo esc_attr__('Modes d\'édition CSS', 'supersede-css-jlg'); ?>">
+                <button type="button" class="ssc-editor-tab active" id="ssc-editor-tab-desktop" role="tab" aria-selected="true" aria-controls="ssc-editor-panel-desktop" data-tab="desktop"><?php esc_html_e('🖥️ Desktop', 'supersede-css-jlg'); ?></button>
+                <button type="button" class="ssc-editor-tab" id="ssc-editor-tab-tablet" role="tab" aria-selected="false" aria-controls="ssc-editor-panel-tablet" data-tab="tablet"><?php esc_html_e('📲 Tablette', 'supersede-css-jlg'); ?></button>
+                <button type="button" class="ssc-editor-tab" id="ssc-editor-tab-mobile" role="tab" aria-selected="false" aria-controls="ssc-editor-panel-mobile" data-tab="mobile"><?php esc_html_e('📱 Mobile', 'supersede-css-jlg'); ?></button>
+                <button type="button" class="ssc-editor-tab" id="ssc-editor-tab-tutorial" role="tab" aria-selected="false" aria-controls="ssc-editor-panel-tutorial" data-tab="tutorial"><?php esc_html_e('💡 Tutoriel @media queries', 'supersede-css-jlg'); ?></button>
             </div>
             <div class="ssc-editor-container">
-                <div id="ssc-editor-panel-desktop" class="ssc-editor-panel active"><textarea id="ssc-css-editor-desktop"><?php echo esc_textarea($css_desktop); ?></textarea></div>
-                <div id="ssc-editor-panel-tablet" class="ssc-editor-panel"><textarea id="ssc-css-editor-tablet"><?php echo esc_textarea($css_tablet); ?></textarea></div>
-                <div id="ssc-editor-panel-mobile" class="ssc-editor-panel"><textarea id="ssc-css-editor-mobile"><?php echo esc_textarea($css_mobile); ?></textarea></div>
-                <div id="ssc-editor-panel-tutorial" class="ssc-editor-panel ssc-tutorial-content">
+                <div id="ssc-editor-panel-desktop" class="ssc-editor-panel active" role="tabpanel" aria-labelledby="ssc-editor-tab-desktop" tabindex="0">
+                    <textarea id="ssc-css-editor-desktop"><?php echo esc_textarea($css_desktop); ?></textarea>
+                </div>
+                <div id="ssc-editor-panel-tablet" class="ssc-editor-panel" role="tabpanel" aria-labelledby="ssc-editor-tab-tablet" tabindex="0" hidden>
+                    <textarea id="ssc-css-editor-tablet"><?php echo esc_textarea($css_tablet); ?></textarea>
+                </div>
+                <div id="ssc-editor-panel-mobile" class="ssc-editor-panel" role="tabpanel" aria-labelledby="ssc-editor-tab-mobile" tabindex="0" hidden>
+                    <textarea id="ssc-css-editor-mobile"><?php echo esc_textarea($css_mobile); ?></textarea>
+                </div>
+                <div id="ssc-editor-panel-tutorial" class="ssc-editor-panel ssc-tutorial-content" role="tabpanel" aria-labelledby="ssc-editor-tab-tutorial" tabindex="0" hidden>
                     <h3><?php esc_html_e('Le Principe : "Desktop First" Simplifié', 'supersede-css-jlg'); ?></h3>
                     <p><?php esc_html_e('Pensez à votre design comme à la construction d\'une maison :', 'supersede-css-jlg'); ?></p>
                     <ol>

@@ -7,13 +7,23 @@
 .ssc-ve-tab {
     padding: 10px 16px;
     cursor: pointer;
+    border: none;
     border-bottom: 2px solid transparent;
+    background: none;
+    color: inherit;
+    font: inherit;
+    margin: 0;
 }
 
 .ssc-ve-tab.active {
     color: var(--ssc-accent);
     border-bottom-color: var(--ssc-accent);
     font-weight: 600;
+}
+
+.ssc-ve-tab:focus-visible {
+    outline: 2px solid var(--ssc-accent);
+    outline-offset: 2px;
 }
 
 .ssc-ve-panel {
