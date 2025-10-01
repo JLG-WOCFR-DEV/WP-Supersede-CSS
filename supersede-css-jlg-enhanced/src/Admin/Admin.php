@@ -277,7 +277,12 @@ final class Admin
             'rest' => [
                 'root'  => esc_url_raw(rest_url('ssc/v1/')),
                 'nonce' => wp_create_nonce('wp_rest')
-            ]
+            ],
+            'i18n' => [
+                'commandPaletteTitle' => esc_attr__('Supersede CSS command palette', 'supersede-css-jlg'),
+                'commandPaletteSearchPlaceholder' => esc_attr__('Navigate or run an action…', 'supersede-css-jlg'),
+                'commandPaletteSearchLabel' => esc_html__('Command palette search', 'supersede-css-jlg'),
+            ],
         ]);
     }
 }
