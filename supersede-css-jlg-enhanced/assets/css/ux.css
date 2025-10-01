@@ -70,6 +70,6 @@ body.ssc-no-scroll{overflow:hidden}
 #ssc-cmdp ul{max-height:50vh;overflow:auto;margin:0;padding:0;list-style:none}
 #ssc-cmdp li a{display:flex;padding:10px;text-decoration:none;color:var(--ssc-text);border-bottom:1px solid var(--ssc-border)}
 #ssc-cmdp li a:hover{background:rgba(165, 180, 252, 0.1)}
-#ssc-toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:99999}
-.ssc-toast{background:var(--ssc-card);border:1px solid var(--ssc-border);border-radius:10px;padding:10px 12px;box-shadow:0 10px 20px rgba(0,0,0,.12); opacity: 0; transform: translateY(10px); animation: ssc-toast-in 0.3s ease forwards;}
+#ssc-toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:99999;pointer-events:none}
+.ssc-toast{background:var(--ssc-card);border:1px solid var(--ssc-border);border-radius:10px;padding:10px 12px;box-shadow:0 10px 20px rgba(0,0,0,.12); opacity: 0; transform: translateY(10px); animation: ssc-toast-in 0.3s ease forwards;pointer-events:auto}
 @keyframes ssc-toast-in { to { opacity: 1; transform: translateY(0); } }

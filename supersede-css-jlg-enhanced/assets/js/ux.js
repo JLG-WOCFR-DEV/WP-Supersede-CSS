@@ -1,10 +1,44 @@
 (function($) {
     // --- Toast Notifications ---
-    window.sscToast = function(message) {
-        const toast = $('<div class="ssc-toast"></div>').text(message);
-        const container = $('#ssc-toasts').length ? $('#ssc-toasts') : $('<div id="ssc-toasts"></div>').appendTo('body');
+    const TOAST_DEFAULT_TIMEOUT = 3000;
+    const TOAST_DEFAULT_POLITENESS = 'polite';
+
+    const getToastContainer = (politeness = TOAST_DEFAULT_POLITENESS) => {
+        let container = $('#ssc-toasts');
+
+        if (!container.length) {
+            container = $('<div id="ssc-toasts" role="status" aria-live="polite" aria-atomic="false"></div>');
+            container.appendTo('body');
+        }
+
+        const normalizedPoliteness = politeness === 'assertive' ? 'assertive' : TOAST_DEFAULT_POLITENESS;
+        if (container.attr('aria-live') !== normalizedPoliteness) {
+            container.attr('aria-live', normalizedPoliteness);
+        }
+
+        return container;
+    };
+
+    window.sscToast = function(message, {
+        politeness = TOAST_DEFAULT_POLITENESS,
+        role,
+        timeout = TOAST_DEFAULT_TIMEOUT
+    } = {}) {
+        const container = getToastContainer(politeness);
+        const toastRole = role || (politeness === 'assertive' ? 'alert' : 'status');
+        const toast = $('<div class="ssc-toast"></div>')
+            .attr('role', toastRole)
+            .text(message);
+
         container.append(toast);
-        setTimeout(() => toast.remove(), 3000);
+
+        setTimeout(() => {
+            toast.remove();
+
+            if (!container.children().length) {
+                container.attr('aria-live', TOAST_DEFAULT_POLITENESS);
+            }
+        }, timeout);
     };
 
     // --- Plugin Asset URL Helper ---
