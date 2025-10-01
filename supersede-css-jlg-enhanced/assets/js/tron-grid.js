@@ -90,6 +90,7 @@
         
         $('#ssc-tron-apply').on('click', () => {
             const css = $('#ssc-tron-css').text();
+            const errorMessage = __('Échec de l\'enregistrement de la grille animée.', 'supersede-css-jlg');
             $.ajax({
                 url: SSC.rest.root + 'save-css',
                 method: 'POST',
@@ -97,9 +98,9 @@
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
             }).done(() => window.sscToast('Grille animée appliquée !'))
                 .fail((jqXHR, textStatus, errorThrown) => {
-                    console.error('Échec de l\'enregistrement de la grille animée.', errorThrown || jqXHR);
+                    console.error(errorMessage, { jqXHR, textStatus, errorThrown });
                     window.sscToast(
-                        __('Échec de l\'enregistrement de la grille animée.', 'supersede-css-jlg'),
+                        errorMessage,
                         { politeness: 'assertive' }
                     );
                 });

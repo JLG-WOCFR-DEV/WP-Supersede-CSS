@@ -168,13 +168,14 @@
         const $applyButton = $('#ssc-bg-apply');
         $applyButton.on('click', () => {
              const css = $('#ssc-bg-css').text();
+             const errorMessage = __('Échec de l\'enregistrement du fond animé.', 'supersede-css-jlg');
              $applyButton.prop('disabled', true).attr('aria-disabled', 'true');
              $.ajax({ url: SSC.rest.root + 'save-css', method: 'POST', data: { css, append: true, _wpnonce: SSC.rest.nonce }, beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
              }).done(() => window.sscToast('Fond animé appliqué !'))
              .fail((jqXHR, textStatus, errorThrown) => {
-                 console.error('Échec de l\'enregistrement du fond animé.', errorThrown || jqXHR);
+                 console.error(errorMessage, { jqXHR, textStatus, errorThrown });
                  window.sscToast(
-                     __('Échec de l\'enregistrement du fond animé.', 'supersede-css-jlg'),
+                     errorMessage,
                      { politeness: 'assertive' }
                  );
              })
