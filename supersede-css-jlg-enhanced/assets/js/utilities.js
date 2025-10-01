@@ -135,6 +135,10 @@
         const pickerToggle = $('#ssc-element-picker-toggle');
         const previewFrame = $('#ssc-preview-frame');
         const urlField = $('#ssc-preview-url');
+        const previewToggleButton = $('#ssc-preview-toggle');
+        const previewColumn = $('#ssc-preview-column');
+        const previewLayoutQuery = typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 1024px)') : null;
+        let previewVisible = true;
         let lastHovered;
         let lastValidPreviewUrl = previewFrame.attr('src') || '';
 
@@ -240,5 +244,37 @@
              const widths = { desktop: '100%', tablet: '768px', mobile: '375px' };
              $('#ssc-preview-frame').css('max-width', widths[$(this).data('vp')]);
         });
+
+        if (previewToggleButton.length && previewColumn.length && previewLayoutQuery) {
+            const showLabel = previewToggleButton.data('show') || __('Afficher l\'aperçu', 'supersede-css-jlg');
+            const hideLabel = previewToggleButton.data('hide') || __('Masquer l\'aperçu', 'supersede-css-jlg');
+
+            const setPreviewVisibility = (visible) => {
+                previewVisible = visible;
+                previewColumn.toggleClass('is-hidden', !visible);
+                previewToggleButton.text(visible ? hideLabel : showLabel);
+                previewToggleButton.attr('aria-expanded', visible ? 'true' : 'false');
+            };
+
+            const handleLayoutChange = (event) => {
+                if (event.matches) {
+                    setPreviewVisibility(false);
+                } else {
+                    setPreviewVisibility(true);
+                }
+            };
+
+            previewToggleButton.on('click', function() {
+                if (!previewLayoutQuery.matches) return;
+                setPreviewVisibility(!previewVisible);
+            });
+
+            handleLayoutChange(previewLayoutQuery);
+            if (typeof previewLayoutQuery.addEventListener === 'function') {
+                previewLayoutQuery.addEventListener('change', handleLayoutChange);
+            } else if (typeof previewLayoutQuery.addListener === 'function') {
+                previewLayoutQuery.addListener(handleLayoutChange);
+            }
+        }
     });
 })(jQuery);
