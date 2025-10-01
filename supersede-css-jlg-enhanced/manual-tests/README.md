@@ -2,9 +2,12 @@
 
 Ce dossier regroupe les scénarios manuels (fichiers `*.md`) à rejouer avant une publication majeure. Les scénarios peuvent être exécutés dans l'ordre de votre choix en fonction des changements apportés.
 
-## Test UI automatisé
+## Tests UI automatisés
 
-Un test Playwright couvre désormais le gestionnaire de tokens (ajout, édition, suppression et mise à jour du CSS d'aperçu).
+Deux scénarios Playwright vérifient l'interface d'administration :
+
+- `tests/ui/tokens.spec.js` couvre le gestionnaire de tokens (ajout, édition, suppression et mise à jour du CSS d'aperçu).
+- `tests/ui/shell-accessibility.spec.js` vérifie l'accessibilité de l'enveloppe Supersede CSS (menu mobile et palette de commandes).
 
 1. Installer les dépendances JS (à effectuer une seule fois) :
    ```bash
@@ -14,12 +17,17 @@ Un test Playwright couvre désormais le gestionnaire de tokens (ajout, édition,
    # Selon votre distribution, installez aussi les dépendances système :
    npx playwright install-deps
    ```
-2. Lancer le test UI :
+2. Lancer la suite complète :
    ```bash
    npm run test:ui
    ```
 
-Le test s'exécute de manière isolée grâce au moquage des appels REST. Aucun site WordPress n'est requis.
+   Pour exécuter uniquement le scénario d'accessibilité du shell :
+   ```bash
+   npm run test:ui:shell
+   ```
+
+Ces tests s'exécutent de manière isolée grâce au moquage des appels REST. Aucun site WordPress n'est requis.
 
 ## Tests manuels disponibles
 
