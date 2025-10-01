@@ -56,7 +56,10 @@ if (!defined('ABSPATH')) {
                 </div>
             </div>
         </div>
-        <div class="ssc-preview-column">
+        <button type="button" id="ssc-preview-toggle" class="button ssc-preview-toggle" data-show="<?php echo esc_attr__('Afficher l\'aperçu', 'supersede-css-jlg'); ?>" data-hide="<?php echo esc_attr__('Masquer l\'aperçu', 'supersede-css-jlg'); ?>" aria-expanded="false" aria-controls="ssc-preview-column">
+            <?php echo esc_html__('Afficher l\'aperçu', 'supersede-css-jlg'); ?>
+        </button>
+        <div class="ssc-preview-column" id="ssc-preview-column">
             <div class="ssc-preview-header">
                 <div class="ssc-url-bar">
                     <input type="url" id="ssc-preview-url" value="<?php echo esc_url($preview_url); ?>">

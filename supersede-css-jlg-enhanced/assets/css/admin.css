@@ -57,6 +57,7 @@
 
 /* Utilities Page */
 .ssc-utilities-wrap .ssc-editor-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; height: calc(100vh - 250px); }
+.ssc-preview-toggle { display: none; }
 .ssc-editor-column, .ssc-preview-column { display: flex; flex-direction: column; }
 .ssc-editor-header, .ssc-preview-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid var(--ssc-border); margin-bottom: 8px; }
 .ssc-editor-container, .ssc-preview-frame-container { flex-grow: 1; position: relative; }
@@ -64,6 +65,53 @@
 .ssc-editor-container .CodeMirror { position: absolute; inset: 0; height: 100% !important; }
 .ssc-preview-frame-container iframe { width: 100%; height: 100%; border: 1px solid var(--ssc-border); background: #fff; border-radius: 8px; }
 .ssc-url-bar { display: flex; gap: 8px; flex-grow: 1; } .ssc-url-bar input { width: 100%; }
+
+@media (max-width: 1024px) {
+    .ssc-utilities-wrap .ssc-editor-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto;
+        height: auto;
+    }
+
+    .ssc-preview-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        margin-top: 8px;
+    }
+
+    .ssc-editor-column {
+        order: 1;
+    }
+
+    .ssc-preview-column {
+        order: 2;
+        margin-top: 8px;
+    }
+
+    .ssc-preview-column.is-hidden {
+        display: none;
+    }
+
+    .ssc-preview-frame-container {
+        min-height: 400px;
+    }
+
+    .ssc-editor-container {
+        min-height: 320px;
+    }
+}
+
+@media (max-width: 782px) {
+    .ssc-preview-frame-container {
+        min-height: 320px;
+    }
+
+    .ssc-editor-container {
+        min-height: 280px;
+    }
+}
 
 /* Visual Editors */
 .ssc-kv-builder .kv-row { display: flex; gap: 8px; margin-bottom: 8px; } .ssc-kv-builder .kv-row input { flex: 1; }
