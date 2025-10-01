@@ -1,4 +1,11 @@
 (function($) {
+    const fallbackI18n = {
+        __: (text) => text,
+    };
+
+    const hasI18n = typeof window !== 'undefined' && window.wp && window.wp.i18n;
+    const { __ } = hasI18n ? window.wp.i18n : fallbackI18n;
+
     $(document).ready(function() {
         if (!$('.ssc-ve-tabs').length) return;
 
@@ -158,10 +165,22 @@
 
         // Attacher les écouteurs d'événements
         $('#ssc-bg-type, #starColor, #starCount, #gradientSpeed').on('input change', generateBackgroundCSS);
-        $('#ssc-bg-apply').on('click', () => {
+        const $applyButton = $('#ssc-bg-apply');
+        $applyButton.on('click', () => {
              const css = $('#ssc-bg-css').text();
+             $applyButton.prop('disabled', true).attr('aria-disabled', 'true');
              $.ajax({ url: SSC.rest.root + 'save-css', method: 'POST', data: { css, append: true, _wpnonce: SSC.rest.nonce }, beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
-             }).done(() => window.sscToast('Fond animé appliqué !'));
+             }).done(() => window.sscToast('Fond animé appliqué !'))
+             .fail((jqXHR, textStatus, errorThrown) => {
+                 console.error('Échec de l\'enregistrement du fond animé.', errorThrown || jqXHR);
+                 window.sscToast(
+                     __('Échec de l\'enregistrement du fond animé.', 'supersede-css-jlg'),
+                     { politeness: 'assertive' }
+                 );
+             })
+             .always(() => {
+                 $applyButton.prop('disabled', false).removeAttr('aria-disabled');
+             });
         });
         
         // Appel initial pour afficher l'aperçu par défaut
