@@ -21,6 +21,7 @@ Objectif : vérifier que le flux « Exporter → Importer » permet de restau
 4. **Importer le fichier exporté**
    1. Toujours dans l’onglet « Import / Export », sélectionner le fichier JSON précédemment exporté.
    2. Cliquer sur **Importer** et s’assurer que le toast « Configuration importée ! » et le message récapitulatif apparaissent.
+   3. Ouvrir les outils de développement et vérifier que le conteneur `#ssc-toasts` reste présent avec `role="status"` et l’attribut `aria-live` correspondant, et que chaque toast ajouté possède `role="alert"` (ou un rôle équivalent selon la criticité).
 5. **Valider la restauration**
    1. Revenir sur l’éditeur principal et vérifier que le CSS, les presets et les autres réglages sont de nouveau présents.
    2. En cas d’échec, relever le message affiché dans `#ssc-import-msg` ainsi que la réponse REST (onglet Réseau du navigateur) pour faciliter le diagnostic.
