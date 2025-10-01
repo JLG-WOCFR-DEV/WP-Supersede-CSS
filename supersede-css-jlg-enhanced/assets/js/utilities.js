@@ -178,11 +178,55 @@
             }
         });
 
+        const showToast = (message) => {
+            if (typeof window !== 'undefined' && typeof window.sscToast === 'function') {
+                window.sscToast(message);
+            } else if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+                window.alert(message);
+            } else {
+                console.log(message); // eslint-disable-line no-console
+            }
+        };
+
+        const extractApiMessage = (payload, fallbackMessage) => {
+            if (!payload) {
+                return fallbackMessage;
+            }
+
+            if (typeof payload === 'string') {
+                return payload;
+            }
+
+            if (payload.message && typeof payload.message === 'string') {
+                return payload.message;
+            }
+
+            if (payload.data) {
+                if (typeof payload.data === 'string') {
+                    return payload.data;
+                }
+
+                if (payload.data.message && typeof payload.data.message === 'string') {
+                    return payload.data.message;
+                }
+            }
+
+            return fallbackMessage;
+        };
+
         $('#ssc-save-css').on('click', function() {
+            const $button = $(this);
+            if ($button.prop('disabled')) {
+                return;
+            }
+
             const desktopCss = getEditorValue('desktop');
             const tabletCss = getEditorValue('tablet');
             const mobileCss = getEditorValue('mobile');
             const fullCss = getFullCss();
+            const defaultSuccessMessage = __('CSS enregistré !', 'supersede-css-jlg');
+            const defaultErrorMessage = __('Impossible d\'enregistrer le CSS. Vérifiez votre connexion et réessayez.', 'supersede-css-jlg');
+            $button.prop('disabled', true);
             $.ajax({
                 url: SSC.rest.root + 'save-css', method: 'POST',
                 data: {
@@ -193,8 +237,20 @@
                     option_name: 'ssc_active_css',
                     _wpnonce: SSC.rest.nonce
                 },
-                beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
-            }).done(() => window.sscToast(__('CSS enregistré !', 'supersede-css-jlg')));
+                beforeSend: (xhr) => {
+                    xhr.setRequestHeader('X-WP-Nonce', SSC.rest.nonce);
+                }
+            }).done((response) => {
+                const message = extractApiMessage(response, defaultSuccessMessage);
+                showToast(message);
+            }).fail((jqXHR, textStatus, errorThrown) => {
+                const responsePayload = jqXHR && jqXHR.responseJSON ? jqXHR.responseJSON : null;
+                const networkMessage = textStatus === 'error' && !responsePayload && errorThrown ? errorThrown : null;
+                const message = extractApiMessage(responsePayload || networkMessage, defaultErrorMessage);
+                showToast(message);
+            }).always(() => {
+                $button.prop('disabled', false);
+            });
         });
 
         const pickerToggle = $('#ssc-element-picker-toggle');
@@ -208,11 +264,7 @@
         let lastValidPreviewUrl = previewFrame.attr('src') || '';
 
         function notifyInvalidUrl(message) {
-            if (typeof window.sscToast === 'function') {
-                window.sscToast(message);
-            } else {
-                alert(message);
-            }
+            showToast(message);
         }
 
         pickerToggle.on('click', function() {
