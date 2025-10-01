@@ -199,8 +199,8 @@
         // --- Command Palette (⌘K) ---
         const cmdkButton = $('#ssc-cmdk');
         const cmdkPanelHtml = `
-            <div id="ssc-cmdp">
-                <div class="panel">
+            <div id="ssc-cmdp" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Palette de commandes Supersede CSS" tabindex="-1">
+                <div class="panel" role="document">
                     <input type="text" id="ssc-cmdp-search" placeholder="Naviguer ou lancer une action..." style="width: 100%; padding: 12px; border: none; border-bottom: 1px solid var(--ssc-border); font-size: 16px;">
                     <ul id="ssc-cmdp-results"></ul>
                 </div>
@@ -210,7 +210,96 @@
         const cmdp = $('#ssc-cmdp');
         const searchInput = $('#ssc-cmdp-search');
         const resultsList = $('#ssc-cmdp-results');
+        const backgroundElementsSelector = 'body > *:not(#ssc-cmdp)';
         let commands = [];
+        let previouslyFocusedCommandElement = null;
+        let paletteFocusableElements = $();
+        let isCommandPaletteOpen = false;
+
+        const updatePaletteFocusableElements = () => {
+            const focusable = cmdp.find(focusableSelectors).filter(':visible');
+            paletteFocusableElements = focusable.length ? focusable : cmdp;
+        };
+
+        const setBackgroundTreeState = (hidden) => {
+            $(backgroundElementsSelector).each(function() {
+                const $element = $(this);
+
+                if (hidden) {
+                    if (typeof $element.data('sscCmdpOriginalAriaHidden') === 'undefined') {
+                        const originalAriaHidden = $element.attr('aria-hidden');
+                        $element.data('sscCmdpOriginalAriaHidden', typeof originalAriaHidden === 'undefined' ? null : originalAriaHidden);
+                    }
+
+                    if (typeof $element.data('sscCmdpOriginalInert') === 'undefined') {
+                        $element.data('sscCmdpOriginalInert', this.hasAttribute('inert'));
+                    }
+
+                    $element.attr('aria-hidden', 'true');
+                    this.setAttribute('inert', '');
+                } else {
+                    if (typeof $element.data('sscCmdpOriginalAriaHidden') !== 'undefined') {
+                        const originalAriaHidden = $element.data('sscCmdpOriginalAriaHidden');
+                        if (originalAriaHidden === null) {
+                            $element.removeAttr('aria-hidden');
+                        } else {
+                            $element.attr('aria-hidden', originalAriaHidden);
+                        }
+                        $element.removeData('sscCmdpOriginalAriaHidden');
+                    }
+
+                    if (typeof $element.data('sscCmdpOriginalInert') !== 'undefined') {
+                        if ($element.data('sscCmdpOriginalInert')) {
+                            this.setAttribute('inert', '');
+                        } else {
+                            this.removeAttribute('inert');
+                        }
+                        $element.removeData('sscCmdpOriginalInert');
+                    }
+                }
+            });
+        };
+
+        const openCommandPalette = () => {
+            if (isCommandPaletteOpen) {
+                searchInput.trigger('focus');
+                return;
+            }
+
+            previouslyFocusedCommandElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+            isCommandPaletteOpen = true;
+            cmdp.addClass('active');
+            cmdp.attr('aria-hidden', 'false');
+            cmdkButton.attr('aria-expanded', 'true');
+            setBackgroundTreeState(true);
+            renderResults();
+            searchInput.val('').trigger('focus');
+            updatePaletteFocusableElements();
+        };
+
+        const closeCommandPalette = () => {
+            if (!isCommandPaletteOpen) {
+                return;
+            }
+
+            isCommandPaletteOpen = false;
+            cmdp.removeClass('active');
+            cmdp.attr('aria-hidden', 'true');
+            cmdkButton.attr('aria-expanded', 'false');
+            setBackgroundTreeState(false);
+            paletteFocusableElements = $();
+            if (cmdkButton.length) {
+                cmdkButton.trigger('focus');
+            } else if (previouslyFocusedCommandElement) {
+                $(previouslyFocusedCommandElement).trigger('focus');
+            }
+            previouslyFocusedCommandElement = null;
+        };
+
+        cmdkButton.attr({
+            'aria-haspopup': 'dialog',
+            'aria-expanded': 'false'
+        });
 
         // Collect navigation links
         $('.ssc-sidebar a').each(function() {
@@ -243,47 +332,73 @@
                 const link = $(`<a href="#">${c.name}</a>`);
                 link.on('click', (e) => {
                     e.preventDefault();
+                    closeCommandPalette();
                     if (c.type === 'link') {
                         window.location.href = c.handler;
                     } else {
                         c.handler();
                     }
-                    cmdp.removeClass('active');
                 });
                 resultsList.append($('<li></li>').append(link));
             });
+            updatePaletteFocusableElements();
         }
 
         cmdkButton.on('click', () => {
-            cmdp.addClass('active');
-            renderResults();
-            searchInput.val('').focus();
+            openCommandPalette();
         });
 
         cmdp.on('click', function(e) {
             if ($(e.target).is(cmdp)) {
-                cmdp.removeClass('active');
+                closeCommandPalette();
             }
         });
-        
+
         searchInput.on('input', () => renderResults(searchInput.val()));
 
         $(document).on('keydown', function(e) {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+            const key = typeof e.key === 'string' ? e.key.toLowerCase() : e.key;
+
+            if ((e.metaKey || e.ctrlKey) && key === 'k') {
                 e.preventDefault();
-                cmdkButton.click();
+                openCommandPalette();
             }
 
-            if (e.key === 'Escape') {
-                if (cmdp.hasClass('active')) {
-                    cmdp.removeClass('active');
+            if (key === 'escape') {
+                if (isCommandPaletteOpen) {
+                    e.preventDefault();
+                    closeCommandPalette();
                 }
                 if (shell.hasClass('ssc-shell--menu-open')) {
                     closeMobileMenu();
                 }
             }
 
-            if (shell.hasClass('ssc-shell--menu-open') && e.key === 'Tab') {
+            if (isCommandPaletteOpen && key === 'tab') {
+                const focusable = paletteFocusableElements;
+                const elements = focusable.toArray();
+
+                if (!elements.length) {
+                    e.preventDefault();
+                    cmdp.trigger('focus');
+                    return;
+                }
+
+                const first = elements[0];
+                const last = elements[elements.length - 1];
+                const activeElement = document.activeElement;
+
+                if (!e.shiftKey && activeElement === last) {
+                    e.preventDefault();
+                    $(first).trigger('focus');
+                } else if (e.shiftKey && activeElement === first) {
+                    e.preventDefault();
+                    $(last).trigger('focus');
+                }
+                return;
+            }
+
+            if (shell.hasClass('ssc-shell--menu-open') && key === 'tab') {
                 const focusable = sidebar.find(focusableSelectors).filter(':visible');
                 if (!focusable.length) {
                     return;
@@ -304,6 +419,15 @@
         });
 
         $(document).on('focusin', function(e) {
+            if (isCommandPaletteOpen && $(e.target).closest('#ssc-cmdp').length === 0) {
+                if (paletteFocusableElements.length) {
+                    $(paletteFocusableElements.get(0)).trigger('focus');
+                } else {
+                    cmdp.trigger('focus');
+                }
+                return;
+            }
+
             if (!shell.hasClass('ssc-shell--menu-open') || !isMobileViewport()) {
                 return;
             }
