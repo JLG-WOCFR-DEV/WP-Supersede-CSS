@@ -19,7 +19,9 @@ if (!defined('ABSPATH')) {
         <div class="ssc-pane" style="flex: 1.5;">
             <h3><?php esc_html_e('Quick Apply', 'supersede-css-jlg'); ?></h3>
             <div class="ssc-actions">
+                <label class="screen-reader-text" for="ssc-qa-search"><?php esc_html_e('Rechercher un preset', 'supersede-css-jlg'); ?></label>
                 <input type="search" id="ssc-qa-search" class="regular-text" placeholder="<?php echo esc_attr__('Rechercher...', 'supersede-css-jlg'); ?>">
+                <label class="screen-reader-text" for="ssc-qa-select"><?php esc_html_e('Sélectionner un preset', 'supersede-css-jlg'); ?></label>
                 <select id="ssc-qa-select" class="regular-text"></select>
                 <button id="ssc-qa-apply" class="button button-primary"><?php esc_html_e('Appliquer', 'supersede-css-jlg'); ?></button>
             </div>
