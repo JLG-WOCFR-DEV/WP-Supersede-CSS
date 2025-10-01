@@ -6,13 +6,13 @@ if (!defined('ABSPATH')) {
 <div class="ssc-app ssc-fullwidth">
     <h2><?php esc_html_e('🎬 Générateur d\'Effets Visuels', 'supersede-css-jlg'); ?></h2>
     <p><?php esc_html_e('Une collection d\'effets visuels avancés pour animer vos fonds, images et conteneurs.', 'supersede-css-jlg'); ?></p>
-    <div class="ssc-ve-tabs">
-        <div class="ssc-ve-tab active" data-tab="backgrounds"><?php esc_html_e('🌌 Fonds Animés', 'supersede-css-jlg'); ?></div>
-        <div class="ssc-ve-tab" data-tab="ecg"><?php esc_html_e('❤️ ECG / Battement de Cœur', 'supersede-css-jlg'); ?></div>
-        <div class="ssc-ve-tab" data-tab="crt"><?php esc_html_e('📺 Effet CRT (Scanline)', 'supersede-css-jlg'); ?></div>
+    <div class="ssc-ve-tabs" role="tablist" aria-label="<?php echo esc_attr__('Types d\'effets visuels', 'supersede-css-jlg'); ?>">
+        <button type="button" class="ssc-ve-tab active" id="ssc-ve-tab-backgrounds" role="tab" aria-selected="true" aria-controls="ssc-ve-panel-backgrounds" data-tab="backgrounds"><?php esc_html_e('🌌 Fonds Animés', 'supersede-css-jlg'); ?></button>
+        <button type="button" class="ssc-ve-tab" id="ssc-ve-tab-ecg" role="tab" aria-selected="false" aria-controls="ssc-ve-panel-ecg" data-tab="ecg"><?php esc_html_e('❤️ ECG / Battement de Cœur', 'supersede-css-jlg'); ?></button>
+        <button type="button" class="ssc-ve-tab" id="ssc-ve-tab-crt" role="tab" aria-selected="false" aria-controls="ssc-ve-panel-crt" data-tab="crt"><?php esc_html_e('📺 Effet CRT (Scanline)', 'supersede-css-jlg'); ?></button>
     </div>
 
-    <div id="ssc-ve-panel-crt" class="ssc-ve-panel">
+    <div id="ssc-ve-panel-crt" class="ssc-ve-panel" role="tabpanel" aria-labelledby="ssc-ve-tab-crt" tabindex="0" hidden>
         <div class="ssc-two" style="align-items: flex-start;">
             <div class="ssc-pane">
                 <h3><?php esc_html_e('Paramètres de l\'effet CRT', 'supersede-css-jlg'); ?></h3>
@@ -32,7 +32,7 @@ if (!defined('ABSPATH')) {
         </div>
     </div>
 
-    <div id="ssc-ve-panel-ecg" class="ssc-ve-panel">
+    <div id="ssc-ve-panel-ecg" class="ssc-ve-panel" role="tabpanel" aria-labelledby="ssc-ve-tab-ecg" tabindex="0" hidden>
          <div class="ssc-two" style="align-items: flex-start;">
             <div class="ssc-pane">
                 <h3><?php esc_html_e('Paramètres de l\'ECG', 'supersede-css-jlg'); ?></h3>
@@ -63,7 +63,7 @@ if (!defined('ABSPATH')) {
         </div>
     </div>
 
-    <div id="ssc-ve-panel-backgrounds" class="ssc-ve-panel">
+    <div id="ssc-ve-panel-backgrounds" class="ssc-ve-panel active" role="tabpanel" aria-labelledby="ssc-ve-tab-backgrounds" tabindex="0">
          <div class="ssc-two" style="align-items: flex-start;">
             <div class="ssc-pane">
                 <h3><?php esc_html_e('Paramètres du Fond', 'supersede-css-jlg'); ?></h3>

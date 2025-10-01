@@ -101,15 +101,80 @@
 
         initCodeMirrors();
 
-        $('.ssc-editor-tab').on('click', function() {
-            const tab = $(this).data('tab');
-            $('.ssc-editor-tab, .ssc-editor-panel').removeClass('active');
-            $(this).addClass('active');
-            $(`#ssc-editor-panel-${tab}`).addClass('active');
+        const $tabList = $('.ssc-editor-tabs');
+        const $tabs = $tabList.find('.ssc-editor-tab');
+        const $panels = $('.ssc-editor-panel');
 
-            // Rafraîchir l'éditeur si c'est un onglet d'édition
+        function setActiveTab($newTab, focus = false) {
+            if (!$newTab.length) return;
+            const tab = $newTab.data('tab');
+            const panelId = $newTab.attr('aria-controls');
+            const $panel = panelId ? $(`#${panelId}`) : $();
+
+            $tabs.each(function() {
+                const $tab = $(this);
+                $tab.removeClass('active').attr({
+                    'aria-selected': 'false',
+                    tabindex: '-1'
+                });
+            });
+
+            $panels.each(function() {
+                $(this).removeClass('active').attr('hidden', true);
+            });
+
+            $newTab.addClass('active').attr({
+                'aria-selected': 'true',
+                tabindex: '0'
+            });
+
+            if (focus) {
+                $newTab.trigger('focus');
+            }
+
+            if ($panel.length) {
+                $panel.addClass('active').removeAttr('hidden');
+            }
+
             if (editors[tab]) {
                 editors[tab].refresh();
+            }
+        }
+
+        $tabs.attr('tabindex', '-1');
+        const $initialActive = $tabs.filter('.active').attr('tabindex', '0');
+        if ($initialActive.length) {
+            const initialPanelId = $initialActive.attr('aria-controls');
+            if (initialPanelId) {
+                $panels.not(`#${initialPanelId}`).attr('hidden', true);
+            }
+        } else if ($tabs.length) {
+            setActiveTab($tabs.eq(0));
+        }
+
+        $tabs.on('click', function() {
+            setActiveTab($(this));
+        });
+
+        $tabs.on('keydown', function(event) {
+            const key = event.key;
+            const currentIndex = $tabs.index(this);
+            let newIndex = null;
+
+            if (key === 'ArrowRight' || key === 'ArrowDown') {
+                newIndex = (currentIndex + 1) % $tabs.length;
+            } else if (key === 'ArrowLeft' || key === 'ArrowUp') {
+                newIndex = (currentIndex - 1 + $tabs.length) % $tabs.length;
+            } else if (key === 'Home') {
+                newIndex = 0;
+            } else if (key === 'End') {
+                newIndex = $tabs.length - 1;
+            }
+
+            if (newIndex !== null) {
+                event.preventDefault();
+                const $targetTab = $tabs.eq(newIndex);
+                setActiveTab($targetTab, true);
             }
         });
 
