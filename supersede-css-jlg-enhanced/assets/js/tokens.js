@@ -345,7 +345,7 @@
             event.preventDefault();
             copyToClipboard(cssTextarea.val());
             if (typeof window.sscToast === 'function') {
-                window.sscToast('Tokens copiés');
+                window.sscToast(i18n.copySuccess || 'Tokens copiés');
             }
         });
 

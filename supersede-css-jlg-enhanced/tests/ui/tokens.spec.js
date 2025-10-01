@@ -4,6 +4,11 @@ const ADMIN_PATH = '/wp-admin/admin.php?page=supersede-css-jlg-tokens';
 const DEFAULT_USERNAME = process.env.WP_USERNAME || 'admin';
 const DEFAULT_PASSWORD = process.env.WP_PASSWORD || 'password';
 
+function getAdminTokensUrl(testInfo) {
+  const baseURL = testInfo.project.use.baseURL || 'http://localhost:8889';
+  return new URL(ADMIN_PATH, baseURL).toString();
+}
+
 async function authenticate(page, adminUrl, credentials) {
   const loginUrl = `/wp-login.php?redirect_to=${encodeURIComponent(adminUrl)}`;
   await page.goto(loginUrl, { waitUntil: 'domcontentloaded' });
@@ -54,8 +59,7 @@ async function seedTokens(page, tokensEndpoint, nonce, tokens) {
 
 test.describe('Token manager admin UI', () => {
   test('adds, edits and deletes tokens with live CSS preview updates', async ({ page }, testInfo) => {
-    const baseURL = testInfo.project.use.baseURL || 'http://localhost:8889';
-    const adminTokensUrl = new URL(ADMIN_PATH, baseURL).toString();
+    const adminTokensUrl = getAdminTokensUrl(testInfo);
 
     await authenticate(page, adminTokensUrl, {
       username: DEFAULT_USERNAME,
@@ -156,5 +160,27 @@ test.describe('Token manager admin UI', () => {
     expect(finalJson.tokens[0].type).toBe('color');
     expect(finalJson.css).toContain('--primary-color: #123456;');
     expect(finalJson.css).not.toContain('--spacing_small');
+  });
+
+  test('shows localized toast message when copying tokens', async ({ page }, testInfo) => {
+    const adminTokensUrl = getAdminTokensUrl(testInfo);
+
+    await authenticate(page, adminTokensUrl, {
+      username: DEFAULT_USERNAME,
+      password: DEFAULT_PASSWORD,
+    });
+
+    await waitForPluginReady(page);
+
+    const expectedMessage = await page.evaluate(() => {
+      const data = window.SSC_TOKENS_DATA || {};
+      const messages = data.i18n || {};
+      return messages.copySuccess || 'Tokens copiés';
+    });
+
+    await page.locator('#ssc-tokens-copy').click();
+
+    const toast = page.locator('.ssc-toast').last();
+    await expect(toast).toHaveText(expectedMessage);
   });
 });
