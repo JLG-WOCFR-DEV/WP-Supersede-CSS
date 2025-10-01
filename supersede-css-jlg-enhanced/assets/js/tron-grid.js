@@ -1,4 +1,11 @@
 (function($) {
+    const fallbackI18n = {
+        __: (text) => text,
+    };
+
+    const hasI18n = typeof window !== 'undefined' && window.wp && window.wp.i18n;
+    const { __ } = hasI18n ? window.wp.i18n : fallbackI18n;
+
     function copyToClipboard(text) {
         if (navigator.clipboard && window.isSecureContext) {
             return navigator.clipboard.writeText(text);
@@ -88,7 +95,14 @@
                 method: 'POST',
                 data: { css: css, append: true, _wpnonce: SSC.rest.nonce },
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
-            }).done(() => window.sscToast('Grille animée appliquée !'));
+            }).done(() => window.sscToast('Grille animée appliquée !'))
+                .fail((jqXHR, textStatus, errorThrown) => {
+                    console.error('Échec de l\'enregistrement de la grille animée.', errorThrown || jqXHR);
+                    window.sscToast(
+                        __('Échec de l\'enregistrement de la grille animée.', 'supersede-css-jlg'),
+                        { politeness: 'assertive' }
+                    );
+                });
         });
 
         generateTronCSS();
