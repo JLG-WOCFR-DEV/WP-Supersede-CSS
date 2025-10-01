@@ -1,4 +1,11 @@
 (function($) {
+    const fallbackI18n = {
+        __: (text) => text,
+    };
+
+    const hasI18n = typeof window !== 'undefined' && window.wp && window.wp.i18n;
+    const { __ } = hasI18n ? window.wp.i18n : fallbackI18n;
+
     const presets = {
         bounce: {
             name: 'ssc-bounce',
@@ -75,19 +82,38 @@
 
         $('#ssc-anim-copy').on('click', () => {
             window.sscCopyToClipboard($('#ssc-anim-css').text(), {
-                successMessage: 'CSS de l\'animation copié !',
-                errorMessage: 'Impossible de copier le CSS de l\'animation.'
+                successMessage: __('CSS de l\'animation copié !', 'supersede-css-jlg'),
+                errorMessage: __('Impossible de copier le CSS de l\'animation.', 'supersede-css-jlg')
             }).catch(() => {});
         });
 
-        $('#ssc-anim-apply').on('click', () => {
+        $('#ssc-anim-apply').on('click', function() {
             const css = $('#ssc-anim-css').text();
+            const $button = $(this);
+
+            if ($button.prop('disabled')) {
+                return;
+            }
+
+            $button.prop('disabled', true).attr('aria-disabled', 'true');
             $.ajax({
                 url: SSC.rest.root + 'save-css',
                 method: 'POST',
                 data: { css, append: true, _wpnonce: SSC.rest.nonce },
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
-            }).done(() => window.sscToast('Animation appliquée !'));
+            })
+                .done(() => window.sscToast(__('Animation appliquée !', 'supersede-css-jlg')))
+                .fail((jqXHR, textStatus, errorThrown) => {
+                    const errorMessage = __('Impossible d\'appliquer l\'animation.', 'supersede-css-jlg');
+                    console.error(errorMessage, { jqXHR, textStatus, errorThrown });
+                    window.sscToast(errorMessage, {
+                        politeness: 'assertive',
+                        role: 'alert'
+                    });
+                })
+                .always(() => {
+                    $button.prop('disabled', false).removeAttr('aria-disabled');
+                });
         });
 
         generateAnimationCSS();

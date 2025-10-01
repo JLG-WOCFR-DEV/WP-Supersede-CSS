@@ -168,15 +168,21 @@
         const $applyButton = $('#ssc-bg-apply');
         $applyButton.on('click', () => {
              const css = $('#ssc-bg-css').text();
+             const successMessage = __('Fond animé appliqué !', 'supersede-css-jlg');
              const errorMessage = __('Échec de l\'enregistrement du fond animé.', 'supersede-css-jlg');
+
+             if ($applyButton.prop('disabled')) {
+                 return;
+             }
+
              $applyButton.prop('disabled', true).attr('aria-disabled', 'true');
              $.ajax({ url: SSC.rest.root + 'save-css', method: 'POST', data: { css, append: true, _wpnonce: SSC.rest.nonce }, beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
-             }).done(() => window.sscToast('Fond animé appliqué !'))
+             }).done(() => window.sscToast(successMessage))
              .fail((jqXHR, textStatus, errorThrown) => {
                  console.error(errorMessage, { jqXHR, textStatus, errorThrown });
                  window.sscToast(
                      errorMessage,
-                     { politeness: 'assertive' }
+                     { politeness: 'assertive', role: 'alert' }
                  );
              })
              .always(() => {
@@ -300,10 +306,29 @@
         }
 
         $('#ssc-ecg-preset, #ssc-ecg-color, #ssc-ecg-top, #ssc-ecg-logo-size, #ssc-ecg-z-index').on('input', generateECGCSS);
-        $('#ssc-ecg-apply').on('click', () => {
+        const $ecgApplyButton = $('#ssc-ecg-apply');
+        $ecgApplyButton.on('click', () => {
+             if ($ecgApplyButton.prop('disabled')) {
+                 return;
+             }
+
              const css = $('#ssc-ecg-css').text();
+             const successMessage = __('Effet ECG appliqué !', 'supersede-css-jlg');
+             const errorMessage = __('Impossible d\'appliquer l\'effet ECG.', 'supersede-css-jlg');
+
+             $ecgApplyButton.prop('disabled', true).attr('aria-disabled', 'true');
              $.ajax({ url: SSC.rest.root + 'save-css', method: 'POST', data: { css, append: true, _wpnonce: SSC.rest.nonce }, beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
-             }).done(() => window.sscToast('Effet ECG appliqué !'));
+             }).done(() => window.sscToast(successMessage))
+             .fail((jqXHR, textStatus, errorThrown) => {
+                 console.error(errorMessage, { jqXHR, textStatus, errorThrown });
+                 window.sscToast(errorMessage, {
+                     politeness: 'assertive',
+                     role: 'alert'
+                 });
+             })
+             .always(() => {
+                 $ecgApplyButton.prop('disabled', false).removeAttr('aria-disabled');
+             });
         });
         generateECGCSS();
     }
