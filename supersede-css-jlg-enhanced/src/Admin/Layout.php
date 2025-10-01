@@ -313,15 +313,27 @@ class Layout {
         ?>
         <div class="ssc-shell">
             <header class="ssc-topbar">
-                <a href="<?php echo esc_url(admin_url('index.php')); ?>" class="ssc-back-to-admin button">
-                    <span class="dashicons dashicons-arrow-left-alt"></span> WP Admin
+                <a href="<?php echo esc_url(admin_url('index.php')); ?>" class="ssc-back-to-admin button" aria-label="Retourner sur le tableau de bord WordPress">
+                    <span class="dashicons dashicons-arrow-left-alt" aria-hidden="true"></span>
+                    <span class="ssc-topbar-label">WP Admin</span>
                 </a>
                 <span class="ssc-title">Supersede CSS</span><span class="ssc-spacer"></span>
-                <button class="button" id="ssc-theme">🌓 Thème</button>
-                <button class="button button-primary" id="ssc-cmdk">⌘K Commande</button>
+                <button type="button" class="button" id="ssc-theme" aria-label="Basculer le thème clair ou sombre">
+                    <span aria-hidden="true">🌓</span>
+                    <span class="ssc-topbar-label">Thème</span>
+                </button>
+                <button type="button" class="button ssc-mobile-menu-toggle" id="ssc-mobile-menu" aria-expanded="false" aria-controls="ssc-sidebar" aria-label="Afficher le menu">
+                    <span class="dashicons dashicons-menu" aria-hidden="true"></span>
+                </button>
+                <button type="button" class="button button-primary" id="ssc-cmdk" aria-label="Ouvrir la palette de commandes">
+                    <span aria-hidden="true">⌘K</span>
+                    <span class="ssc-topbar-label">Commande</span>
+                </button>
             </header>
+            <div class="ssc-shell-overlay" hidden></div>
             <div class="ssc-layout">
-                <aside><nav class="ssc-sidebar">
+                <aside>
+                    <nav class="ssc-sidebar" id="ssc-sidebar">
                     <?php foreach ($menu_items as $group_label => $items): ?>
                         <div class="ssc-sidebar-group">
                             <h4 class="ssc-sidebar-heading"><?php echo esc_html($group_label); ?></h4>
@@ -332,7 +344,8 @@ class Layout {
                             <?php endforeach; ?>
                         </div>
                     <?php endforeach; ?>
-                </nav></aside>
+                    </nav>
+                </aside>
                 <main class="ssc-main-content">
                     <?php echo wp_kses( $page_content, self::allowed_tags() ); ?>
                 </main>
