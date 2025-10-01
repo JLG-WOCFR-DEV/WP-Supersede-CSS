@@ -183,4 +183,110 @@ test.describe('Token manager admin UI', () => {
     const toast = page.locator('.ssc-toast').last();
     await expect(toast).toHaveText(expectedMessage);
   });
+
+  test('prevents saving tokens with duplicate names', async ({ page }, testInfo) => {
+    const adminTokensUrl = getAdminTokensUrl(testInfo);
+
+    await authenticate(page, adminTokensUrl, {
+      username: DEFAULT_USERNAME,
+      password: DEFAULT_PASSWORD,
+    });
+
+    let { restRoot, nonce } = await waitForPluginReady(page);
+    let tokensEndpoint = new URL('tokens', restRoot).toString();
+
+    const baseToken = {
+      name: '--primary-color',
+      value: '#123456',
+      type: 'color',
+      description: 'Primary color',
+      group: 'Brand',
+    };
+
+    await seedTokens(page, tokensEndpoint, nonce, [baseToken]);
+
+    await page.reload({ waitUntil: 'networkidle' });
+    ({ restRoot, nonce } = await waitForPluginReady(page));
+    tokensEndpoint = new URL('tokens', restRoot).toString();
+
+    const builder = page.locator('#ssc-token-builder');
+    const rows = builder.locator('.ssc-token-row');
+
+    await expect(rows).toHaveCount(1);
+
+    await page.locator('#ssc-token-add').click();
+    await expect(rows).toHaveCount(2);
+
+    const duplicateRow = rows.nth(1);
+    await duplicateRow.locator('.token-name').fill('--primary-color');
+    await duplicateRow.locator('.token-name').blur();
+
+    const duplicateMessages = await page.evaluate(() => {
+      const data = window.SSC_TOKENS_DATA || {};
+      const messages = data.i18n || {};
+      return {
+        duplicateError: messages.duplicateError || 'Certains tokens utilisent le même nom. Corrigez les doublons avant d’enregistrer.',
+        duplicateListPrefix: messages.duplicateListPrefix || 'Doublons :',
+      };
+    });
+
+    const observedRequests = [];
+    const requestListener = (request) => {
+      if (request.url().startsWith(tokensEndpoint) && request.method() === 'POST') {
+        observedRequests.push(request);
+      }
+    };
+    page.on('request', requestListener);
+
+    await page.locator('#ssc-tokens-save').click();
+    await page.waitForTimeout(750);
+
+    page.off('request', requestListener);
+    expect(observedRequests).toHaveLength(0);
+
+    const expectedDuplicateToast = `${duplicateMessages.duplicateError} ${duplicateMessages.duplicateListPrefix} --primary-color`;
+    const duplicateToast = page.locator('.ssc-toast').last();
+    await expect(duplicateToast).toHaveText(expectedDuplicateToast);
+
+    const firstRowName = rows.first().locator('.token-name');
+    await expect(firstRowName).toHaveAttribute('aria-invalid', 'true');
+    await expect(duplicateRow.locator('.token-name')).toHaveAttribute('aria-invalid', 'true');
+    await expect(duplicateRow).toHaveClass(/ssc-token-row--duplicate/);
+
+    const fetchResponse = await page.request.get(tokensEndpoint, {
+      headers: {
+        'X-WP-Nonce': nonce,
+      },
+    });
+    expect(fetchResponse.ok()).toBeTruthy();
+    const fetchedJson = await fetchResponse.json();
+    expect(Array.isArray(fetchedJson.tokens)).toBeTruthy();
+    expect(fetchedJson.tokens).toHaveLength(1);
+    expect(fetchedJson.tokens[0].name).toBe('--primary-color');
+
+    await duplicateRow.locator('.token-name').fill('--secondary-color');
+    await duplicateRow.locator('.token-name').blur();
+    await expect(firstRowName).not.toHaveAttribute('aria-invalid', 'true');
+    await expect(duplicateRow.locator('.token-name')).not.toHaveAttribute('aria-invalid', 'true');
+
+    const saveResponse = page.waitForResponse(
+      (response) =>
+        response.url().startsWith(tokensEndpoint) &&
+        response.request().method() === 'POST'
+    );
+    await page.locator('#ssc-tokens-save').click();
+    const saved = await saveResponse;
+    expect(saved.ok()).toBeTruthy();
+
+    const finalState = await page.request.get(tokensEndpoint, {
+      headers: {
+        'X-WP-Nonce': nonce,
+      },
+    });
+    expect(finalState.ok()).toBeTruthy();
+    const finalJson = await finalState.json();
+    expect(finalJson.tokens).toHaveLength(2);
+    const names = finalJson.tokens.map((token) => token.name).sort();
+    expect(names).toEqual(['--primary-color', '--secondary-color']);
+  });
 });

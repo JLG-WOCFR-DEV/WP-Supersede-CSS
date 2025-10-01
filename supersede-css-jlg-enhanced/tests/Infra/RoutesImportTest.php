@@ -446,7 +446,7 @@ if ($storedCombinedToken['type'] !== 'color' || $storedCombinedToken['group'] !=
     exit(1);
 }
 
-$ssc_options_store['ssc_tokens_registry'] = \SSC\Support\TokenRegistry::saveRegistry([
+$saveResult = \SSC\Support\TokenRegistry::saveRegistry([
     [
         'name' => '--spacing-large',
         'value' => '32px',
@@ -455,6 +455,13 @@ $ssc_options_store['ssc_tokens_registry'] = \SSC\Support\TokenRegistry::saveRegi
         'group' => 'Spacing',
     ],
 ]);
+
+if ($saveResult['duplicates'] !== []) {
+    fwrite(STDERR, 'Initial registry setup should not report duplicates.' . PHP_EOL);
+    exit(1);
+}
+
+$ssc_options_store['ssc_tokens_registry'] = $saveResult['tokens'];
 
 $cssOnlyResult = $applyMethod->invoke($routes, [
     'ssc_tokens_css' => ":root {\n    --spacing-large: 40px;\n}",
@@ -484,7 +491,7 @@ if ($storedCssOnlyToken['type'] !== 'number' || $storedCssOnlyToken['group'] !==
     exit(1);
 }
 
-\SSC\Support\TokenRegistry::saveRegistry([
+$secondSave = \SSC\Support\TokenRegistry::saveRegistry([
     [
         'name' => '--existing-token',
         'value' => '#abcdef',
@@ -493,6 +500,11 @@ if ($storedCssOnlyToken['type'] !== 'number' || $storedCssOnlyToken['group'] !==
         'group' => 'Legacy',
     ],
 ]);
+
+if ($secondSave['duplicates'] !== []) {
+    fwrite(STDERR, 'Registry persistence should not report duplicates.' . PHP_EOL);
+    exit(1);
+}
 
 $emptyTokensResult = $applyMethod->invoke($routes, [
     'ssc_tokens_css' => '',

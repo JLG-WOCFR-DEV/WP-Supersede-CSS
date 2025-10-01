@@ -17,6 +17,203 @@
     const reloadButton = $('#ssc-tokens-reload');
     const previewStyle = $('#ssc-tokens-preview-style');
     const groupDatalistId = 'ssc-token-groups-list';
+    const duplicateRowClass = 'ssc-token-row--duplicate';
+    const duplicateInputClass = 'token-field-input--duplicate';
+
+    function getCanonicalName(value) {
+        const normalized = normalizeName(value);
+        if (!normalized) {
+            return '';
+        }
+
+        return normalized.toLowerCase();
+    }
+
+    function calculateDuplicateKeys() {
+        const seen = Object.create(null);
+        const duplicates = [];
+
+        tokens.forEach(function(token) {
+            if (!token || typeof token !== 'object') {
+                return;
+            }
+
+            const canonical = getCanonicalName(token.name);
+            if (!canonical) {
+                return;
+            }
+
+            const rawValue = token.value == null ? '' : String(token.value);
+            if (rawValue.trim() === '') {
+                return;
+            }
+
+            if (seen[canonical]) {
+                if (duplicates.indexOf(canonical) === -1) {
+                    duplicates.push(canonical);
+                }
+            } else {
+                seen[canonical] = true;
+            }
+        });
+
+        return duplicates;
+    }
+
+    function buildDuplicateLabels(duplicateKeys) {
+        if (!Array.isArray(duplicateKeys) || !duplicateKeys.length) {
+            return [];
+        }
+
+        const canonicalSet = new Set(
+            duplicateKeys
+                .map(function(key) {
+                    return typeof key === 'string' ? key.toLowerCase() : '';
+                })
+                .filter(function(key) {
+                    return key !== '';
+                })
+        );
+
+        if (!canonicalSet.size) {
+            return [];
+        }
+
+        const labels = [];
+
+        tokens.forEach(function(token) {
+            if (!token || typeof token.name !== 'string') {
+                return;
+            }
+
+            const normalized = normalizeName(token.name);
+            const canonical = normalized ? normalized.toLowerCase() : '';
+            if (!canonical || !canonicalSet.has(canonical)) {
+                return;
+            }
+
+            if (normalized && labels.indexOf(normalized) === -1) {
+                labels.push(normalized);
+            }
+        });
+
+        return labels;
+    }
+
+    function updateDuplicateHighlights(duplicateKeys) {
+        const canonicalSet = new Set(
+            (duplicateKeys || []).map(function(key) {
+                return typeof key === 'string' ? key.toLowerCase() : '';
+            }).filter(function(key) {
+                return key !== '';
+            })
+        );
+
+        if (!builder.length) {
+            return;
+        }
+
+        builder.find('.ssc-token-row').each(function() {
+            const row = $(this);
+            const nameInput = row.find('.token-name');
+            if (!nameInput.length) {
+                return;
+            }
+
+            const canonical = getCanonicalName(nameInput.val());
+            const isDuplicate = canonical !== '' && canonicalSet.has(canonical);
+            row.toggleClass(duplicateRowClass, isDuplicate);
+            nameInput.toggleClass(duplicateInputClass, isDuplicate);
+            if (isDuplicate) {
+                nameInput.attr('aria-invalid', 'true');
+            } else {
+                nameInput.removeAttr('aria-invalid');
+            }
+        });
+    }
+
+    function notifyDuplicateError(labels, customMessage) {
+        if (typeof window.sscToast !== 'function') {
+            return;
+        }
+
+        const fallbackMessage = i18n.duplicateError || 'Certains tokens utilisent le même nom. Corrigez les doublons avant d’enregistrer.';
+        const message = (typeof customMessage === 'string' && customMessage.trim() !== '') ? customMessage : fallbackMessage;
+        const normalizedLabels = Array.isArray(labels)
+            ? labels
+                .map(function(label) {
+                    return typeof label === 'string' ? label.trim() : '';
+                })
+                .filter(function(label) {
+                    return label !== '';
+                })
+            : [];
+
+        let finalMessage = message;
+        if (normalizedLabels.length) {
+            const prefix = i18n.duplicateListPrefix || 'Doublons :';
+            finalMessage = message + ' ' + prefix + ' ' + normalizedLabels.join(', ');
+        }
+
+        window.sscToast(finalMessage, { politeness: 'assertive', role: 'alert' });
+    }
+
+    function handleDuplicateConflict(duplicateKeys, labels, message) {
+        updateDuplicateHighlights(duplicateKeys);
+        notifyDuplicateError(labels, message);
+    }
+
+    function refreshDuplicateState() {
+        const duplicates = calculateDuplicateKeys();
+        updateDuplicateHighlights(duplicates);
+        return duplicates;
+    }
+
+    function parseServerDuplicateResponse(response) {
+        if (!response || !Array.isArray(response.duplicates) || !response.duplicates.length) {
+            return null;
+        }
+
+        const canonicalKeys = [];
+        const labels = [];
+
+        response.duplicates.forEach(function(item) {
+            if (!item || typeof item !== 'object') {
+                return;
+            }
+
+            const canonical = typeof item.canonical === 'string' ? item.canonical.toLowerCase() : '';
+            if (canonical && canonicalKeys.indexOf(canonical) === -1) {
+                canonicalKeys.push(canonical);
+            }
+
+            if (Array.isArray(item.variants)) {
+                item.variants.forEach(function(variant) {
+                    if (typeof variant !== 'string') {
+                        return;
+                    }
+                    const trimmed = variant.trim();
+                    if (trimmed !== '' && labels.indexOf(trimmed) === -1) {
+                        labels.push(trimmed);
+                    }
+                });
+            } else if (typeof item.canonical === 'string') {
+                const trimmedCanonical = item.canonical.trim();
+                if (trimmedCanonical !== '' && labels.indexOf(trimmedCanonical) === -1) {
+                    labels.push(trimmedCanonical);
+                }
+            }
+        });
+
+        if (!canonicalKeys.length && !labels.length) {
+            return null;
+        }
+
+        return {
+            canonicalKeys: canonicalKeys,
+            labels: labels,
+        };
+    }
 
     function copyToClipboard(text) {
         if (navigator.clipboard && window.isSecureContext) {
@@ -197,6 +394,7 @@
                 text: i18n.emptyState || 'Aucun token pour le moment. Utilisez le bouton ci-dessous pour commencer.',
             }));
             ensureGroupDatalist(['Général']);
+            updateDuplicateHighlights([]);
             return;
         }
 
@@ -222,6 +420,8 @@
             });
             builder.append(section);
         });
+
+        refreshDuplicateState();
     }
 
     function addToken() {
@@ -284,7 +484,18 @@
 
     function saveTokens() {
         if (!restRoot) {
-            return $.Deferred().reject();
+            const deferred = $.Deferred();
+            deferred.reject();
+            return deferred.promise();
+        }
+
+        const duplicates = refreshDuplicateState();
+        if (duplicates.length) {
+            const labels = buildDuplicateLabels(duplicates);
+            notifyDuplicateError(labels);
+            const deferred = $.Deferred();
+            deferred.reject({ duplicates: duplicates, labels: labels, source: 'local' });
+            return deferred.promise();
         }
 
         return $.ajax({
@@ -307,12 +518,18 @@
             } else {
                 refreshCssFromTokens();
             }
+            refreshDuplicateState();
             hasLocalChanges = false;
             if (typeof window.sscToast === 'function') {
                 window.sscToast(i18n.saveSuccess || 'Tokens enregistrés');
             }
-        }).fail(function() {
-            if (typeof window.sscToast === 'function') {
+        }).fail(function(jqXHR) {
+            const response = jqXHR && jqXHR.responseJSON ? jqXHR.responseJSON : null;
+            const parsed = parseServerDuplicateResponse(response);
+            if (parsed) {
+                const message = response && typeof response.message === 'string' ? response.message : '';
+                handleDuplicateConflict(parsed.canonicalKeys, parsed.labels, message);
+            } else if (typeof window.sscToast === 'function') {
                 window.sscToast(i18n.saveError || 'Impossible d’enregistrer les tokens.');
             }
         });
@@ -368,6 +585,7 @@
             hasLocalChanges = true;
             updateToken(index, 'name', $(this).val());
             refreshCssFromTokens();
+            refreshDuplicateState();
         });
 
         builder.on('blur', '.token-name', function() {
@@ -377,6 +595,7 @@
             hasLocalChanges = true;
             updateToken(index, 'name', normalized);
             refreshCssFromTokens();
+            refreshDuplicateState();
         });
 
         builder.on('input', '.token-value', function() {
@@ -384,6 +603,7 @@
             hasLocalChanges = true;
             updateToken(index, 'value', $(this).val());
             refreshCssFromTokens();
+            refreshDuplicateState();
         });
 
         builder.on('input', '.token-description', function() {

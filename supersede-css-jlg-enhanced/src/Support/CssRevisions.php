@@ -115,7 +115,10 @@ final class CssRevisions
             $existingRegistry = TokenRegistry::getRegistry();
             $tokensWithMetadata = TokenRegistry::mergeMetadata($tokens, $existingRegistry);
             $savedTokens = TokenRegistry::saveRegistry($tokensWithMetadata);
-            $css = TokenRegistry::tokensToCss($savedTokens);
+            if ($savedTokens['duplicates'] !== []) {
+                return;
+            }
+            $css = TokenRegistry::tokensToCss($savedTokens['tokens']);
             update_option('ssc_tokens_css', $css, false);
         } else {
             update_option($option, $css, false);

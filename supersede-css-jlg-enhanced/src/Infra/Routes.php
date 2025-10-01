@@ -270,7 +270,14 @@ final class Routes {
             $existingRegistry = TokenRegistry::getRegistry();
             $tokensWithMetadata = TokenRegistry::mergeMetadata($tokens, $existingRegistry);
             $sanitizedTokens = TokenRegistry::saveRegistry($tokensWithMetadata);
-            $css_to_store = TokenRegistry::tokensToCss($sanitizedTokens);
+            if ($sanitizedTokens['duplicates'] !== []) {
+                return new \WP_REST_Response([
+                    'ok' => false,
+                    'message' => __('Some tokens use the same name. Please choose unique names before saving.', 'supersede-css-jlg'),
+                    'duplicates' => $sanitizedTokens['duplicates'],
+                ], 422);
+            }
+            $css_to_store = TokenRegistry::tokensToCss($sanitizedTokens['tokens']);
         } else {
             update_option($option_name, $css_to_store, false);
         }
@@ -487,7 +494,17 @@ final class Routes {
             ], 400);
         }
 
-        $sanitized = TokenRegistry::saveRegistry($tokens);
+        $result = TokenRegistry::saveRegistry($tokens);
+
+        if ($result['duplicates'] !== []) {
+            return new \WP_REST_Response([
+                'ok' => false,
+                'message' => __('Some tokens use the same name. Please choose unique names before saving.', 'supersede-css-jlg'),
+                'duplicates' => $result['duplicates'],
+            ], 422);
+        }
+
+        $sanitized = $result['tokens'];
 
         return new \WP_REST_Response([
             'ok' => true,
@@ -798,7 +815,34 @@ final class Routes {
                     $existingRegistry = [];
                 }
                 $tokensWithMetadata = TokenRegistry::mergeMetadata($tokens, $existingRegistry);
-                TokenRegistry::saveRegistry($tokensWithMetadata);
+                $savedTokens = TokenRegistry::saveRegistry($tokensWithMetadata);
+                if ($savedTokens['duplicates'] !== []) {
+                    $duplicateLabels = array_map(static function (array $duplicate): string {
+                        $variants = $duplicate['variants'] ?? [];
+                        if (is_array($variants)) {
+                            $variants = array_values(array_filter(array_map('strval', $variants)));
+                        } else {
+                            $variants = [];
+                        }
+
+                        if ($variants !== []) {
+                            return implode(' / ', $variants);
+                        }
+
+                        return isset($duplicate['canonical']) ? (string) $duplicate['canonical'] : '';
+                    }, $savedTokens['duplicates']);
+                    $duplicateSummary = implode(', ', array_filter($duplicateLabels));
+                    $skipped[] = sprintf(
+                        '%s (%s: %s)',
+                        $optionName,
+                        __('duplicate token names', 'supersede-css-jlg'),
+                        $duplicateSummary
+                    );
+                    foreach ($duplicateWarnings as $duplicatePath) {
+                        $skipped[] = sprintf('%s (duplicate key: %s)', $optionName, $duplicatePath);
+                    }
+                    continue;
+                }
                 if (function_exists('\ssc_invalidate_css_cache')) {
                     \ssc_invalidate_css_cache();
                 }
@@ -818,7 +862,34 @@ final class Routes {
                     continue;
                 }
 
-                TokenRegistry::saveRegistry($sanitizedValue);
+                $savedTokens = TokenRegistry::saveRegistry($sanitizedValue);
+                if ($savedTokens['duplicates'] !== []) {
+                    $duplicateLabels = array_map(static function (array $duplicate): string {
+                        $variants = $duplicate['variants'] ?? [];
+                        if (is_array($variants)) {
+                            $variants = array_values(array_filter(array_map('strval', $variants)));
+                        } else {
+                            $variants = [];
+                        }
+
+                        if ($variants !== []) {
+                            return implode(' / ', $variants);
+                        }
+
+                        return isset($duplicate['canonical']) ? (string) $duplicate['canonical'] : '';
+                    }, $savedTokens['duplicates']);
+                    $duplicateSummary = implode(', ', array_filter($duplicateLabels));
+                    $skipped[] = sprintf(
+                        '%s (%s: %s)',
+                        $optionName,
+                        __('duplicate token names', 'supersede-css-jlg'),
+                        $duplicateSummary
+                    );
+                    foreach ($duplicateWarnings as $duplicatePath) {
+                        $skipped[] = sprintf('%s (duplicate key: %s)', $optionName, $duplicatePath);
+                    }
+                    continue;
+                }
                 if (function_exists('\ssc_invalidate_css_cache')) {
                     \ssc_invalidate_css_cache();
                 }
@@ -867,7 +938,9 @@ final class Routes {
             return null;
         }
 
-        return TokenRegistry::normalizeRegistry($value);
+        $result = TokenRegistry::normalizeRegistry($value);
+
+        return $result['tokens'];
     }
 
     /**
