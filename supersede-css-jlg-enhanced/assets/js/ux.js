@@ -79,6 +79,16 @@
     };
 
     $(document).ready(function() {
+        const localizedData = (typeof window !== 'undefined' && typeof window.SSC !== 'undefined' && window.SSC)
+            ? window.SSC
+            : {};
+        const i18n = (typeof localizedData.i18n === 'object' && localizedData.i18n !== null)
+            ? localizedData.i18n
+            : {};
+        const commandPaletteTitle = i18n.commandPaletteTitle || 'Supersede CSS command palette';
+        const commandPaletteSearchPlaceholder = i18n.commandPaletteSearchPlaceholder || 'Navigate or run an action…';
+        const commandPaletteSearchLabel = i18n.commandPaletteSearchLabel || 'Command palette search';
+
         // --- Dark/Light Theme Toggle ---
         const themeToggle = $('#ssc-theme');
         const body = $('body');
@@ -199,9 +209,10 @@
         // --- Command Palette (⌘K) ---
         const cmdkButton = $('#ssc-cmdk');
         const cmdkPanelHtml = `
-            <div id="ssc-cmdp" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Palette de commandes Supersede CSS" tabindex="-1">
+            <div id="ssc-cmdp" role="dialog" aria-modal="true" aria-hidden="true" aria-label="${commandPaletteTitle}" tabindex="-1">
                 <div class="panel" role="document">
-                    <input type="text" id="ssc-cmdp-search" placeholder="Naviguer ou lancer une action..." style="width: 100%; padding: 12px; border: none; border-bottom: 1px solid var(--ssc-border); font-size: 16px;">
+                    <label for="ssc-cmdp-search" class="screen-reader-text">${commandPaletteSearchLabel}</label>
+                    <input type="text" id="ssc-cmdp-search" placeholder="${commandPaletteSearchPlaceholder}" style="width: 100%; padding: 12px; border: none; border-bottom: 1px solid var(--ssc-border); font-size: 16px;">
                     <ul id="ssc-cmdp-results"></ul>
                 </div>
             </div>`;
