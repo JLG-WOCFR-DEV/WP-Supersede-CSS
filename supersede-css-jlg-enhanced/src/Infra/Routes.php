@@ -317,6 +317,21 @@ final class Routes {
             ], 404);
         }
 
+        if (is_array($restored) && isset($restored['error'])) {
+            $duplicates = $restored['duplicates'] ?? [];
+
+            return new \WP_Error(
+                'ssc_tokens_conflict',
+                __('Some tokens use the same name. Please choose unique names before restoring.', 'supersede-css-jlg'),
+                [
+                    'status' => 409,
+                    'duplicates' => $duplicates,
+                    'revision' => $restored['revision']['id'] ?? $revisionId,
+                ]
+            );
+        }
+
+        /** @var array{id: string, option: string, css: string, timestamp: string, author: string, segments?: array<string, string>} $restored */
         $context = [];
         if (($restored['option'] ?? '') === 'ssc_active_css' && isset($restored['segments']) && is_array($restored['segments'])) {
             $context['segments'] = $restored['segments'];

@@ -256,3 +256,52 @@ if (!$latest || $latest['css'] !== $expectedLatestCss) {
     fwrite(STDERR, 'The newest revision should be kept at the beginning of the stack.' . PHP_EOL);
     exit(1);
 }
+
+$duplicateTokensCss = ':root { --color-duplicate: #111111; --Color-Duplicate: #222222; }';
+CssRevisions::record('ssc_tokens_css', $duplicateTokensCss);
+
+$tokenRevision = null;
+foreach (CssRevisions::all() as $candidate) {
+    if (($candidate['option'] ?? '') === 'ssc_tokens_css') {
+        $tokenRevision = $candidate;
+        break;
+    }
+}
+
+if ($tokenRevision === null) {
+    fwrite(STDERR, 'A revision targeting the tokens CSS should be stored.' . PHP_EOL);
+    exit(1);
+}
+
+update_option('ssc_tokens_registry', []);
+$originalTokensCss = '/* existing tokens css */';
+update_option('ssc_tokens_css', $originalTokensCss);
+
+$ssc_cache_invalidations = 0;
+$duplicateRestore = CssRevisions::restore($tokenRevision['id']);
+
+if (!is_array($duplicateRestore) || ($duplicateRestore['error'] ?? '') !== 'tokens_duplicates') {
+    fwrite(STDERR, 'Restoring a tokens revision with duplicates should expose an error structure.' . PHP_EOL);
+    exit(1);
+}
+
+if (!isset($duplicateRestore['revision']['id']) || $duplicateRestore['revision']['id'] !== $tokenRevision['id']) {
+    fwrite(STDERR, 'The error payload should reference the attempted revision.' . PHP_EOL);
+    exit(1);
+}
+
+$duplicates = $duplicateRestore['duplicates'] ?? [];
+if (!is_array($duplicates) || $duplicates === []) {
+    fwrite(STDERR, 'Duplicate conflicts should be returned alongside the error payload.' . PHP_EOL);
+    exit(1);
+}
+
+if (get_option('ssc_tokens_css') !== $originalTokensCss) {
+    fwrite(STDERR, 'The tokens CSS option should remain unchanged when duplicates are detected.' . PHP_EOL);
+    exit(1);
+}
+
+if ($ssc_cache_invalidations !== 0) {
+    fwrite(STDERR, 'Failing to restore a tokens revision should not invalidate the CSS cache.' . PHP_EOL);
+    exit(1);
+}

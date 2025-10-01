@@ -267,9 +267,9 @@ final class TokenRegistry
 
     /**
      * @param string $css
-     * @return array<int, array{name: string, value: string, type: string, description: string, group: string}>
+     * @return array{tokens: array<int, array{name: string, value: string, type: string, description: string, group: string}>, duplicates: array<int, array{canonical: string, variants: array<int, string>, conflicts: array<int, array{name: string, value: string}>}>}
      */
-    public static function convertCssToRegistry(string $css): array
+    public static function convertCssToRegistryDetailed(string $css): array
     {
         $tokensByName = [];
         $length = strlen($css);
@@ -449,6 +449,17 @@ final class TokenRegistry
         }
 
         $result = self::normalizeRegistry(array_values($tokensByName));
+
+        return $result;
+    }
+
+    /**
+     * @param string $css
+     * @return array<int, array{name: string, value: string, type: string, description: string, group: string}>
+     */
+    public static function convertCssToRegistry(string $css): array
+    {
+        $result = self::convertCssToRegistryDetailed($css);
 
         return $result['tokens'];
     }
