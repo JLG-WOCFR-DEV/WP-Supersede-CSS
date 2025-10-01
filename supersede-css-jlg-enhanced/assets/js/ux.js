@@ -122,6 +122,23 @@
         const commandPaletteTitle = i18n.commandPaletteTitle || 'Supersede CSS command palette';
         const commandPaletteSearchPlaceholder = i18n.commandPaletteSearchPlaceholder || 'Navigate or run an action…';
         const commandPaletteSearchLabel = i18n.commandPaletteSearchLabel || 'Command palette search';
+        const getCommandPaletteResultsAnnouncement = (count) => {
+            const template = i18n.commandPaletteResultsAnnouncement || '%d result(s) available.';
+
+            if (typeof template === 'function') {
+                return template(count);
+            }
+
+            if (typeof template === 'string') {
+                if (template.includes('%d')) {
+                    return template.replace(/%d/g, count);
+                }
+
+                return `${count} ${template}`;
+            }
+
+            return `${count} result(s) available.`;
+        };
 
         // --- Dark/Light Theme Toggle ---
         const themeToggle = $('#ssc-theme');
@@ -247,7 +264,7 @@
                 <div class="panel" role="document">
                     <label for="ssc-cmdp-search" class="screen-reader-text">${commandPaletteSearchLabel}</label>
                     <input type="text" id="ssc-cmdp-search" placeholder="${commandPaletteSearchPlaceholder}" style="width: 100%; padding: 12px; border: none; border-bottom: 1px solid var(--ssc-border); font-size: 16px;">
-                    <ul id="ssc-cmdp-results"></ul>
+                    <ul id="ssc-cmdp-results" role="listbox" aria-live="polite"></ul>
                 </div>
             </div>`;
         $('body').append(cmdkPanelHtml);
@@ -374,7 +391,7 @@
                 : commands;
 
             filtered.forEach(c => {
-                const link = $(`<a href="#">${c.name}</a>`);
+                const link = $(`<a href="#">${c.name}</a>`).attr('role', 'option');
                 link.on('click', (e) => {
                     e.preventDefault();
                     closeCommandPalette();
@@ -386,6 +403,13 @@
                 });
                 resultsList.append($('<li></li>').append(link));
             });
+            const resultCount = filtered.length;
+            if (typeof window !== 'undefined' && window.wp && wp.a11y && typeof wp.a11y.speak === 'function') {
+                const announcement = getCommandPaletteResultsAnnouncement(resultCount);
+                if (announcement) {
+                    wp.a11y.speak(announcement, 'polite');
+                }
+            }
             updatePaletteFocusableElements();
         }
 
