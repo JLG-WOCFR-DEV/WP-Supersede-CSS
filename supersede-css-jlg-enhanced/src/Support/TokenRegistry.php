@@ -102,7 +102,7 @@ final class TokenRegistry
 
     /**
      * @param array<int, array{name?: mixed, value?: mixed, type?: mixed, description?: mixed, group?: mixed}> $tokens
-     * @return array{tokens: array<int, array{name: string, value: string, type: string, description: string, group: string}>, duplicates: array<int, array{canonical: string, variants: array<int, string>}>}
+     * @return array{tokens: array<int, array{name: string, value: string, type: string, description: string, group: string}>, duplicates: array<int, array{canonical: string, variants: array<int, string>, conflicts: array<int, array{name: string, value: string}>}>}
      */
     public static function saveRegistry(array $tokens): array
     {
@@ -139,13 +139,14 @@ final class TokenRegistry
 
     /**
      * @param array<int, array{name?: mixed, value?: mixed, type?: mixed, description?: mixed, group?: mixed}> $tokens
-     * @return array{tokens: array<int, array{name: string, value: string, type: string, description: string, group: string}>, duplicates: array<int, array{canonical: string, variants: array<int, string>}>}
+     * @return array{tokens: array<int, array{name: string, value: string, type: string, description: string, group: string}>, duplicates: array<int, array{canonical: string, variants: array<int, string>, conflicts: array<int, array{name: string, value: string}>}>}
      */
     public static function normalizeRegistry(array $tokens): array
     {
         $normalizedByName = [];
         $duplicateKeys = [];
         $variantsByKey = [];
+        $conflictTokensByKey = [];
 
         foreach ($tokens as $token) {
             if (!is_array($token)) {
@@ -172,6 +173,10 @@ final class TokenRegistry
                 $variantsByKey[$normalizedKey] = [];
             }
             $variantsByKey[$normalizedKey][] = $normalizedName;
+            if (!isset($conflictTokensByKey[$normalizedKey])) {
+                $conflictTokensByKey[$normalizedKey] = [];
+            }
+            $conflictTokensByKey[$normalizedKey][] = $token;
 
             $valueRaw = isset($token['value']) ? (string) $token['value'] : '';
             $value = trim(sanitize_textarea_field($valueRaw));
@@ -200,7 +205,7 @@ final class TokenRegistry
 
             if (array_key_exists($normalizedKey, $normalizedByName)) {
                 $duplicateKeys[$normalizedKey] = true;
-                unset($normalizedByName[$normalizedKey]);
+                continue;
             }
 
             $normalizedByName[$normalizedKey] = $normalizedToken;
@@ -211,10 +216,46 @@ final class TokenRegistry
         foreach (array_keys($duplicateKeys) as $duplicateKey) {
             $variants = $variantsByKey[$duplicateKey] ?? [];
             $variants = array_values(array_unique($variants));
+            $canonical = $normalizedByName[$duplicateKey]['name'] ?? ($variants[0] ?? $duplicateKey);
+
+            $conflictDetails = array_values(array_filter(array_map(
+                static function (array $original): ?array {
+                    if (!is_array($original)) {
+                        return null;
+                    }
+
+                    return [
+                        'name' => isset($original['name']) ? (string) $original['name'] : '',
+                        'value' => isset($original['value']) ? (string) $original['value'] : '',
+                    ];
+                },
+                $conflictTokensByKey[$duplicateKey] ?? []
+            )));
+
+            $uniqueConflicts = [];
+            foreach ($conflictDetails as $conflict) {
+                if (!isset($conflict['name'])) {
+                    continue;
+                }
+                $nameValue = trim((string) $conflict['name']);
+                if ($nameValue === '') {
+                    continue;
+                }
+                $nameKey = strtolower($nameValue);
+                $valueKey = isset($conflict['value']) ? trim((string) $conflict['value']) : '';
+                $hash = $nameKey . '|' . $valueKey;
+                if (!isset($uniqueConflicts[$hash])) {
+                    $uniqueConflicts[$hash] = [
+                        'name' => $nameValue,
+                        'value' => $valueKey,
+                    ];
+                }
+            }
 
             $duplicates[] = [
-                'canonical' => $duplicateKey,
+                'canonical' => $canonical,
                 'variants' => $variants,
+                'conflicts' => array_values($uniqueConflicts),
             ];
         }
 
@@ -397,11 +438,7 @@ final class TokenRegistry
                     'group' => 'Legacy',
                 ];
 
-                if (array_key_exists($name, $tokensByName)) {
-                    unset($tokensByName[$name]);
-                }
-
-                $tokensByName[$name] = $token;
+                $tokensByName[] = $token;
             }
 
             if ($index < $length && ($css[$index] === ';' || $css[$index] === '}')) {

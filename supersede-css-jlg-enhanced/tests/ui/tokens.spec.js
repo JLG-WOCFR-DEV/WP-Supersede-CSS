@@ -230,6 +230,25 @@ test.describe('Token manager admin UI', () => {
       };
     });
 
+    await page.evaluate(() => {
+      const spoken = [];
+      window.__sscTestSpokenMessages = spoken;
+      if (!window.wp) {
+        window.wp = {};
+      }
+      if (!window.wp.a11y) {
+        window.wp.a11y = {};
+      }
+      const originalSpeak = typeof window.wp.a11y.speak === 'function' ? window.wp.a11y.speak : null;
+      window.wp.a11y.speak = function speakOverride(message, politeness) {
+        spoken.push(String(message));
+        if (originalSpeak) {
+          return originalSpeak.call(this, message, politeness);
+        }
+        return undefined;
+      };
+    });
+
     const observedRequests = [];
     const requestListener = (request) => {
       if (request.url().startsWith(tokensEndpoint) && request.method() === 'POST') {
@@ -247,6 +266,9 @@ test.describe('Token manager admin UI', () => {
     const expectedDuplicateToast = `${duplicateMessages.duplicateError} ${duplicateMessages.duplicateListPrefix} --primary-color`;
     const duplicateToast = page.locator('.ssc-toast').last();
     await expect(duplicateToast).toHaveText(expectedDuplicateToast);
+
+    const spokenMessages = await page.evaluate(() => window.__sscTestSpokenMessages || []);
+    expect(spokenMessages).toContain(expectedDuplicateToast);
 
     const firstRowName = rows.first().locator('.token-name');
     await expect(firstRowName).toHaveAttribute('aria-invalid', 'true');
@@ -288,5 +310,100 @@ test.describe('Token manager admin UI', () => {
     expect(finalJson.tokens).toHaveLength(2);
     const names = finalJson.tokens.map((token) => token.name).sort();
     expect(names).toEqual(['--primary-color', '--secondary-color']);
+  });
+
+  test('API surfaces duplicate conflicts when normalization detects collisions', async ({ page }, testInfo) => {
+    const adminTokensUrl = getAdminTokensUrl(testInfo);
+
+    await authenticate(page, adminTokensUrl, {
+      username: DEFAULT_USERNAME,
+      password: DEFAULT_PASSWORD,
+    });
+
+    let { restRoot, nonce } = await waitForPluginReady(page);
+    let tokensEndpoint = new URL('tokens', restRoot).toString();
+
+    const baseTokens = [
+      {
+        name: '--primary-color',
+        value: '#123456',
+        type: 'color',
+        description: 'Primary brand color',
+        group: 'Brand',
+      },
+      {
+        name: '--secondary-color',
+        value: '#abcdef',
+        type: 'color',
+        description: 'Secondary brand color',
+        group: 'Brand',
+      },
+    ];
+
+    await seedTokens(page, tokensEndpoint, nonce, baseTokens);
+
+    await page.reload({ waitUntil: 'networkidle' });
+    ({ restRoot, nonce } = await waitForPluginReady(page));
+    tokensEndpoint = new URL('tokens', restRoot).toString();
+
+    const beforeResponse = await page.request.get(tokensEndpoint, {
+      headers: {
+        'X-WP-Nonce': nonce,
+      },
+    });
+    expect(beforeResponse.ok()).toBeTruthy();
+    const beforeJson = await beforeResponse.json();
+    const beforeSnapshot = JSON.stringify(beforeJson.tokens);
+
+    const duplicatePayload = [
+      {
+        name: '--SpacingLarge',
+        value: '4rem',
+        type: 'text',
+        description: 'Large spacing token',
+        group: 'Spacing',
+      },
+      {
+        name: 'spacing-large',
+        value: '6rem',
+        type: 'text',
+        description: 'Duplicate spacing token',
+        group: 'Spacing',
+      },
+    ];
+
+    const duplicateResponse = await page.request.post(tokensEndpoint, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-WP-Nonce': nonce,
+      },
+      data: { tokens: duplicatePayload },
+    });
+
+    expect(duplicateResponse.status()).toBe(422);
+    const duplicateJson = await duplicateResponse.json();
+    expect(duplicateJson.ok).toBeFalsy();
+    expect(Array.isArray(duplicateJson.duplicates)).toBeTruthy();
+    expect(duplicateJson.duplicates.length).toBeGreaterThan(0);
+    const firstDuplicate = duplicateJson.duplicates[0];
+    expect(firstDuplicate.canonical).toBe('--SpacingLarge');
+    expect(Array.isArray(firstDuplicate.variants)).toBeTruthy();
+    expect(firstDuplicate.variants).toEqual(
+      expect.arrayContaining(['--SpacingLarge', '--spacing-large'])
+    );
+    expect(Array.isArray(firstDuplicate.conflicts)).toBeTruthy();
+    const conflictNames = firstDuplicate.conflicts.map((conflict) => conflict.name);
+    expect(conflictNames).toEqual(
+      expect.arrayContaining(['--SpacingLarge', 'spacing-large'])
+    );
+
+    const afterResponse = await page.request.get(tokensEndpoint, {
+      headers: {
+        'X-WP-Nonce': nonce,
+      },
+    });
+    expect(afterResponse.ok()).toBeTruthy();
+    const afterJson = await afterResponse.json();
+    expect(JSON.stringify(afterJson.tokens)).toBe(beforeSnapshot);
   });
 });
