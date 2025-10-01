@@ -4,6 +4,7 @@ namespace SSC\Infra;
 use SSC\Support\CssRevisions;
 use SSC\Support\CssSanitizer;
 use SSC\Support\TokenRegistry;
+use function ssc_get_breakpoints;
 
 if (!class_exists('\\SSC\\Support\\CssRevisions') && is_readable(__DIR__ . '/../Support/CssRevisions.php')) {
     require_once __DIR__ . '/../Support/CssRevisions.php';
@@ -1328,12 +1329,16 @@ final class Routes {
             $parts[] = $desktop;
         }
 
+        $breakpoints = ssc_get_breakpoints();
+        $tabletMax = isset($breakpoints['tablet']) ? (int) $breakpoints['tablet'] : 782;
+        $mobileMax = isset($breakpoints['mobile']) ? (int) $breakpoints['mobile'] : 480;
+
         if (trim($tablet) !== '') {
-            $parts[] = "@media (max-width: 782px) {\n{$tablet}\n}";
+            $parts[] = "@media (max-width: {$tabletMax}px) {\n{$tablet}\n}";
         }
 
         if (trim($mobile) !== '') {
-            $parts[] = "@media (max-width: 480px) {\n{$mobile}\n}";
+            $parts[] = "@media (max-width: {$mobileMax}px) {\n{$mobile}\n}";
         }
 
         $combined = implode("\n\n", array_filter($parts, static function (string $part): bool {

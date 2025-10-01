@@ -20,6 +20,67 @@
     const codeMirrorAvailable = typeof window !== 'undefined' && typeof window.CodeMirror !== 'undefined';
     let codeMirrorWarningShown = false;
 
+    const DEFAULT_BREAKPOINTS = Object.freeze({
+        desktop: 0,
+        tablet: 782,
+        mobile: 480,
+    });
+
+    function resolveBreakpoint(rawValue, fallback, allowZero = false) {
+        if (rawValue === null || rawValue === undefined || rawValue === '') {
+            return fallback;
+        }
+
+        const parsed = Number.parseInt(rawValue, 10);
+
+        if (Number.isNaN(parsed)) {
+            return fallback;
+        }
+
+        if (parsed > 0) {
+            return parsed;
+        }
+
+        if (allowZero && parsed === 0) {
+            return 0;
+        }
+
+        return fallback;
+    }
+
+    function getResponsiveBreakpoints() {
+        if (typeof window === 'undefined') {
+            return { ...DEFAULT_BREAKPOINTS };
+        }
+
+        const localized = window.SSC_UTILITIES_DATA && window.SSC_UTILITIES_DATA.breakpoints;
+        if (!localized || typeof localized !== 'object') {
+            return { ...DEFAULT_BREAKPOINTS };
+        }
+
+        return {
+            desktop: resolveBreakpoint(localized.desktop, DEFAULT_BREAKPOINTS.desktop, true),
+            tablet: resolveBreakpoint(localized.tablet, DEFAULT_BREAKPOINTS.tablet),
+            mobile: resolveBreakpoint(localized.mobile, DEFAULT_BREAKPOINTS.mobile),
+        };
+    }
+
+    const responsiveBreakpoints = getResponsiveBreakpoints();
+    const cssBreakpoints = {
+        tablet: responsiveBreakpoints.tablet > 0 ? responsiveBreakpoints.tablet : DEFAULT_BREAKPOINTS.tablet,
+        mobile: responsiveBreakpoints.mobile > 0 ? responsiveBreakpoints.mobile : DEFAULT_BREAKPOINTS.mobile,
+    };
+
+    function widthFromBreakpoint(value) {
+        return value > 0 ? `${value}px` : '100%';
+    }
+
+    const previewWidths = {
+        desktop: widthFromBreakpoint(responsiveBreakpoints.desktop),
+        tablet: widthFromBreakpoint(cssBreakpoints.tablet),
+        mobile: widthFromBreakpoint(cssBreakpoints.mobile),
+    };
+
     function notifyCodeMirrorUnavailable() {
         if (codeMirrorWarningShown) return;
         const message = __('Éditeur enrichi indisponible : CodeMirror n\'est pas chargé. Les champs texte classiques seront utilisés.', 'supersede-css-jlg');
@@ -63,8 +124,8 @@
         const tabletCss = getEditorValue('tablet');
         const mobileCss = getEditorValue('mobile');
 
-        const tabletWrapped = tabletCss.trim() ? `@media (max-width: 782px) {\n${tabletCss}\n}` : '';
-        const mobileWrapped = mobileCss.trim() ? `@media (max-width: 480px) {\n${mobileCss}\n}` : '';
+        const tabletWrapped = tabletCss.trim() ? `@media (max-width: ${cssBreakpoints.tablet}px) {\n${tabletCss}\n}` : '';
+        const mobileWrapped = mobileCss.trim() ? `@media (max-width: ${cssBreakpoints.mobile}px) {\n${mobileCss}\n}` : '';
 
         return [desktopCss, tabletWrapped, mobileWrapped].filter(Boolean).join('\n\n');
     }
@@ -263,6 +324,10 @@
         let lastHovered;
         let lastValidPreviewUrl = previewFrame.attr('src') || '';
 
+        if (previewFrame.length) {
+            previewFrame.css('max-width', previewWidths.desktop);
+        }
+
         function notifyInvalidUrl(message) {
             showToast(message);
         }
@@ -357,9 +422,10 @@
             lastValidPreviewUrl = normalizedUrl;
         }).trigger('click');
         $('.ssc-responsive-toggles button').on('click', function() {
-             $(this).addClass('button-primary').siblings().removeClass('button-primary');
-             const widths = { desktop: '100%', tablet: '768px', mobile: '375px' };
-             $('#ssc-preview-frame').css('max-width', widths[$(this).data('vp')]);
+            $(this).addClass('button-primary').siblings().removeClass('button-primary');
+            const viewport = $(this).data('vp');
+            const width = previewWidths[viewport] || previewWidths.desktop;
+            $('#ssc-preview-frame').css('max-width', width);
         });
 
         if (previewToggleButton.length && previewColumn.length && previewLayoutQuery) {

@@ -98,6 +98,87 @@ if (!function_exists('ssc_invalidate_css_cache')) {
     }
 }
 
+if (!function_exists('ssc_get_breakpoints')) {
+    /**
+     * Returns the responsive breakpoints used throughout the plugin.
+     *
+     * Developers can filter the final result via the `ssc_breakpoints` filter.
+     * The option stored in the database is expected to be an associative array
+     * with the keys `desktop`, `tablet` and `mobile`.
+     */
+    function ssc_get_breakpoints(): array
+    {
+        $defaults = [
+            'desktop' => 0,
+            'tablet' => 782,
+            'mobile' => 480,
+        ];
+
+        $option = get_option('ssc_breakpoints', []);
+        if (!is_array($option)) {
+            $option = [];
+        }
+
+        $sanitized = $defaults;
+
+        foreach ($defaults as $key => $fallback) {
+            $value = $option[$key] ?? $fallback;
+
+            if (is_string($value) && $value !== '') {
+                $value = trim($value);
+            }
+
+            if (is_numeric($value)) {
+                $numeric = (int) $value;
+
+                if ($key === 'desktop') {
+                    $sanitized[$key] = max(0, $numeric);
+                } else {
+                    $sanitized[$key] = $numeric > 0 ? $numeric : $fallback;
+                }
+                continue;
+            }
+
+            if ($key === 'desktop') {
+                $sanitized[$key] = 0;
+            } else {
+                $sanitized[$key] = $fallback;
+            }
+        }
+
+        /** @var array{desktop:int,tablet:int,mobile:int} $filtered */
+        $filtered = apply_filters('ssc_breakpoints', $sanitized);
+
+        if (!is_array($filtered)) {
+            return $sanitized;
+        }
+
+        foreach ($defaults as $key => $fallback) {
+            if (!array_key_exists($key, $filtered)) {
+                $filtered[$key] = $sanitized[$key];
+                continue;
+            }
+
+            $value = $filtered[$key];
+
+            if (!is_numeric($value)) {
+                $filtered[$key] = $sanitized[$key];
+                continue;
+            }
+
+            $numeric = (int) $value;
+
+            if ($key === 'desktop') {
+                $filtered[$key] = max(0, $numeric);
+            } else {
+                $filtered[$key] = $numeric > 0 ? $numeric : $fallback;
+            }
+        }
+
+        return $filtered;
+    }
+}
+
 add_action('plugins_loaded', function(){
     $cache_meta = get_option('ssc_css_cache_meta', []);
     $cached_version = is_array($cache_meta) && isset($cache_meta['version'])

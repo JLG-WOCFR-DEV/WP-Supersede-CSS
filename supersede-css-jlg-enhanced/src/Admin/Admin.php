@@ -252,6 +252,12 @@ final class Admin
 
                     wp_enqueue_script($script_handle, SSC_PLUGIN_URL . $path, $dependencies, SSC_VERSION, true);
 
+                    if ($handle === 'utilities') {
+                        wp_localize_script($script_handle, 'SSC_UTILITIES_DATA', [
+                            'breakpoints' => \ssc_get_breakpoints(),
+                        ]);
+                    }
+
                     if (in_array($handle, ['utilities', 'import-export'], true) && function_exists('wp_set_script_translations')) {
                         wp_set_script_translations(
                             $script_handle,

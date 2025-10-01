@@ -26,6 +26,7 @@ class RoutesSaveCssTest extends WP_UnitTestCase
             'ssc_css_cache',
             'ssc_css_cache_meta',
             'ssc_css_revisions',
+            'ssc_breakpoints',
         ] as $option) {
             delete_option($option);
         }
@@ -151,5 +152,55 @@ class RoutesSaveCssTest extends WP_UnitTestCase
         );
         $this->assertFalse(get_option('ssc_css_cache'));
         $this->assertFalse(get_option('ssc_css_cache_meta'));
+    }
+
+    public function test_save_css_uses_configured_breakpoints(): void
+    {
+        update_option('ssc_breakpoints', [
+            'desktop' => 0,
+            'tablet' => 650,
+            'mobile' => 420,
+        ], false);
+
+        $request = $this->createRequest([
+            'css_desktop' => 'body { color: #123456; }',
+            'css_tablet' => '.foo { font-size: 1.25rem; }',
+            'css_mobile' => '.foo { font-size: 1rem; }',
+        ]);
+
+        $response = $this->routes->saveCss($request);
+
+        $this->assertInstanceOf(WP_REST_Response::class, $response);
+        $this->assertSame(200, $response->get_status());
+
+        $stored = get_option('ssc_active_css', '');
+        $this->assertIsString($stored);
+        $this->assertStringContainsString('@media (max-width: 650px)', $stored);
+        $this->assertStringContainsString('@media (max-width: 420px)', $stored);
+    }
+
+    public function test_save_css_falls_back_to_default_breakpoints_when_option_invalid(): void
+    {
+        update_option('ssc_breakpoints', [
+            'desktop' => 'not-a-number',
+            'tablet' => -10,
+            'mobile' => 0,
+        ], false);
+
+        $request = $this->createRequest([
+            'css_desktop' => 'body { margin: 0; }',
+            'css_tablet' => '.foo { display: none; }',
+            'css_mobile' => '.foo { display: block; }',
+        ]);
+
+        $response = $this->routes->saveCss($request);
+
+        $this->assertInstanceOf(WP_REST_Response::class, $response);
+        $this->assertSame(200, $response->get_status());
+
+        $stored = get_option('ssc_active_css', '');
+        $this->assertIsString($stored);
+        $this->assertStringContainsString('@media (max-width: 782px)', $stored);
+        $this->assertStringContainsString('@media (max-width: 480px)', $stored);
     }
 }
