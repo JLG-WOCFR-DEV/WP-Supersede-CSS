@@ -38,5 +38,6 @@ Ces tests s'exécutent de manière isolée grâce au moquage des appels REST. Au
 - `sanitize-imports.php`
 - `sanitize-urls.php`
 - `uninstall-multisite.md`
+- `css-save-network-error.md`
 
 Consultez chaque fichier pour les prérequis et étapes détaillées.
