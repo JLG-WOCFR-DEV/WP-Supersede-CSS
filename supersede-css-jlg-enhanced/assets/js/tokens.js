@@ -5,12 +5,54 @@
 
     let tokens = Array.isArray(localized.tokens) ? localized.tokens.slice() : [];
     let hasLocalChanges = false;
+    let beforeUnloadHandler = null;
     const tokenTypes = localized.types || {
         color: { label: 'Couleur', input: 'color' },
         text: { label: 'Texte', input: 'text' },
         number: { label: 'Nombre', input: 'number' },
     };
     const i18n = localized.i18n || {};
+
+    function getUnsavedChangesMessage() {
+        return i18n.reloadConfirm || 'Des modifications locales non enregistrées seront perdues. Continuer ?';
+    }
+
+    function detachBeforeUnloadHandler() {
+        if (!beforeUnloadHandler) {
+            return;
+        }
+
+        window.removeEventListener('beforeunload', beforeUnloadHandler);
+        beforeUnloadHandler = null;
+    }
+
+    function ensureBeforeUnloadHandler() {
+        if (beforeUnloadHandler) {
+            return;
+        }
+
+        beforeUnloadHandler = function(event) {
+            if (!hasLocalChanges) {
+                return undefined;
+            }
+
+            const message = getUnsavedChangesMessage();
+            event.preventDefault();
+            event.returnValue = message;
+            return message;
+        };
+
+        window.addEventListener('beforeunload', beforeUnloadHandler);
+    }
+
+    function setHasLocalChanges(value) {
+        hasLocalChanges = Boolean(value);
+        if (hasLocalChanges) {
+            ensureBeforeUnloadHandler();
+        } else {
+            detachBeforeUnloadHandler();
+        }
+    }
 
     const builder = $('#ssc-token-builder');
     const cssTextarea = $('#ssc-tokens');
@@ -446,14 +488,14 @@
             description: '',
             group: 'Général',
         });
-        hasLocalChanges = true;
+        setHasLocalChanges(true);
         renderTokens();
         refreshCssFromTokens();
     }
 
     function removeToken(index) {
         tokens.splice(index, 1);
-        hasLocalChanges = true;
+        setHasLocalChanges(true);
         renderTokens();
         refreshCssFromTokens();
     }
@@ -463,7 +505,7 @@
             return;
         }
         tokens[index][key] = value;
-        hasLocalChanges = true;
+        setHasLocalChanges(true);
     }
 
     function fetchTokensFromServer() {
@@ -483,7 +525,7 @@
                 if (response && Array.isArray(response.tokens)) {
                     tokens = response.tokens;
                     renderTokens();
-                    hasLocalChanges = false;
+                    setHasLocalChanges(false);
                 }
                 if (response && typeof response.css === 'string') {
                     applyCss(response.css);
@@ -533,7 +575,7 @@
                 refreshCssFromTokens();
             }
             refreshDuplicateState();
-            hasLocalChanges = false;
+            setHasLocalChanges(false);
             if (typeof window.sscToast === 'function') {
                 window.sscToast(i18n.saveSuccess || 'Tokens enregistrés');
             }
@@ -584,19 +626,19 @@
             reloadButton.on('click', function(event) {
                 event.preventDefault();
                 if (hasLocalChanges) {
-                    const confirmMessage = i18n.reloadConfirm || 'Des modifications locales non enregistrées seront perdues. Continuer ?';
+                    const confirmMessage = getUnsavedChangesMessage();
                     if (!window.confirm(confirmMessage)) {
                         return;
                     }
                 }
-                hasLocalChanges = false;
+                setHasLocalChanges(false);
                 fetchTokensFromServer();
             });
         }
 
         builder.on('input', '.token-name', function() {
             const index = $(this).closest('.ssc-token-row').data('index');
-            hasLocalChanges = true;
+            setHasLocalChanges(true);
             updateToken(index, 'name', $(this).val());
             refreshCssFromTokens();
             refreshDuplicateState();
@@ -606,7 +648,7 @@
             const index = $(this).closest('.ssc-token-row').data('index');
             const normalized = normalizeName($(this).val());
             $(this).val(normalized);
-            hasLocalChanges = true;
+            setHasLocalChanges(true);
             updateToken(index, 'name', normalized);
             refreshCssFromTokens();
             refreshDuplicateState();
@@ -614,7 +656,7 @@
 
         builder.on('input', '.token-value', function() {
             const index = $(this).closest('.ssc-token-row').data('index');
-            hasLocalChanges = true;
+            setHasLocalChanges(true);
             updateToken(index, 'value', $(this).val());
             refreshCssFromTokens();
             refreshDuplicateState();
@@ -622,13 +664,13 @@
 
         builder.on('input', '.token-description', function() {
             const index = $(this).closest('.ssc-token-row').data('index');
-            hasLocalChanges = true;
+            setHasLocalChanges(true);
             updateToken(index, 'description', $(this).val());
         });
 
         builder.on('change', '.token-type', function() {
             const index = $(this).closest('.ssc-token-row').data('index');
-            hasLocalChanges = true;
+            setHasLocalChanges(true);
             updateToken(index, 'type', $(this).val());
             renderTokens();
             refreshCssFromTokens();
@@ -637,7 +679,7 @@
         builder.on('change', '.token-group', function() {
             const index = $(this).closest('.ssc-token-row').data('index');
             const newGroup = $(this).val().trim() || 'Général';
-            hasLocalChanges = true;
+            setHasLocalChanges(true);
             updateToken(index, 'group', newGroup);
             renderTokens();
             refreshCssFromTokens();
