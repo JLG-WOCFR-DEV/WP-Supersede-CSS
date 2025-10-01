@@ -6,7 +6,8 @@
     "env:start": "wp-env start",
     "env:stop": "wp-env stop",
     "env:destroy": "wp-env destroy --yes",
-    "test:ui": "playwright test"
+    "test:ui": "playwright test",
+    "test:ui:shell": "playwright test tests/ui/shell-accessibility.spec.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.1",
