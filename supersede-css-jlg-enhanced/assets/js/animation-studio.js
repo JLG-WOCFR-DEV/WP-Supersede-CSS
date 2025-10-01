@@ -80,14 +80,34 @@
             }).catch(() => {});
         });
 
-        $('#ssc-anim-apply').on('click', () => {
+        const $applyButton = $('#ssc-anim-apply');
+        $applyButton.on('click', () => {
             const css = $('#ssc-anim-css').text();
+            const originalText = $applyButton.text();
+
+            $applyButton
+                .prop('disabled', true)
+                .attr('aria-disabled', 'true')
+                .text('Application…');
+
             $.ajax({
                 url: SSC.rest.root + 'save-css',
                 method: 'POST',
                 data: { css, append: true, _wpnonce: SSC.rest.nonce },
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
-            }).done(() => window.sscToast('Animation appliquée !'));
+            })
+                .done(() => window.sscToast('Animation appliquée !'))
+                .fail((jqXHR, textStatus, errorThrown) => {
+                    const errorMessage = 'Impossible d\'appliquer l\'animation.';
+                    console.error(errorMessage, { jqXHR, textStatus, errorThrown });
+                    window.sscToast(errorMessage, { politeness: 'assertive' });
+                })
+                .always(() => {
+                    $applyButton
+                        .prop('disabled', false)
+                        .removeAttr('aria-disabled')
+                        .text(originalText);
+                });
         });
 
         generateAnimationCSS();
