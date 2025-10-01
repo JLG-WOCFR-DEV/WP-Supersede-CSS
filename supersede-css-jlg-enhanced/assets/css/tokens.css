@@ -47,3 +47,18 @@
     margin: 0;
     font-style: italic;
 }
+
+.ssc-token-row--duplicate {
+    background-color: rgba(220, 38, 38, 0.08);
+    border-radius: 4px;
+    padding: 4px;
+}
+
+.token-field-input--duplicate {
+    border-color: #dc2626;
+    box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.35);
+}
+
+.token-field-input--duplicate:focus {
+    box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.35), 0 0 0 3px rgba(220, 38, 38, 0.2);
+}

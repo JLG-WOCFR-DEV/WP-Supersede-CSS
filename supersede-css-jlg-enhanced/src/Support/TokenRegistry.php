@@ -36,7 +36,8 @@ final class TokenRegistry
         $stored = get_option(self::OPTION_REGISTRY, self::REGISTRY_NOT_FOUND);
 
         if ($stored !== self::REGISTRY_NOT_FOUND && is_array($stored)) {
-            $normalized = self::normalizeRegistry($stored);
+            $result = self::normalizeRegistry($stored);
+            $normalized = $result['tokens'];
             $shouldPersistCss = false;
 
             if ($stored !== $normalized) {
@@ -58,7 +59,9 @@ final class TokenRegistry
 
         $legacyCss = get_option(self::OPTION_CSS, '');
         if (is_string($legacyCss) && trim($legacyCss) !== '') {
-            $fromCss = self::normalizeRegistry(self::convertCssToRegistry($legacyCss));
+            $converted = self::convertCssToRegistry($legacyCss);
+            $result = self::normalizeRegistry($converted);
+            $fromCss = $result['tokens'];
             if ($fromCss !== []) {
                 update_option(self::OPTION_REGISTRY, $fromCss, false);
                 self::persistCss($fromCss);
@@ -66,7 +69,8 @@ final class TokenRegistry
             }
         }
 
-        $defaults = self::normalizeRegistry(self::getDefaultRegistry());
+        $defaultsResult = self::normalizeRegistry(self::getDefaultRegistry());
+        $defaults = $defaultsResult['tokens'];
         update_option(self::OPTION_REGISTRY, $defaults, false);
         self::persistCss($defaults);
 
@@ -98,11 +102,16 @@ final class TokenRegistry
 
     /**
      * @param array<int, array{name?: mixed, value?: mixed, type?: mixed, description?: mixed, group?: mixed}> $tokens
-     * @return array<int, array{name: string, value: string, type: string, description: string, group: string}>
+     * @return array{tokens: array<int, array{name: string, value: string, type: string, description: string, group: string}>, duplicates: array<int, array{canonical: string, variants: array<int, string>}>}
      */
     public static function saveRegistry(array $tokens): array
     {
-        $normalized = self::normalizeRegistry($tokens);
+        $result = self::normalizeRegistry($tokens);
+        $normalized = $result['tokens'];
+
+        if ($result['duplicates'] !== []) {
+            return $result;
+        }
 
         $stored = get_option(self::OPTION_REGISTRY, null);
         if (!is_array($stored) || $stored !== $normalized) {
@@ -111,7 +120,7 @@ final class TokenRegistry
 
         self::persistCss($normalized);
 
-        return $normalized;
+        return $result;
     }
 
     /**
@@ -130,11 +139,13 @@ final class TokenRegistry
 
     /**
      * @param array<int, array{name?: mixed, value?: mixed, type?: mixed, description?: mixed, group?: mixed}> $tokens
-     * @return array<int, array{name: string, value: string, type: string, description: string, group: string}>
+     * @return array{tokens: array<int, array{name: string, value: string, type: string, description: string, group: string}>, duplicates: array<int, array{canonical: string, variants: array<int, string>}>}
      */
     public static function normalizeRegistry(array $tokens): array
     {
         $normalizedByName = [];
+        $duplicateKeys = [];
+        $variantsByKey = [];
 
         foreach ($tokens as $token) {
             if (!is_array($token)) {
@@ -157,6 +168,10 @@ final class TokenRegistry
             }
 
             $normalizedKey = strtolower($normalizedName);
+            if (!isset($variantsByKey[$normalizedKey])) {
+                $variantsByKey[$normalizedKey] = [];
+            }
+            $variantsByKey[$normalizedKey][] = $normalizedName;
 
             $valueRaw = isset($token['value']) ? (string) $token['value'] : '';
             $value = trim(sanitize_textarea_field($valueRaw));
@@ -184,13 +199,29 @@ final class TokenRegistry
             ];
 
             if (array_key_exists($normalizedKey, $normalizedByName)) {
+                $duplicateKeys[$normalizedKey] = true;
                 unset($normalizedByName[$normalizedKey]);
             }
 
             $normalizedByName[$normalizedKey] = $normalizedToken;
         }
 
-        return array_values($normalizedByName);
+        $duplicates = [];
+
+        foreach (array_keys($duplicateKeys) as $duplicateKey) {
+            $variants = $variantsByKey[$duplicateKey] ?? [];
+            $variants = array_values(array_unique($variants));
+
+            $duplicates[] = [
+                'canonical' => $duplicateKey,
+                'variants' => $variants,
+            ];
+        }
+
+        return [
+            'tokens' => array_values($normalizedByName),
+            'duplicates' => $duplicates,
+        ];
     }
 
     /**
@@ -380,7 +411,9 @@ final class TokenRegistry
             $cursor = $index;
         }
 
-        return self::normalizeRegistry(array_values($tokensByName));
+        $result = self::normalizeRegistry(array_values($tokensByName));
+
+        return $result['tokens'];
     }
 
     /**
@@ -396,7 +429,9 @@ final class TokenRegistry
 
         $existingByName = [];
 
-        foreach (self::normalizeRegistry($existing) as $existingToken) {
+        $existingResult = self::normalizeRegistry($existing);
+
+        foreach ($existingResult['tokens'] as $existingToken) {
             $name = strtolower($existingToken['name']);
             $existingByName[$name] = [
                 'type' => $existingToken['type'],

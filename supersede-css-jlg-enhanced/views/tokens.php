@@ -22,6 +22,8 @@ if (function_exists('wp_localize_script')) {
             'deleteLabel' => __('Supprimer', 'supersede-css-jlg'),
             'saveSuccess' => __('Tokens enregistrés', 'supersede-css-jlg'),
             'saveError' => __('Impossible d’enregistrer les tokens.', 'supersede-css-jlg'),
+            'duplicateError' => __('Certains tokens utilisent le même nom. Corrigez les doublons avant d’enregistrer.', 'supersede-css-jlg'),
+            'duplicateListPrefix' => __('Doublons :', 'supersede-css-jlg'),
             'copySuccess' => __('Tokens copiés', 'supersede-css-jlg'),
             'reloadConfirm' => __('Des modifications locales non enregistrées seront perdues. Continuer ?', 'supersede-css-jlg'),
         ],

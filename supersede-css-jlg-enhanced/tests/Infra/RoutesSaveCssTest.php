@@ -78,7 +78,8 @@ class RoutesSaveCssTest extends WP_UnitTestCase
             ],
         ];
 
-        TokenRegistry::saveRegistry($initialRegistry);
+        $initialSave = TokenRegistry::saveRegistry($initialRegistry);
+        $this->assertSame([], $initialSave['duplicates']);
 
         $tokenCss = ":root {\n    --first-token: #123456;\n    --second-token: 1.5rem;\n    --with-semicolon: 'foo;bar'\n}";
 
@@ -94,10 +95,14 @@ class RoutesSaveCssTest extends WP_UnitTestCase
 
         $sanitizedCss = CssSanitizer::sanitize($tokenCss);
         $convertedRegistry = TokenRegistry::convertCssToRegistry($sanitizedCss);
-        $normalizedInitial = TokenRegistry::normalizeRegistry($initialRegistry);
-        $expectedRegistry = TokenRegistry::normalizeRegistry(
+        $normalizedInitialResult = TokenRegistry::normalizeRegistry($initialRegistry);
+        $this->assertSame([], $normalizedInitialResult['duplicates']);
+        $normalizedInitial = $normalizedInitialResult['tokens'];
+        $expectedRegistryResult = TokenRegistry::normalizeRegistry(
             TokenRegistry::mergeMetadata($convertedRegistry, $normalizedInitial)
         );
+        $this->assertSame([], $expectedRegistryResult['duplicates']);
+        $expectedRegistry = $expectedRegistryResult['tokens'];
         $expectedRegistryCss = TokenRegistry::tokensToCss($expectedRegistry);
 
         $this->assertSame($expectedRegistry, get_option('ssc_tokens_registry'));

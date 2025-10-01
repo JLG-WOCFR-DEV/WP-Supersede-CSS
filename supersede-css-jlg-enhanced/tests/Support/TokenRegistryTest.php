@@ -90,7 +90,7 @@ if (!function_exists('update_option')) {
 require_once __DIR__ . '/../../src/Support/CssSanitizer.php';
 require_once __DIR__ . '/../../src/Support/TokenRegistry.php';
 
-$normalized = TokenRegistry::normalizeRegistry([
+$normalizedResult = TokenRegistry::normalizeRegistry([
     [
         'name' => '--BrandPrimary',
         'value' => '#3366ff',
@@ -99,13 +99,20 @@ $normalized = TokenRegistry::normalizeRegistry([
         'group' => 'Brand',
     ],
 ]);
+
+$normalized = $normalizedResult['tokens'];
+
+if ($normalizedResult['duplicates'] !== []) {
+    fwrite(STDERR, 'TokenRegistry::normalizeRegistry should not report duplicates for unique tokens.' . PHP_EOL);
+    exit(1);
+}
 
 if ($normalized === [] || $normalized[0]['name'] !== '--BrandPrimary') {
     fwrite(STDERR, 'TokenRegistry::normalizeRegistry should preserve the original token casing.' . PHP_EOL);
     exit(1);
 }
 
-$registry = TokenRegistry::saveRegistry([
+$registryResult = TokenRegistry::saveRegistry([
     [
         'name' => '--BrandPrimary',
         'value' => '#3366ff',
@@ -114,6 +121,13 @@ $registry = TokenRegistry::saveRegistry([
         'group' => 'Brand',
     ],
 ]);
+
+$registry = $registryResult['tokens'];
+
+if ($registryResult['duplicates'] !== []) {
+    fwrite(STDERR, 'TokenRegistry::saveRegistry should not report duplicates for unique tokens.' . PHP_EOL);
+    exit(1);
+}
 
 if ($registry === [] || $registry[0]['name'] !== '--BrandPrimary') {
     fwrite(STDERR, 'TokenRegistry::saveRegistry should preserve the original token casing.' . PHP_EOL);
@@ -237,7 +251,13 @@ $underscoredTokens = [
     ],
 ];
 
-$savedRegistry = TokenRegistry::saveRegistry($underscoredTokens);
+$savedRegistryResult = TokenRegistry::saveRegistry($underscoredTokens);
+$savedRegistry = $savedRegistryResult['tokens'];
+
+if ($savedRegistryResult['duplicates'] !== []) {
+    fwrite(STDERR, 'saveRegistry should not report duplicates for unique underscored tokens.' . PHP_EOL);
+    exit(1);
+}
 
 if ($savedRegistry === [] || $savedRegistry[0]['name'] !== '--spacing_small') {
     fwrite(STDERR, 'saveRegistry should preserve underscores in token names.' . PHP_EOL);
@@ -292,7 +312,11 @@ if ($registryFromCommentedCss === [] || $registryFromCommentedCss[0]['name'] !==
     exit(1);
 }
 
-TokenRegistry::saveRegistry($registryFromCommentedCss);
+$commentedResult = TokenRegistry::saveRegistry($registryFromCommentedCss);
+if ($commentedResult['duplicates'] !== []) {
+    fwrite(STDERR, 'saveRegistry should not report duplicates when CSS comments are ignored.' . PHP_EOL);
+    exit(1);
+}
 
 if (!isset($ssc_options_store['ssc_tokens_registry']) || !is_array($ssc_options_store['ssc_tokens_registry'])) {
     fwrite(STDERR, 'saveRegistry should persist tokens parsed after leading comments.' . PHP_EOL);
@@ -314,7 +338,11 @@ if ($annotatedRegistry === [] || $annotatedRegistry[0]['name'] !== '--my-token')
     exit(1);
 }
 
-TokenRegistry::saveRegistry($annotatedRegistry);
+$annotatedResult = TokenRegistry::saveRegistry($annotatedRegistry);
+if ($annotatedResult['duplicates'] !== []) {
+    fwrite(STDERR, 'saveRegistry should not report duplicates when annotated comments are present.' . PHP_EOL);
+    exit(1);
+}
 
 if (!isset($ssc_options_store['ssc_tokens_registry']) || !is_array($ssc_options_store['ssc_tokens_registry'])) {
     fwrite(STDERR, 'saveRegistry should persist tokens that follow annotated comments.' . PHP_EOL);
