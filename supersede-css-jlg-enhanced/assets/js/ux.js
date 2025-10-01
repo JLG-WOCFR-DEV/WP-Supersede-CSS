@@ -96,6 +96,7 @@
         const sidebar = $('#ssc-sidebar');
         const mobileMenuToggle = $('#ssc-mobile-menu');
         const overlay = $('.ssc-shell-overlay');
+        const bodyEl = $('body');
         const focusableSelectors = 'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])';
         let lastFocusedElement = null;
 
@@ -126,7 +127,7 @@
 
             lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
             shell.addClass('ssc-shell--menu-open');
-            $('body').addClass('ssc-no-scroll');
+            bodyEl.addClass('ssc-no-scroll');
             overlay.removeAttr('hidden');
             mobileMenuToggle.attr({
                 'aria-expanded': 'true',
@@ -143,7 +144,7 @@
             }
 
             shell.removeClass('ssc-shell--menu-open');
-            $('body').removeClass('ssc-no-scroll');
+            bodyEl.removeClass('ssc-no-scroll');
             overlay.attr('hidden', 'hidden');
             mobileMenuToggle.attr({
                 'aria-expanded': 'false',
@@ -179,6 +180,12 @@
 
             if (!$(event.target).closest('aside, #ssc-mobile-menu').length) {
                 closeMobileMenu();
+            }
+        });
+
+        sidebar.on('click', 'a', function() {
+            if (isMobileViewport()) {
+                closeMobileMenu({ restoreFocus: false });
             }
         });
 
