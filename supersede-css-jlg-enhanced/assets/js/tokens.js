@@ -133,10 +133,6 @@
     }
 
     function notifyDuplicateError(labels, customMessage) {
-        if (typeof window.sscToast !== 'function') {
-            return;
-        }
-
         const fallbackMessage = i18n.duplicateError || 'Certains tokens utilisent le même nom. Corrigez les doublons avant d’enregistrer.';
         const message = (typeof customMessage === 'string' && customMessage.trim() !== '') ? customMessage : fallbackMessage;
         const normalizedLabels = Array.isArray(labels)
@@ -155,7 +151,13 @@
             finalMessage = message + ' ' + prefix + ' ' + normalizedLabels.join(', ');
         }
 
-        window.sscToast(finalMessage, { politeness: 'assertive', role: 'alert' });
+        if (typeof window.sscToast === 'function') {
+            window.sscToast(finalMessage, { politeness: 'assertive', role: 'alert' });
+        }
+
+        if (window.wp && window.wp.a11y && typeof window.wp.a11y.speak === 'function') {
+            window.wp.a11y.speak(finalMessage, 'assertive');
+        }
     }
 
     function handleDuplicateConflict(duplicateKeys, labels, message) {
@@ -195,6 +197,18 @@
                     const trimmed = variant.trim();
                     if (trimmed !== '' && labels.indexOf(trimmed) === -1) {
                         labels.push(trimmed);
+                    }
+                });
+            }
+
+            if (Array.isArray(item.conflicts)) {
+                item.conflicts.forEach(function(conflict) {
+                    if (!conflict || typeof conflict !== 'object') {
+                        return;
+                    }
+                    const rawName = typeof conflict.name === 'string' ? conflict.name.trim() : '';
+                    if (rawName !== '' && labels.indexOf(rawName) === -1) {
+                        labels.push(rawName);
                     }
                 });
             } else if (typeof item.canonical === 'string') {
