@@ -322,8 +322,17 @@ class Layout {
                     <span aria-hidden="true">🌓</span>
                     <span class="ssc-topbar-label">Thème</span>
                 </button>
-                <button type="button" class="button ssc-mobile-menu-toggle" id="ssc-mobile-menu" aria-expanded="false" aria-controls="ssc-sidebar" aria-label="Afficher le menu">
+                <button
+                    type="button"
+                    class="button ssc-mobile-menu-toggle"
+                    id="ssc-mobile-menu"
+                    aria-expanded="false"
+                    aria-controls="ssc-sidebar"
+                    aria-haspopup="true"
+                    aria-label="Afficher le menu"
+                >
                     <span class="dashicons dashicons-menu" aria-hidden="true"></span>
+                    <span class="screen-reader-text">Menu</span>
                 </button>
                 <button type="button" class="button button-primary" id="ssc-cmdk" aria-label="Ouvrir la palette de commandes">
                     <span aria-hidden="true">⌘K</span>

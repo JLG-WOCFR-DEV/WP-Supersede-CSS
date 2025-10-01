@@ -11,7 +11,8 @@
 .ssc-topbar .button{display:inline-flex;align-items:center;gap:6px}
 .ssc-mobile-menu-toggle{display:none;align-items:center;justify-content:center;gap:4px}
 .ssc-mobile-menu-toggle .dashicons{font-size:18px;line-height:1}
-.ssc-shell-overlay{display:none}
+.ssc-shell-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);opacity:0;transition:opacity .3s ease;pointer-events:none;z-index:1050}
+.ssc-shell--menu-open .ssc-shell-overlay{opacity:1;pointer-events:auto}
 body.ssc-no-scroll{overflow:hidden}
 
 /* CORRECTION : La sidebar utilise maintenant les variables du thème */
@@ -31,7 +32,7 @@ body.ssc-no-scroll{overflow:hidden}
 
 .ssc-sidebar a{display:flex;gap:8px;align-items:center;padding:8px;border-radius:8px;color:var(--ssc-text);text-decoration:none;border:1px solid transparent}
 .ssc-sidebar a.active{background:rgba(165, 180, 252, 0.1);border-color:var(--ssc-border); color: var(--ssc-accent); font-weight: 600;}
-.ssc-layout{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:flex-start;position:relative}
+.ssc-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;align-items:flex-start;position:relative}
 .ssc-main-content { padding-left: 16px; }
 
 /* Titres des groupes dans la sidebar */
@@ -50,15 +51,11 @@ body.ssc-no-scroll{overflow:hidden}
     .ssc-topbar .ssc-title{flex:1 0 100%;margin-top:4px}
     .ssc-topbar .ssc-spacer{display:none}
     .ssc-mobile-menu-toggle{display:inline-flex}
-    .ssc-layout{grid-template-columns:1fr}
-    .ssc-layout aside{position:fixed;inset:0;background:var(--ssc-card);border:0;border-radius:0;padding:88px 16px 24px;max-width:100%;transform:translateY(-100%);transition:transform .3s ease,opacity .3s ease;z-index:1100;overflow-y:auto;box-shadow:0 20px 40px rgba(15,23,42,.4);pointer-events:none;opacity:0;visibility:hidden}
-    .ssc-layout aside .ssc-sidebar{width:100%;height:auto;max-width:640px;margin:0 auto}
+    .ssc-layout{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto}
     .ssc-layout .ssc-main-content{padding-left:0}
-    .ssc-shell-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1050;opacity:0;transition:opacity .3s ease}
-    .ssc-shell--menu-open .ssc-shell-overlay{display:block;opacity:1}
-    .ssc-shell--menu-open .ssc-layout aside{transform:translateY(0);pointer-events:auto;opacity:1;visibility:visible}
-    .ssc-shell--menu-open .ssc-shell-overlay{pointer-events:auto}
-    .ssc-shell-overlay{pointer-events:none}
+    .ssc-layout aside{position:fixed;inset:0;background:var(--ssc-card);border:0;border-radius:0;padding:92px 16px 24px;max-width:100%;transform:translateY(-100%);opacity:0;visibility:hidden;transition:opacity .3s ease,transform .3s ease;z-index:1100;overflow-y:auto;box-shadow:0 24px 48px rgba(15,23,42,.35);pointer-events:none;display:flex;justify-content:center}
+    .ssc-layout aside .ssc-sidebar{width:100%;height:auto;max-width:640px;margin:0 auto}
+    .ssc-shell--menu-open .ssc-layout aside{transform:translateY(0);opacity:1;visibility:visible;pointer-events:auto}
 }
 
 @media (max-width:782px){
