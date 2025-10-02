@@ -11,7 +11,17 @@ final class TokenRegistry
     private const REGISTRY_NOT_FOUND = '__ssc_tokens_registry_missing__';
 
     /**
-     * @var array<string, array{label: string, input: string}>
+     * Supported token types exposed to the UI.
+     *
+     * The `input` key controls the form control rendered for the token value.
+     * Accepted values are `color`, `number`, `text` and `textarea`.
+     *
+     * @var array<string, array{
+     *     label: string,
+     *     input: 'color'|'number'|'text'|'textarea',
+     *     placeholder?: string,
+     *     rows?: positive-int
+     * }>
      */
     private const SUPPORTED_TYPES = [
         'color' => [
@@ -21,10 +31,33 @@ final class TokenRegistry
         'text' => [
             'label' => 'Texte',
             'input' => 'text',
+            'placeholder' => 'Ex. 16px ou clamp(1rem, 2vw, 2rem)',
         ],
         'number' => [
             'label' => 'Nombre',
             'input' => 'number',
+        ],
+        'spacing' => [
+            'label' => 'Espacement',
+            'input' => 'text',
+            'placeholder' => 'Ex. 16px 24px',
+        ],
+        'font' => [
+            'label' => 'Typographie',
+            'input' => 'text',
+            'placeholder' => 'Ex. "Inter", sans-serif',
+        ],
+        'shadow' => [
+            'label' => 'Ombre',
+            'input' => 'textarea',
+            'placeholder' => "0 2px 4px rgba(15, 23, 42, 0.25)",
+            'rows' => 3,
+        ],
+        'gradient' => [
+            'label' => 'Dégradé',
+            'input' => 'textarea',
+            'placeholder' => 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+            'rows' => 3,
         ],
     ];
 
@@ -124,7 +157,7 @@ final class TokenRegistry
     }
 
     /**
-     * @return array<string, array{label: string, input: string}>
+     * @return array<string, array{label: string, input: string, placeholder?: string, rows?: int}>
      */
     public static function getSupportedTypes(): array
     {
@@ -132,6 +165,9 @@ final class TokenRegistry
 
         foreach ($types as $key => $type) {
             $types[$key]['label'] = __($type['label'], 'supersede-css-jlg');
+            if (isset($type['placeholder'])) {
+                $types[$key]['placeholder'] = __($type['placeholder'], 'supersede-css-jlg');
+            }
         }
 
         return $types;
@@ -178,15 +214,24 @@ final class TokenRegistry
             }
             $conflictTokensByKey[$normalizedKey][] = $token;
 
+            $rawType = isset($token['type']) ? (string) $token['type'] : 'text';
+            $type = isset(self::SUPPORTED_TYPES[$rawType]) ? $rawType : 'text';
+            $typeMeta = self::SUPPORTED_TYPES[$type];
+            $inputKind = $typeMeta['input'];
+
             $valueRaw = isset($token['value']) ? (string) $token['value'] : '';
-            $value = trim(sanitize_textarea_field($valueRaw));
-            if ($value === '') {
+            $sanitizedValue = $inputKind === 'textarea'
+                ? sanitize_textarea_field($valueRaw)
+                : sanitize_text_field($valueRaw);
+
+            if (trim($sanitizedValue) === '') {
                 continue;
             }
 
-            $type = isset($token['type']) ? (string) $token['type'] : 'text';
-            if (!isset(self::SUPPORTED_TYPES[$type])) {
-                $type = 'text';
+            if ($inputKind === 'textarea') {
+                $value = preg_replace("/\r\n?/", "\n", $sanitizedValue);
+            } else {
+                $value = trim($sanitizedValue);
             }
 
             $description = isset($token['description']) ? sanitize_textarea_field((string) $token['description']) : '';
@@ -527,7 +572,21 @@ final class TokenRegistry
         $lines = [];
 
         foreach ($tokens as $token) {
-            $lines[] = sprintf('    %s: %s;', $token['name'], $token['value']);
+            $value = (string) $token['value'];
+            $valueLines = preg_split("/\r\n|\n/", $value) ?: [$value];
+
+            $firstLine = array_shift($valueLines);
+            $line = sprintf('    %s: %s', $token['name'], $firstLine);
+
+            if ($valueLines !== []) {
+                $indented = array_map(
+                    static fn(string $lineValue): string => '        ' . $lineValue,
+                    $valueLines
+                );
+                $line .= "\n" . implode("\n", $indented);
+            }
+
+            $lines[] = $line . ';';
         }
 
         $css = ":root {\n" . implode("\n", $lines) . "\n}";

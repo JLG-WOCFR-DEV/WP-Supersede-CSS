@@ -4,7 +4,7 @@ if (!defined('ABSPATH')) {
 }
 /** @var string $tokens_css */
 /** @var array<int, array{name: string, value: string, type: string, description: string, group: string}> $tokens_registry */
-/** @var array<string, array{label: string, input: string}> $token_types */
+/** @var array<string, array{label: string, input: string, placeholder?: string, rows?: int}> $token_types */
 
 if (function_exists('wp_localize_script')) {
     wp_localize_script('ssc-tokens', 'SSC_TOKENS_DATA', [
