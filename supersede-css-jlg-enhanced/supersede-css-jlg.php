@@ -128,6 +128,30 @@ add_action('plugins_loaded', function(){
     }, 99);
 });
 
+if (!function_exists('ssc_enqueue_block_editor_inline_css')) {
+    /**
+     * Injecte le CSS Supersede dans l'éditeur de blocs.
+     */
+    function ssc_enqueue_block_editor_inline_css(): void
+    {
+        $css_filtered = ssc_get_cached_css();
+
+        if ($css_filtered === '') {
+            return;
+        }
+
+        $css_filtered = CssSanitizer::sanitize($css_filtered);
+
+        if ($css_filtered === '') {
+            return;
+        }
+
+        wp_add_inline_style('wp-edit-blocks', '/* Supersede CSS (Editor) */' . $css_filtered);
+    }
+}
+
+add_action('enqueue_block_editor_assets', 'ssc_enqueue_block_editor_inline_css');
+
 add_action('plugins_loaded', function() {
     load_plugin_textdomain('supersede-css-jlg', false, dirname(plugin_basename(__FILE__)) . '/languages');
 });
