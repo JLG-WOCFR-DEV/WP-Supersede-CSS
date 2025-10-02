@@ -4,12 +4,38 @@ if (!defined('ABSPATH')) {
 }
 /** @var string $tokens_css */
 /** @var array<int, array{name: string, value: string, type: string, description: string, group: string}> $tokens_registry */
-/** @var array<string, array{label: string, input: string, placeholder?: string, rows?: int}> $token_types */
+/** @var array<string, array{label: string, input: string, placeholder?: string, help?: string, rows?: int}> $token_types */
 
 if (function_exists('wp_localize_script')) {
+    $localized_types = [];
+    foreach ($token_types as $type_key => $meta) {
+        if (!is_string($type_key) || $type_key === '') {
+            continue;
+        }
+
+        $normalized_meta = [
+            'label' => $meta['label'],
+            'input' => $meta['input'],
+        ];
+
+        if (isset($meta['placeholder'])) {
+            $normalized_meta['placeholder'] = $meta['placeholder'];
+        }
+
+        if (isset($meta['help'])) {
+            $normalized_meta['help'] = $meta['help'];
+        }
+
+        if (isset($meta['rows'])) {
+            $normalized_meta['rows'] = (int) $meta['rows'];
+        }
+
+        $localized_types[$type_key] = $normalized_meta;
+    }
+
     wp_localize_script('ssc-tokens', 'SSC_TOKENS_DATA', [
         'tokens' => $tokens_registry,
-        'types' => $token_types,
+        'types' => $localized_types,
         'css' => $tokens_css,
         'i18n' => [
             'addToken' => __('Ajouter un token', 'supersede-css-jlg'),

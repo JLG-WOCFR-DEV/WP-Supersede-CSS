@@ -14,12 +14,17 @@ final class TokenRegistry
      * Supported token types exposed to the UI.
      *
      * The `input` key controls the form control rendered for the token value.
-     * Accepted values are `color`, `number`, `text` and `textarea`.
+     * Accepted values are:
+     *  - `color`: renders an `<input type="color">` (falls back to text if value is not a valid hex).
+     *  - `number`: renders an `<input type="number">`.
+     *  - `text`: renders an `<input type="text">`.
+     *  - `textarea`: renders a `<textarea>` and keeps multi-line values intact.
      *
      * @var array<string, array{
      *     label: string,
      *     input: 'color'|'number'|'text'|'textarea',
      *     placeholder?: string,
+     *     help?: string,
      *     rows?: positive-int
      * }>
      */
@@ -27,37 +32,63 @@ final class TokenRegistry
         'color' => [
             'label' => 'Couleur',
             'input' => 'color',
+            'help' => 'Utilisez un code hexadécimal (ex. #4f46e5) ou une variable existante.',
         ],
         'text' => [
             'label' => 'Texte',
             'input' => 'text',
             'placeholder' => 'Ex. 16px ou clamp(1rem, 2vw, 2rem)',
+            'help' => 'Idéal pour les valeurs libres (unités CSS, fonctions, etc.).',
         ],
         'number' => [
             'label' => 'Nombre',
             'input' => 'number',
+            'help' => 'Pour les valeurs strictement numériques (ex. 1.25).',
         ],
         'spacing' => [
             'label' => 'Espacement',
             'input' => 'text',
             'placeholder' => 'Ex. 16px 24px',
+            'help' => 'Convient aux marges/paddings ou aux espacements multiples.',
         ],
         'font' => [
             'label' => 'Typographie',
             'input' => 'text',
             'placeholder' => 'Ex. "Inter", sans-serif',
+            'help' => 'Définissez la pile de polices complète avec les guillemets requis.',
         ],
         'shadow' => [
             'label' => 'Ombre',
             'input' => 'textarea',
             'placeholder' => "0 2px 4px rgba(15, 23, 42, 0.25)",
             'rows' => 3,
+            'help' => 'Accepte plusieurs valeurs box-shadow, une par ligne si nécessaire.',
         ],
         'gradient' => [
             'label' => 'Dégradé',
             'input' => 'textarea',
             'placeholder' => 'linear-gradient(135deg, #4f46e5, #7c3aed)',
             'rows' => 3,
+            'help' => 'Pour les dégradés CSS complexes (linear-, radial-…).',
+        ],
+        'border' => [
+            'label' => 'Bordure',
+            'input' => 'text',
+            'placeholder' => 'Ex. 1px solid currentColor',
+            'help' => 'Combinez largeur, style et couleur de bordure.',
+        ],
+        'dimension' => [
+            'label' => 'Dimensions',
+            'input' => 'text',
+            'placeholder' => 'Ex. 320px ou clamp(280px, 50vw, 480px)',
+            'help' => 'Largeurs/hauteurs ou tailles maximales avec clamp/min/max.',
+        ],
+        'transition' => [
+            'label' => 'Transition',
+            'input' => 'textarea',
+            'placeholder' => "all 0.3s ease-in-out\ncolor 150ms ease", // multi-ligne possible
+            'rows' => 2,
+            'help' => 'Définissez des transitions multi-propriétés, une par ligne.',
         ],
     ];
 
@@ -167,6 +198,9 @@ final class TokenRegistry
             $types[$key]['label'] = __($type['label'], 'supersede-css-jlg');
             if (isset($type['placeholder'])) {
                 $types[$key]['placeholder'] = __($type['placeholder'], 'supersede-css-jlg');
+            }
+            if (isset($type['help'])) {
+                $types[$key]['help'] = __($type['help'], 'supersede-css-jlg');
             }
         }
 

@@ -3,13 +3,67 @@
     const restNonce = window.SSC && window.SSC.rest && window.SSC.rest.nonce ? window.SSC.rest.nonce : '';
     const localized = window.SSC_TOKENS_DATA || {};
     const defaultTokenTypes = {
-        color: { label: 'Couleur', input: 'color' },
-        text: { label: 'Texte', input: 'text', placeholder: 'Ex. 16px ou clamp(1rem, 2vw, 2rem)' },
-        number: { label: 'Nombre', input: 'number' },
-        spacing: { label: 'Espacement', input: 'text', placeholder: 'Ex. 16px 24px' },
-        font: { label: 'Typographie', input: 'text', placeholder: 'Ex. "Inter", sans-serif' },
-        shadow: { label: 'Ombre', input: 'textarea', placeholder: '0 2px 4px rgba(15, 23, 42, 0.25)', rows: 3 },
-        gradient: { label: 'Dégradé', input: 'textarea', placeholder: 'linear-gradient(135deg, #4f46e5, #7c3aed)', rows: 3 },
+        color: {
+            label: 'Couleur',
+            input: 'color',
+            help: 'Utilisez un code hexadécimal (ex. #4f46e5) ou une variable existante.',
+        },
+        text: {
+            label: 'Texte',
+            input: 'text',
+            placeholder: 'Ex. 16px ou clamp(1rem, 2vw, 2rem)',
+            help: 'Idéal pour les valeurs libres (unités CSS, fonctions, etc.).',
+        },
+        number: {
+            label: 'Nombre',
+            input: 'number',
+            help: 'Pour les valeurs strictement numériques (ex. 1.25).',
+        },
+        spacing: {
+            label: 'Espacement',
+            input: 'text',
+            placeholder: 'Ex. 16px 24px',
+            help: 'Convient aux marges/paddings ou aux espacements multiples.',
+        },
+        font: {
+            label: 'Typographie',
+            input: 'text',
+            placeholder: 'Ex. "Inter", sans-serif',
+            help: 'Définissez la pile de polices complète avec les guillemets requis.',
+        },
+        shadow: {
+            label: 'Ombre',
+            input: 'textarea',
+            placeholder: '0 2px 4px rgba(15, 23, 42, 0.25)',
+            rows: 3,
+            help: 'Accepte plusieurs valeurs box-shadow, une par ligne si nécessaire.',
+        },
+        gradient: {
+            label: 'Dégradé',
+            input: 'textarea',
+            placeholder: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+            rows: 3,
+            help: 'Pour les dégradés CSS complexes (linear-, radial-…).',
+        },
+        border: {
+            label: 'Bordure',
+            input: 'text',
+            placeholder: 'Ex. 1px solid currentColor',
+            help: 'Combinez largeur, style et couleur de bordure.',
+        },
+        dimension: {
+            label: 'Dimensions',
+            input: 'text',
+            placeholder: 'Ex. 320px ou clamp(280px, 50vw, 480px)',
+            help: 'Largeurs/hauteurs ou tailles maximales avec clamp/min/max.',
+        },
+        transition: {
+            label: 'Transition',
+            input: 'textarea',
+            placeholder: 'all 0.3s ease-in-out\ncolor 150ms ease',
+            rows: 2,
+            help: 'Définissez des transitions multi-propriétés, une par ligne.',
+        },
     };
 
     let tokens = Array.isArray(localized.tokens) ? localized.tokens.slice() : [];
@@ -387,10 +441,16 @@
         });
     }
 
-    function createField(label, input) {
+    function createField(label, input, helpText) {
         const field = $('<label>', { class: 'ssc-token-field' });
         field.append($('<span>', { class: 'ssc-token-field__label', text: label }));
         field.append(input);
+        if (helpText) {
+            field.append($('<span>', {
+                class: 'ssc-token-field__help',
+                text: helpText,
+            }));
+        }
         return field;
     }
 
@@ -452,6 +512,11 @@
                 valueInput.attr('placeholder', typeMeta.placeholder);
             }
         }
+        if (typeMeta.help && valueInput && valueInput.attr) {
+            const helpId = 'token-help-' + resolvedType + '-' + index;
+            valueInput.attr('aria-describedby', helpId);
+            valueInput.data('help-id', helpId);
+        }
 
         const typeSelect = $('<select>', { class: 'token-field-input token-type' });
         typeOptions.forEach(function(optionKey) {
@@ -484,11 +549,25 @@
             text: i18n.deleteLabel || 'Supprimer',
         });
 
-        row.append(createField(i18n.nameLabel || 'Nom', nameInput));
-        row.append(createField(i18n.valueLabel || 'Valeur', valueInput));
-        row.append(createField(i18n.typeLabel || 'Type', typeSelect));
-        row.append(createField(i18n.groupLabel || 'Groupe', groupInput));
-        row.append(createField(i18n.descriptionLabel || 'Description', descriptionInput));
+        const nameField = createField(i18n.nameLabel || 'Nom', nameInput);
+        const valueField = createField(i18n.valueLabel || 'Valeur', valueInput, typeMeta.help);
+        const typeField = createField(i18n.typeLabel || 'Type', typeSelect);
+        const groupField = createField(i18n.groupLabel || 'Groupe', groupInput);
+        const descriptionField = createField(i18n.descriptionLabel || 'Description', descriptionInput);
+
+        if (typeMeta.help && valueField) {
+            const helpElement = valueField.find('.ssc-token-field__help');
+            const helpId = valueInput.data('help-id');
+            if (helpElement.length && helpId) {
+                helpElement.attr('id', helpId);
+            }
+        }
+
+        row.append(nameField);
+        row.append(valueField);
+        row.append(typeField);
+        row.append(groupField);
+        row.append(descriptionField);
         row.append(deleteButton);
 
         return row;

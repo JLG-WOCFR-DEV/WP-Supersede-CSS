@@ -271,6 +271,18 @@ if (!isset($supportedTypes['color']['label']) || $supportedTypes['color']['label
     exit(1);
 }
 
+foreach (['spacing', 'font', 'shadow', 'gradient', 'border', 'dimension', 'transition'] as $expectedType) {
+    if (!isset($supportedTypes[$expectedType])) {
+        fwrite(STDERR, sprintf('getSupportedTypes should expose the "%s" type.', $expectedType) . PHP_EOL);
+        exit(1);
+    }
+}
+
+if (!isset($supportedTypes['shadow']['help']) || strpos($supportedTypes['shadow']['help'], 'box-shadow') === false) {
+    fwrite(STDERR, 'getSupportedTypes should provide contextual help for textarea-capable types.' . PHP_EOL);
+    exit(1);
+}
+
 if (!isset($ssc_options_store['ssc_tokens_registry']) || !is_array($ssc_options_store['ssc_tokens_registry'])) {
     fwrite(STDERR, 'saveRegistry should persist the registry with the underscored token.' . PHP_EOL);
     exit(1);
@@ -351,5 +363,33 @@ if (!isset($ssc_options_store['ssc_tokens_registry']) || !is_array($ssc_options_
 
 if (!isset($ssc_options_store['ssc_tokens_css']) || strpos($ssc_options_store['ssc_tokens_css'], '--my-token:value') === false) {
     fwrite(STDERR, 'Persisted CSS should retain tokens declared after annotated comments.' . PHP_EOL);
+    exit(1);
+}
+
+$multilineTokens = [
+    [
+        'name' => '--shadow-card',
+        'value' => "0 2px 6px rgba(15, 23, 42, 0.12)\r\n0 12px 24px rgba(15, 23, 42, 0.16)",
+        'type' => 'shadow',
+        'description' => 'Shadow token with multiple lines.',
+        'group' => 'Surfaces',
+    ],
+];
+
+$multilineResult = TokenRegistry::normalizeRegistry($multilineTokens);
+$normalizedMultiline = $multilineResult['tokens'];
+
+if ($multilineResult['duplicates'] !== []) {
+    fwrite(STDERR, 'normalizeRegistry should not report duplicates for multi-line tokens.' . PHP_EOL);
+    exit(1);
+}
+
+if ($normalizedMultiline === [] || $normalizedMultiline[0]['type'] !== 'shadow') {
+    fwrite(STDERR, 'normalizeRegistry should keep the declared token type for textarea tokens.' . PHP_EOL);
+    exit(1);
+}
+
+if ($normalizedMultiline[0]['value'] !== "0 2px 6px rgba(15, 23, 42, 0.12)\n0 12px 24px rgba(15, 23, 42, 0.16)") {
+    fwrite(STDERR, 'normalizeRegistry should preserve multi-line textarea values.' . PHP_EOL);
     exit(1);
 }
