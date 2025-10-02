@@ -198,6 +198,30 @@ final class Admin
         wp_enqueue_style('ssc-admin', SSC_PLUGIN_URL . 'assets/css/admin.css', [], SSC_VERSION);
         wp_enqueue_script('ssc-ux', SSC_PLUGIN_URL . 'assets/js/ux.js', ['jquery'], SSC_VERSION, true);
 
+        $admin_app_handle = 'ssc-admin-app';
+        $admin_app_path = 'build/admin.js';
+        $admin_asset_path = 'build/admin.asset.php';
+        if (is_file(SSC_PLUGIN_DIR . $admin_app_path)) {
+            $asset = is_file(SSC_PLUGIN_DIR . $admin_asset_path) ? include SSC_PLUGIN_DIR . $admin_asset_path : null;
+            $dependencies = is_array($asset['dependencies'] ?? null) ? $asset['dependencies'] : ['wp-element', 'wp-components', 'wp-i18n'];
+            $version = isset($asset['version']) ? (string) $asset['version'] : (string) filemtime(SSC_PLUGIN_DIR . $admin_app_path);
+            wp_register_script(
+                $admin_app_handle,
+                SSC_PLUGIN_URL . $admin_app_path,
+                $dependencies,
+                $version,
+                true
+            );
+
+            if (function_exists('wp_set_script_translations')) {
+                wp_set_script_translations(
+                    $admin_app_handle,
+                    'supersede-css-jlg',
+                    SSC_PLUGIN_DIR . 'languages'
+                );
+            }
+        }
+
         // CodeMirror
         wp_enqueue_style('ssc-codemirror-style', SSC_PLUGIN_URL . 'assets/codemirror/lib/codemirror.css', [], SSC_VERSION);
         wp_enqueue_script('ssc-codemirror', SSC_PLUGIN_URL . 'assets/codemirror/lib/codemirror.js', [], SSC_VERSION, true);
@@ -220,9 +244,7 @@ final class Admin
             $this->slug.'-avatar'           => ['effects-avatar'],
             $this->slug.'-grid'             => ['grid-editor'],
             $this->slug.'-tron'             => ['tron-grid'],
-            $this->slug.'-effects'          => ['visual-effects'],
             $this->slug.'-anim'             => ['animation-studio'],
-            $this->slug.'-tokens'           => ['tokens'],
             $this->slug.'-layout-builder'   => ['page-layout-builder'],
             $this->slug.'-filters'          => ['filter-editor'],
             $this->slug.'-clip-path'        => ['clip-path-editor'],
@@ -238,6 +260,18 @@ final class Admin
             $this->slug.'-clip-path'        => ['clip-path-editor'],
             $this->slug.'-typography'       => ['typography-editor'],
         ];
+
+        if ($admin_app_handle && is_file(SSC_PLUGIN_DIR . $admin_app_path)) {
+            $reactPages = [
+                $this->slug.'-tokens',
+                $this->slug.'-effects',
+            ];
+
+            if (in_array($page, $reactPages, true)) {
+                wp_enqueue_script($admin_app_handle);
+                wp_enqueue_style('wp-components');
+            }
+        }
 
         if (isset($scripts_by_page[$page])) {
             foreach ($scripts_by_page[$page] as $handle) {

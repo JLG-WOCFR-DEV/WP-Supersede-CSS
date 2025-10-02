@@ -6,11 +6,24 @@
     "env:start": "wp-env start",
     "env:stop": "wp-env stop",
     "env:destroy": "wp-env destroy --yes",
+    "build:admin": "wp-scripts build assets/admin-app/index.tsx --output-path=build --output-filename=admin.js",
     "test:ui": "playwright test",
     "test:ui:shell": "playwright test tests/ui/shell-accessibility.spec.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.1",
-    "@wordpress/env": "^10.11.0"
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.2",
+    "@wordpress/env": "^10.11.0",
+    "@wordpress/scripts": "^28.5.0",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "@wordpress/api-fetch": "^6.53.0",
+    "@wordpress/components": "^28.3.0",
+    "@wordpress/element": "^6.5.0",
+    "@wordpress/i18n": "^5.13.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   }
 }

@@ -8,6 +8,14 @@ Description: Boîte à outils visuelle pour CSS avec presets, éditeurs live, to
 == Description ==
 Cette version a été entièrement refactorisée pour améliorer la stabilité, l'expérience utilisateur et les performances. Elle intègre de nouveaux modules créatifs et simplifie les interfaces complexes.
 
+== Développement ==
+Pour compiler l’interface React utilisée par le gestionnaire de tokens et les effets visuels :
+
+1. Installer les dépendances JavaScript avec `npm install`.
+2. Exécuter `npm run build:admin` pour produire `build/admin.js` et son fichier compagnon.
+
+Les bundles générés doivent être committés afin que l’interface soit chargée en production sans étape de build supplémentaire.
+
 == Sécurité ==
 * Toutes les écritures de CSS passent désormais par `SSC\Support\CssSanitizer` qui retire les balises HTML avec `wp_kses()` avant d'analyser chaque déclaration avec `safe_style_css()` via `safecss_filter_attr()`.
 * Les fonctions identifient et neutralisent les protocoles dangereux (`javascript:`, `vbscript:`) à l'aide de `wp_kses_bad_protocol()` tout en conservant les URL légitimes et les valeurs attendues.

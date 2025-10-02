@@ -1,0 +1,10 @@
+{
+  "extends": "@wordpress/scripts/config/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "*": ["*", "assets/admin-app/*"]
+    }
+  },
+  "include": ["assets/admin-app/**/*", "tests/**/*"]
+}

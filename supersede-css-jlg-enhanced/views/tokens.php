@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 /** @var array<string, array{label: string, input: string}> $token_types */
 
 if (function_exists('wp_localize_script')) {
-    wp_localize_script('ssc-tokens', 'SSC_TOKENS_DATA', [
+    wp_localize_script('ssc-admin-app', 'SSC_TOKENS_DATA', [
         'tokens' => $tokens_registry,
         'types' => $token_types,
         'css' => $tokens_css,
@@ -64,34 +64,11 @@ if (function_exists('wp_localize_script')) {
             <h3><?php esc_html_e('🎨 Éditeur Visuel de Tokens', 'supersede-css-jlg'); ?></h3>
             <p><?php esc_html_e('Gérez vos tokens sous forme de fiches structurées : nom technique, valeur, type de champ, description et groupe d\'appartenance. Chaque catégorie est listée séparément pour garder une vision claire de votre système de design.', 'supersede-css-jlg'); ?></p>
 
-            <div class="ssc-token-toolbar" style="margin-bottom:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                <button id="ssc-token-add" class="button"><?php esc_html_e('+ Ajouter un Token', 'supersede-css-jlg'); ?></button>
-            </div>
-
-            <div id="ssc-token-builder" class="ssc-token-builder" aria-live="polite">
-                <!-- Hydraté par JavaScript -->
-            </div>
-
-            <hr>
-
-            <h3><?php printf(wp_kses_post(__('📜 Code CSS généré (%s)', 'supersede-css-jlg')), '<code>:root</code>'); ?></h3>
-            <p><?php esc_html_e('Le code ci-dessous est synchronisé automatiquement avec la configuration JSON. Il est proposé en lecture seule pour vérification ou copie rapide.', 'supersede-css-jlg'); ?></p>
-            <textarea id="ssc-tokens" rows="10" class="large-text" readonly><?php echo esc_textarea($tokens_css); ?></textarea>
-            <div class="ssc-actions" style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
-                <button id="ssc-tokens-save" class="button button-primary"><?php esc_html_e('Enregistrer les Tokens', 'supersede-css-jlg'); ?></button>
-                <button id="ssc-tokens-copy" class="button"><?php esc_html_e('Copier le CSS', 'supersede-css-jlg'); ?></button>
-                <button id="ssc-tokens-reload" class="button" type="button"><?php esc_html_e('Recharger', 'supersede-css-jlg'); ?></button>
-            </div>
+            <div id="ssc-token-app-root"></div>
         </div>
     </div>
 
     <div class="ssc-panel" style="margin-top:16px;">
-        <h3><?php esc_html_e('👁️ Aperçu en Direct', 'supersede-css-jlg'); ?></h3>
-        <p><?php esc_html_e('Voyez comment vos tokens affectent les éléments. Le style de cet aperçu est directement contrôlé par le code CSS ci-dessus.', 'supersede-css-jlg'); ?></p>
-        <style id="ssc-tokens-preview-style"></style>
-        <div id="ssc-tokens-preview" style="padding: 24px; border: 2px dashed var(--couleur-principale, #ccc); border-radius: var(--radius-moyen, 8px); background: #fff;">
-            <button class="button button-primary" style="background-color: var(--couleur-principale); border-radius: var(--radius-moyen);"><?php esc_html_e('Bouton Principal', 'supersede-css-jlg'); ?></button>
-            <a href="#" style="color: var(--couleur-principale); margin-left: 16px;"><?php esc_html_e('Lien Principal', 'supersede-css-jlg'); ?></a>
-        </div>
+        <p><?php esc_html_e('L’éditeur réactif ci-dessus met automatiquement à jour le CSS et l’aperçu en direct pour simplifier la gestion des tokens.', 'supersede-css-jlg'); ?></p>
     </div>
 </div>

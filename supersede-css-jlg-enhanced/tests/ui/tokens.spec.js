@@ -27,7 +27,7 @@ async function authenticate(page, adminUrl, credentials) {
 }
 
 async function waitForPluginReady(page) {
-  await page.waitForSelector('#ssc-token-builder');
+  await page.waitForSelector('[data-component="tokens"]');
   await page.waitForSelector('#ssc-tokens-preview-style');
   await page.waitForFunction(() => {
     return Boolean(
@@ -85,8 +85,7 @@ test.describe('Token manager admin UI', () => {
     ({ restRoot, nonce } = await waitForPluginReady(page));
     tokensEndpoint = new URL('tokens', restRoot).toString();
 
-    const builder = page.locator('#ssc-token-builder');
-    const rows = builder.locator('.ssc-token-row');
+    const rows = page.locator('.ssc-token-row');
     const previewStyle = page.locator('#ssc-tokens-preview-style');
     const cssTextarea = page.locator('#ssc-tokens');
 
@@ -209,8 +208,7 @@ test.describe('Token manager admin UI', () => {
     ({ restRoot, nonce } = await waitForPluginReady(page));
     tokensEndpoint = new URL('tokens', restRoot).toString();
 
-    const builder = page.locator('#ssc-token-builder');
-    const rows = builder.locator('.ssc-token-row');
+    const rows = page.locator('.ssc-token-row');
 
     await expect(rows).toHaveCount(1);
 

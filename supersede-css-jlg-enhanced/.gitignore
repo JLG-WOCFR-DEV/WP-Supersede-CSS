@@ -1,6 +1,10 @@
 node_modules/
 dist/
 build/
+!build/
+build/*
+!build/admin.js
+!build/admin.asset.php
 vendor/
 coverage/
 .DS_Store
