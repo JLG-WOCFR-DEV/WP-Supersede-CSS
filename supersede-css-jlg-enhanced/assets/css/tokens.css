@@ -35,6 +35,12 @@
     font-size: 13px;
 }
 
+.ssc-token-field__help {
+    font-size: 12px;
+    color: #475569;
+    line-height: 1.4;
+}
+
 .ssc-token-field-input {
     width: 100%;
 }
