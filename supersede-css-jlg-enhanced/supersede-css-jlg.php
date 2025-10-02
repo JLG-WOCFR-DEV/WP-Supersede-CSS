@@ -113,7 +113,7 @@ add_action('plugins_loaded', function(){
         new SSC\Admin\Admin();
     }
     if (class_exists('SSC\Infra\Routes')) {
-        SSC\Infra\Routes::boot();
+        SSC\Infra\Routes::register();
     }
 
     add_action('wp_enqueue_scripts', function(){

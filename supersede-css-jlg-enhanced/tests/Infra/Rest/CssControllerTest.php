@@ -1,20 +1,21 @@
 <?php declare(strict_types=1);
 
-use SSC\Infra\Routes;
+use SSC\Infra\Import\Sanitizer;
+use SSC\Infra\Rest\CssController;
 use SSC\Support\CssSanitizer;
 use SSC\Support\TokenRegistry;
 use WP_REST_Request;
 use WP_REST_Response;
 
-class RoutesSaveCssTest extends WP_UnitTestCase
+final class CssControllerTest extends WP_UnitTestCase
 {
-    private Routes $routes;
+    private CssController $controller;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->routes = new Routes();
+        $this->controller = new CssController(new Sanitizer());
 
         foreach ([
             'ssc_active_css',
@@ -48,7 +49,7 @@ class RoutesSaveCssTest extends WP_UnitTestCase
             'css' => 'body { color: red; }',
         ]);
 
-        $response = $this->routes->saveCss($request);
+        $response = $this->controller->saveCss($request);
 
         $this->assertInstanceOf(WP_REST_Response::class, $response);
         $this->assertSame(200, $response->get_status());
@@ -88,7 +89,7 @@ class RoutesSaveCssTest extends WP_UnitTestCase
             'css' => $tokenCss,
         ]);
 
-        $response = $this->routes->saveCss($request);
+        $response = $this->controller->saveCss($request);
 
         $this->assertInstanceOf(WP_REST_Response::class, $response);
         $this->assertSame(200, $response->get_status());
@@ -136,7 +137,7 @@ class RoutesSaveCssTest extends WP_UnitTestCase
             'css' => 'body { color: blue; }',
         ]);
 
-        $response = $this->routes->saveCss($request);
+        $response = $this->controller->saveCss($request);
 
         $this->assertInstanceOf(WP_REST_Response::class, $response);
         $this->assertSame(200, $response->get_status());
