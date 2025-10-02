@@ -17,7 +17,8 @@
 }
 
 .ssc-layout-preview-mobile {
-    width: 375px;
+    width: min(375px, 100%);
+    max-width: 100%;
     margin-left: auto;
     margin-right: auto;
 }
