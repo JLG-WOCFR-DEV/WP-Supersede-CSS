@@ -69,7 +69,23 @@ if (!defined('ABSPATH')) {
                 <h3><?php esc_html_e('Paramètres du Fond', 'supersede-css-jlg'); ?></h3>
                 <select id="ssc-bg-type" class="regular-text"><option value="stars"><?php esc_html_e('Étoiles', 'supersede-css-jlg'); ?></option><option value="gradient"><?php esc_html_e('Dégradé', 'supersede-css-jlg'); ?></option></select>
                 <div id="ssc-bg-controls-stars"><label><?php esc_html_e('Couleur', 'supersede-css-jlg'); ?></label><input type="color" id="starColor" value="#FFFFFF"><label><?php esc_html_e('Nombre', 'supersede-css-jlg'); ?></label><input type="range" id="starCount" min="50" max="500" value="200" step="10"></div>
-                <div id="ssc-bg-controls-gradient" style="display:none;"><label><?php esc_html_e('Vitesse', 'supersede-css-jlg'); ?></label><input type="range" id="gradientSpeed" min="2" max="20" value="10" step="1"></div>
+                <div id="ssc-bg-controls-gradient" style="display:none;">
+                    <div class="ssc-gradient-angle">
+                        <label for="gradientAngle"><?php esc_html_e('Angle du dégradé', 'supersede-css-jlg'); ?></label>
+                        <input type="number" id="gradientAngle" min="0" max="360" step="1" value="135" class="small-text">°
+                    </div>
+                    <div class="ssc-gradient-stops-wrapper">
+                        <div class="ssc-gradient-stops-header">
+                            <label><?php esc_html_e('Arrêts de couleur', 'supersede-css-jlg'); ?></label>
+                            <button type="button" class="button" id="ssc-add-gradient-stop"><?php esc_html_e('Ajouter un arrêt', 'supersede-css-jlg'); ?></button>
+                        </div>
+                        <div id="ssc-gradient-stops-list" class="ssc-gradient-stops" role="list"></div>
+                        <p class="description"><?php esc_html_e('Chaque arrêt doit avoir une position entre 0% et 100%. Un minimum de deux arrêts est requis.', 'supersede-css-jlg'); ?></p>
+                        <div id="ssc-gradient-errors" class="notice notice-error" style="display:none;"></div>
+                    </div>
+                    <label for="gradientSpeed"><?php esc_html_e('Vitesse', 'supersede-css-jlg'); ?></label>
+                    <input type="range" id="gradientSpeed" min="2" max="20" value="10" step="1">
+                </div>
                  <pre id="ssc-bg-css" class="ssc-code"></pre>
                 <button id="ssc-bg-apply" class="button button-primary"><?php esc_html_e('Appliquer', 'supersede-css-jlg'); ?></button>
             </div>

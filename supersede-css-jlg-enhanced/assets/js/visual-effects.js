@@ -157,62 +157,233 @@
     // --- Module 2: Fonds Animés (Corrigé) ---
     function initBackgrounds() {
         if(!$('#ssc-bg-type').length) return;
-        
+
+        const gradientDefaults = {
+            angle: 135,
+            speed: 10,
+            stops: [
+                { color: '#ee7752', position: 0 },
+                { color: '#e73c7e', position: 33 },
+                { color: '#23a6d5', position: 66 },
+                { color: '#23d5ab', position: 100 },
+            ],
+        };
+
+        let gradientStopIdCounter = 0;
+        const gradientState = {
+            angle: gradientDefaults.angle,
+            stops: [],
+        };
+        let latestGradientResult = null;
+
+        const $gradientStopsList = $('#ssc-gradient-stops-list');
+        const $gradientErrors = $('#ssc-gradient-errors');
+        const $applyButton = $('#ssc-bg-apply');
+        const applyingLabel = __('Application…', 'supersede-css-jlg');
+
+        let applyLockedByValidation = false;
+        let applyBusy = false;
+
         // S'assurer que les keyframes des étoiles sont prêtes
         if (!$('style#ssc-stars-anim-style').length) {
             $('<style id="ssc-stars-anim-style">@keyframes ssc-stars-anim { from { transform: translateY(0px); } to { transform: translateY(-2000px); } }</style>').appendTo('head');
         }
 
-        // Attacher les écouteurs d'événements
-        $('#ssc-bg-type, #starColor, #starCount, #gradientSpeed').on('input change', generateBackgroundCSS);
-        const $applyButton = $('#ssc-bg-apply');
-        const applyingLabel = __('Application…', 'supersede-css-jlg');
-        $applyButton.on('click', () => {
-             const css = $('#ssc-bg-css').text();
-             const errorMessage = __('Échec de l\'enregistrement du fond animé.', 'supersede-css-jlg');
-             const originalText = $applyButton.text();
-             $applyButton
-                 .prop('disabled', true)
-                 .attr('aria-disabled', 'true')
-                 .text(applyingLabel);
-             $.ajax({ url: SSC.rest.root + 'save-css', method: 'POST', data: { css, append: true, _wpnonce: SSC.rest.nonce }, beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
-             }).done(() => window.sscToast('Fond animé appliqué !'))
-             .fail((jqXHR, textStatus, errorThrown) => {
-                 console.error(errorMessage, { jqXHR, textStatus, errorThrown });
-                 window.sscToast(
-                     errorMessage,
-                     { politeness: 'assertive' }
-                 );
-             })
-             .always(() => {
-                 $applyButton
-                     .prop('disabled', false)
-                     .removeAttr('aria-disabled')
-                     .text(originalText);
-             });
-        });
-        
-        // Appel initial pour afficher l'aperçu par défaut
-        generateBackgroundCSS();
-    }
+        function clamp(value, min, max) {
+            if (Number.isNaN(value)) return min;
+            return Math.min(Math.max(value, min), max);
+        }
 
-    function generateBackgroundCSS() {
-        const type = $('#ssc-bg-type').val();
-        $('#ssc-bg-controls-stars').toggle(type === 'stars');
-        $('#ssc-bg-controls-gradient').toggle(type === 'gradient');
-        let css = '', preview = $('#ssc-bg-preview');
-        preview.empty().removeAttr('style').css('animation', '').removeClass('ssc-bg-stars ssc-bg-gradient'); // Réinitialiser l'animation
+        function clampPosition(value) {
+            return Math.round(clamp(value, 0, 100));
+        }
 
-        if (type === 'stars') {
-            const color = $('#starColor').val();
-            const count = parseInt($('#starCount').val(), 10);
-            const keyframes = `@keyframes ssc-stars-anim { from { transform: translateY(0); } to { transform: translateY(-2000px); } }`;
-            const animationDuration = 50;
-            let boxShadows = [];
-            for (let i = 0; i < count; i++) {
-                boxShadows.push(`${Math.random() * 2000}px ${Math.random() * 2000}px ${color}`);
+        function clampAngle(value) {
+            return Math.round(clamp(value, 0, 360));
+        }
+
+        function updateApplyButtonState() {
+            if (!$applyButton.length) {
+                return;
             }
-            css = `${keyframes}
+            const shouldDisable = applyLockedByValidation || applyBusy;
+            $applyButton.prop('disabled', shouldDisable);
+            if (shouldDisable) {
+                $applyButton.attr('aria-disabled', 'true');
+            } else {
+                $applyButton.removeAttr('aria-disabled');
+            }
+        }
+
+        function setValidationState(isValid) {
+            applyLockedByValidation = !isValid;
+            updateApplyButtonState();
+        }
+
+        function renderGradientStops() {
+            if (!$gradientStopsList.length) return;
+
+            const sortedStops = [...gradientState.stops].sort((a, b) => a.position - b.position);
+            gradientState.stops = sortedStops;
+            $gradientStopsList.empty();
+
+            const colorLabel = __('Couleur', 'supersede-css-jlg');
+            const positionLabel = __('Position', 'supersede-css-jlg');
+            const removeLabel = __('Retirer', 'supersede-css-jlg');
+            const removeAriaLabel = __('Supprimer cet arrêt', 'supersede-css-jlg');
+
+            sortedStops.forEach((stop) => {
+                const $item = $('<div>', {
+                    class: 'ssc-gradient-stop',
+                    role: 'listitem',
+                    'data-stop-id': stop.id,
+                });
+
+                const $colorLabel = $('<label>').text(`${colorLabel} `);
+                const $colorInput = $('<input>', {
+                    type: 'color',
+                    class: 'ssc-gradient-stop-color',
+                    value: stop.color,
+                });
+                $colorLabel.append($colorInput);
+
+                const $positionLabel = $('<label>').text(`${positionLabel} `);
+                const $positionInput = $('<input>', {
+                    type: 'number',
+                    class: 'small-text ssc-gradient-stop-position',
+                    min: 0,
+                    max: 100,
+                    step: 1,
+                    value: stop.position,
+                });
+                $positionLabel.append($positionInput).append(document.createTextNode('%'));
+
+                const $removeButton = $('<button>', {
+                    type: 'button',
+                    class: 'button-link-delete ssc-remove-gradient-stop',
+                    text: removeLabel,
+                    'aria-label': removeAriaLabel,
+                });
+
+                $item.append($colorLabel, $positionLabel, $removeButton);
+                $gradientStopsList.append($item);
+            });
+
+            const disableRemoval = gradientState.stops.length <= 2;
+            $gradientStopsList.find('.ssc-remove-gradient-stop').each(function() {
+                $(this).prop('disabled', disableRemoval);
+                if (disableRemoval) {
+                    $(this).attr('aria-disabled', 'true');
+                } else {
+                    $(this).removeAttr('aria-disabled');
+                }
+            });
+        }
+
+        function addGradientStop(stop, options = {}) {
+            const config = stop || {};
+            gradientState.stops.push({
+                id: ++gradientStopIdCounter,
+                color: config.color || '#ffffff',
+                position: clampPosition(typeof config.position === 'number' ? config.position : 50),
+            });
+            renderGradientStops();
+            if (options.triggerUpdate !== false) {
+                generateBackgroundCSS();
+            }
+        }
+
+        function removeGradientStop(stopId) {
+            if (gradientState.stops.length <= 2) {
+                return;
+            }
+            gradientState.stops = gradientState.stops.filter((stop) => stop.id !== stopId);
+            renderGradientStops();
+            generateBackgroundCSS();
+        }
+
+        function updateGradientStop(stopId, updates) {
+            const stop = gradientState.stops.find((item) => item.id === stopId);
+            if (!stop) return;
+            if (typeof updates.color === 'string') {
+                stop.color = updates.color;
+            }
+            if (typeof updates.position === 'number' && !Number.isNaN(updates.position)) {
+                stop.position = clampPosition(updates.position);
+            }
+        }
+
+        function validateGradient() {
+            const errors = [];
+            if (gradientState.stops.length < 2) {
+                errors.push(__('Ajoutez au moins deux arrêts de couleur pour créer un dégradé.', 'supersede-css-jlg'));
+            }
+            gradientState.stops.forEach((stop) => {
+                if (stop.position < 0 || stop.position > 100) {
+                    errors.push(__('Les positions doivent être comprises entre 0% et 100%.', 'supersede-css-jlg'));
+                }
+            });
+            return errors;
+        }
+
+        function computeGradientCss() {
+            const errors = validateGradient();
+            if (errors.length) {
+                return { errors, css: '', gradientString: '', stops: [], angle: gradientState.angle, speed: gradientDefaults.speed, keyframes: '' };
+            }
+
+            const sortedStops = [...gradientState.stops].sort((a, b) => a.position - b.position);
+            const stopList = sortedStops.map((stop) => `${stop.color} ${stop.position}%`).join(', ');
+            const angle = clampAngle(gradientState.angle);
+            const speedValue = parseInt($('#gradientSpeed').val(), 10);
+            const speed = Number.isNaN(speedValue) ? gradientDefaults.speed : speedValue;
+            const gradientString = `linear-gradient(${angle}deg, ${stopList})`;
+            const keyframes = `@keyframes ssc-gradient-anim { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }`;
+            const css = `${keyframes}\n.ssc-bg-gradient {\n  background: ${gradientString};\n  background-size: 400% 400%;\n  animation: ssc-gradient-anim ${speed}s ease infinite;\n}`;
+
+            return {
+                errors,
+                css,
+                gradientString,
+                stops: sortedStops,
+                angle,
+                speed,
+                keyframes,
+            };
+        }
+
+        function setDefaultGradientPreset() {
+            gradientStopIdCounter = 0;
+            gradientState.angle = gradientDefaults.angle;
+            $('#gradientAngle').val(gradientDefaults.angle);
+            gradientState.stops = [];
+            gradientDefaults.stops.forEach((stop) => addGradientStop(stop, { triggerUpdate: false }));
+        }
+
+        function generateBackgroundCSS() {
+            const type = $('#ssc-bg-type').val();
+            $('#ssc-bg-controls-stars').toggle(type === 'stars');
+            $('#ssc-bg-controls-gradient').toggle(type === 'gradient');
+            let css = '';
+            const preview = $('#ssc-bg-preview');
+            preview.empty().removeAttr('style').css('animation', '').removeClass('ssc-bg-stars ssc-bg-gradient');
+
+            if (type === 'stars') {
+                setValidationState(true);
+                latestGradientResult = null;
+                if ($gradientErrors.length) {
+                    $gradientErrors.hide().empty();
+                }
+
+                const color = $('#starColor').val();
+                const count = parseInt($('#starCount').val(), 10);
+                const keyframes = `@keyframes ssc-stars-anim { from { transform: translateY(0); } to { transform: translateY(-2000px); } }`;
+                const animationDuration = 50;
+                const boxShadows = [];
+                for (let i = 0; i < count; i++) {
+                    boxShadows.push(`${Math.random() * 2000}px ${Math.random() * 2000}px ${color}`);
+                }
+                css = `${keyframes}
 .ssc-bg-stars {
   background: #000000;
   position: relative;
@@ -231,34 +402,130 @@
 }
 `;
 
-            // Injecter le CSS généré pour l'aperçu
-            $('style#ssc-stars-preview-style').remove();
-            $(`<style id="ssc-stars-preview-style">${css}</style>`).appendTo('head');
+                $('style#ssc-stars-preview-style').remove();
+                $(`<style id="ssc-stars-preview-style">${css}</style>`).appendTo('head');
 
-            preview.addClass('ssc-bg-stars');
+                preview.addClass('ssc-bg-stars');
 
-        } else if (type === 'gradient') {
-            $('style#ssc-stars-preview-style').remove();
-            const speed = $('#gradientSpeed').val();
-            const keyframes = `@keyframes ssc-gradient-anim { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }`;
+            } else if (type === 'gradient') {
+                $('style#ssc-stars-preview-style').remove();
+                const gradientResult = computeGradientCss();
 
-            // Injecter les keyframes pour que l'aperçu fonctionne
-            $('style#ssc-gradient-anim-style').remove();
-            $(`<style id="ssc-gradient-anim-style">${keyframes}</style>`).appendTo('head');
+                if (gradientResult.errors.length) {
+                    latestGradientResult = null;
+                    if ($gradientErrors.length) {
+                        $gradientErrors.html(gradientResult.errors.map((error) => `<p>${error}</p>`).join('')).show();
+                    }
+                    setValidationState(false);
+                    $('style#ssc-gradient-anim-style').remove();
+                    $('#ssc-bg-css').text('');
+                    return;
+                }
 
-            css = `${keyframes}
-.ssc-bg-gradient {
-  background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-  background-size: 400% 400%;
-  animation: ssc-gradient-anim ${speed}s ease infinite;
-}`;
-            preview.css({
-                background: 'linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab)',
-                backgroundSize: '400% 400%',
-                animation: `ssc-gradient-anim ${speed}s ease infinite`
-            });
+                latestGradientResult = gradientResult;
+                if ($gradientErrors.length) {
+                    $gradientErrors.hide().empty();
+                }
+                setValidationState(true);
+
+                $('style#ssc-gradient-anim-style').remove();
+                $(`<style id="ssc-gradient-anim-style">${gradientResult.keyframes}</style>`).appendTo('head');
+
+                css = gradientResult.css;
+                preview.addClass('ssc-bg-gradient').css({
+                    background: gradientResult.gradientString,
+                    backgroundSize: '400% 400%',
+                    animation: `ssc-gradient-anim ${gradientResult.speed}s ease infinite`,
+                });
+            }
+
+            $('#ssc-bg-css').text(css.trim());
         }
-        $('#ssc-bg-css').text(css.trim());
+
+        $('#ssc-bg-type, #starColor, #starCount, #gradientSpeed').on('input change', generateBackgroundCSS);
+
+        $('#ssc-add-gradient-stop').on('click', () => {
+            addGradientStop({ color: '#ffffff', position: 50 });
+        });
+
+        $gradientStopsList.on('input change', '.ssc-gradient-stop-color', function() {
+            const stopId = parseInt($(this).closest('.ssc-gradient-stop').data('stop-id'), 10);
+            updateGradientStop(stopId, { color: $(this).val() });
+            generateBackgroundCSS();
+        });
+
+        $gradientStopsList.on('input change', '.ssc-gradient-stop-position', function() {
+            const stopId = parseInt($(this).closest('.ssc-gradient-stop').data('stop-id'), 10);
+            const rawValue = parseFloat($(this).val());
+            const position = clampPosition(rawValue);
+            $(this).val(position);
+            updateGradientStop(stopId, { position });
+            generateBackgroundCSS();
+        });
+
+        $gradientStopsList.on('click', '.ssc-remove-gradient-stop', function() {
+            const stopId = parseInt($(this).closest('.ssc-gradient-stop').data('stop-id'), 10);
+            removeGradientStop(stopId);
+        });
+
+        $('#gradientAngle').on('input change', function() {
+            const rawValue = parseFloat($(this).val());
+            const angle = clampAngle(Number.isNaN(rawValue) ? gradientDefaults.angle : rawValue);
+            $(this).val(angle);
+            gradientState.angle = angle;
+            generateBackgroundCSS();
+        });
+
+        $applyButton.on('click', () => {
+             generateBackgroundCSS();
+             const css = $('#ssc-bg-css').text();
+             if ($('#ssc-bg-type').val() === 'gradient' && !css) {
+                 const errorToast = __('Corrigez les erreurs du dégradé avant d\'appliquer.', 'supersede-css-jlg');
+                 window.sscToast(errorToast, { politeness: 'assertive' });
+                 return;
+             }
+
+             if (!css) {
+                 return;
+             }
+
+             const errorMessage = __('Échec de l\'enregistrement du fond animé.', 'supersede-css-jlg');
+             const originalText = $applyButton.text();
+
+             applyBusy = true;
+             updateApplyButtonState();
+
+             $applyButton.text(applyingLabel);
+
+             const requestData = { css, append: true, _wpnonce: SSC.rest.nonce };
+             if ($('#ssc-bg-type').val() === 'gradient' && latestGradientResult) {
+                 requestData.gradient_settings = JSON.stringify({
+                     angle: latestGradientResult.angle,
+                     stops: latestGradientResult.stops.map((stop) => ({ color: stop.color, position: stop.position })),
+                 });
+             }
+
+             $.ajax({ url: SSC.rest.root + 'save-css', method: 'POST', data: requestData, beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
+             }).done(() => window.sscToast('Fond animé appliqué !'))
+             .fail((jqXHR, textStatus, errorThrown) => {
+                 console.error(errorMessage, { jqXHR, textStatus, errorThrown });
+                 window.sscToast(
+                     errorMessage,
+                     { politeness: 'assertive' }
+                 );
+             })
+             .always(() => {
+                 applyBusy = false;
+                 updateApplyButtonState();
+                 $applyButton.text(originalText);
+             });
+        });
+
+        setDefaultGradientPreset();
+        setValidationState(true);
+
+        // Appel initial pour afficher l'aperçu par défaut
+        generateBackgroundCSS();
     }
 
     // --- Module 3: ECG ---
