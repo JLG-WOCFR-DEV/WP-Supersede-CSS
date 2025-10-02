@@ -140,13 +140,16 @@ if (!function_exists('ssc_enqueue_block_editor_inline_css')) {
             return;
         }
 
+        // Double vérification : assure que le CSS est filtré avant injection.
         $css_filtered = CssSanitizer::sanitize($css_filtered);
 
         if ($css_filtered === '') {
             return;
         }
 
-        wp_add_inline_style('wp-edit-blocks', '/* Supersede CSS (Editor) */' . $css_filtered);
+        wp_register_style('ssc-editor-styles-handle', false);
+        wp_enqueue_style('ssc-editor-styles-handle');
+        wp_add_inline_style('ssc-editor-styles-handle', '/* Supersede CSS (Editor) */' . $css_filtered);
     }
 }
 
