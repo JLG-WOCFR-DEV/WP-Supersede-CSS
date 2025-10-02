@@ -1,0 +1,179 @@
+# Copyright (C) 2025 JLG (Enhanced by AI)
+# This file is distributed under the same license as the Supersede CSS JLG (Enhanced) plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: Supersede CSS JLG (Enhanced) 10.0.5\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/supersede-css-jlg-enhanced\n"
+"POT-Creation-Date: 2025-10-02T08:59:34+00:00\n"
+"PO-Revision-Date: 2025-10-02 09:05+0000\n"
+"Last-Translator: Auto Generated\n"
+"Language-Team: French\n"
+"Language: fr_FR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Domain: supersede-css-jlg\n"
+"X-Generator: WP-CLI 2.12.0\n"
+
+#. Plugin Name of the plugin
+#: supersede-css-jlg.php
+msgid "Supersede CSS JLG (Enhanced)"
+msgstr "Supersede CSS JLG (Enhanced)"
+
+#. Description of the plugin
+#: supersede-css-jlg.php
+msgid ""
+"Boîte à outils visuelle pour CSS avec presets, éditeurs live, tokens, et un "
+"centre de débogage amélioré."
+msgstr ""
+"Boîte à outils visuelle pour CSS avec presets, éditeurs live, tokens, et un "
+"centre de débogage amélioré."
+
+#. Author of the plugin
+#: supersede-css-jlg.php
+msgid "JLG (Enhanced by AI)"
+msgstr "JLG (Enhanced by AI)"
+
+#: assets/js/import-export.js:23 assets/js/utilities.js:14
+msgid "wp.i18n is not available. Falling back to untranslated strings."
+msgstr "wp.i18n is not available. Falling back to untranslated strings."
+
+#: assets/js/import-export.js:71
+msgid "Veuillez sélectionner au moins un ensemble à importer."
+msgstr "Veuillez sélectionner au moins un ensemble à importer."
+
+#: assets/js/import-export.js:72
+msgid "Veuillez sélectionner au moins un ensemble à exporter."
+msgstr "Veuillez sélectionner au moins un ensemble à exporter."
+
+#: assets/js/import-export.js:93 assets/js/import-export.js:114
+msgid "Exportation..."
+msgstr "Exportation..."
+
+#: assets/js/import-export.js:103
+msgid "Configuration exportée !"
+msgstr "Configuration exportée !"
+
+#: assets/js/import-export.js:105
+msgid "Erreur lors de l'exportation de la configuration."
+msgstr "Erreur lors de l'exportation de la configuration."
+
+#: assets/js/import-export.js:107
+msgid "Exporter Config (.json)"
+msgstr "Exporter Config (.json)"
+
+#: assets/js/import-export.js:123
+msgid "CSS exporté !"
+msgstr "CSS exporté !"
+
+#: assets/js/import-export.js:125
+msgid "Erreur lors de l'exportation du CSS."
+msgstr "Erreur lors de l'exportation du CSS."
+
+#: assets/js/import-export.js:127
+msgid "Exporter CSS (.css)"
+msgstr "Exporter CSS (.css)"
+
+#: assets/js/import-export.js:167
+msgid "Veuillez sélectionner un fichier JSON à importer."
+msgstr "Veuillez sélectionner un fichier JSON à importer."
+
+#: assets/js/import-export.js:172
+msgid "Importation..."
+msgstr "Importation..."
+
+#: assets/js/import-export.js:176
+msgid "Impossible de lire le fichier sélectionné."
+msgstr "Impossible de lire le fichier sélectionné."
+
+#: assets/js/import-export.js:177 assets/js/import-export.js:186
+#: assets/js/import-export.js:213
+msgid "Importer"
+msgstr "Importer"
+
+#: assets/js/import-export.js:185
+msgid "Le fichier importé ne contient pas un JSON valide."
+msgstr "Le fichier importé ne contient pas un JSON valide."
+
+#: assets/js/import-export.js:200
+#, js-format
+msgid "Import terminé : %1$d option(s) appliquée(s), %2$d ignorée(s)."
+msgstr "Import terminé : %1$d option(s) appliquée(s), %2$d ignorée(s)."
+
+#: assets/js/import-export.js:201
+#, js-format
+msgid "Import terminé : %1$d option(s) appliquée(s)."
+msgstr "Import terminé : %1$d option(s) appliquée(s)."
+
+#: assets/js/import-export.js:205
+msgid "Configuration importée !"
+msgstr "Configuration importée !"
+
+#: assets/js/import-export.js:210
+msgid "Erreur lors de l'importation de la configuration."
+msgstr "Erreur lors de l'importation de la configuration."
+
+#: assets/js/tron-grid.js:93
+msgid "Échec de l'enregistrement de la grille animée."
+msgstr "Échec de l'enregistrement de la grille animée."
+
+#: assets/js/utilities.js:25
+msgid ""
+"Éditeur enrichi indisponible : CodeMirror n'est pas chargé. Les champs texte"
+" classiques seront utilisés."
+msgstr ""
+"Éditeur enrichi indisponible : CodeMirror n'est pas chargé. Les champs texte"
+" classiques seront utilisés."
+
+#: assets/js/utilities.js:227
+msgid "CSS enregistré !"
+msgstr "CSS enregistré !"
+
+#: assets/js/utilities.js:228
+msgid ""
+"Impossible d'enregistrer le CSS. Vérifiez votre connexion et réessayez."
+msgstr ""
+"Impossible d'enregistrer le CSS. Vérifiez votre connexion et réessayez."
+
+#: assets/js/utilities.js:314
+msgid ""
+"Impossible d'accéder au contenu de l'iframe. Assurez-vous que l'URL chargée "
+"est sur le même domaine que votre page d'administration WordPress."
+msgstr ""
+"Impossible d'accéder au contenu de l'iframe. Assurez-vous que l'URL chargée "
+"est sur le même domaine que votre page d'administration WordPress."
+
+#: assets/js/utilities.js:323
+msgid "Veuillez saisir une URL valide pour l'aperçu."
+msgstr "Veuillez saisir une URL valide pour l'aperçu."
+
+#: assets/js/utilities.js:336
+msgid ""
+"URL invalide. Veuillez saisir une adresse commençant par http:// ou https://"
+msgstr ""
+"URL invalide. Veuillez saisir une adresse commençant par http:// ou https://"
+
+#: assets/js/utilities.js:346
+msgid "Seules les URL http et https sont autorisées."
+msgstr "Seules les URL http et https sont autorisées."
+
+#: assets/js/utilities.js:366
+msgid "Afficher l'aperçu"
+msgstr "Afficher l'aperçu"
+
+#: assets/js/utilities.js:367
+msgid "Masquer l'aperçu"
+msgstr "Masquer l'aperçu"
+
+#: assets/js/visual-effects.js:169 assets/js/visual-effects.js:312
+msgid "Application…"
+msgstr "Application…"
+
+#: assets/js/visual-effects.js:172
+msgid "Échec de l'enregistrement du fond animé."
+msgstr "Échec de l'enregistrement du fond animé."
+
+#: assets/js/visual-effects.js:315
+msgid "Impossible d'appliquer l'effet ECG."
+msgstr "Impossible d'appliquer l'effet ECG."
