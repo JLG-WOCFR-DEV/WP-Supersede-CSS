@@ -478,11 +478,18 @@
 
         $applyButton.on('click', () => {
              generateBackgroundCSS();
-             const css = $('#ssc-bg-css').text();
-             if ($('#ssc-bg-type').val() === 'gradient' && !css) {
-                 const errorToast = __('Corrigez les erreurs du dégradé avant d\'appliquer.', 'supersede-css-jlg');
-                 window.sscToast(errorToast, { politeness: 'assertive' });
-                 return;
+
+             const type = $('#ssc-bg-type').val();
+             let css = $('#ssc-bg-css').text().trim();
+
+             if (type === 'gradient') {
+                 if (!latestGradientResult) {
+                     const errorToast = __('Corrigez les erreurs du dégradé avant d\'appliquer.', 'supersede-css-jlg');
+                     window.sscToast(errorToast, { politeness: 'assertive' });
+                     return;
+                 }
+
+                 css = latestGradientResult.css.trim();
              }
 
              if (!css) {
@@ -498,7 +505,7 @@
              $applyButton.text(applyingLabel);
 
              const requestData = { css, append: true, _wpnonce: SSC.rest.nonce };
-             if ($('#ssc-bg-type').val() === 'gradient' && latestGradientResult) {
+             if (type === 'gradient' && latestGradientResult) {
                  requestData.gradient_settings = JSON.stringify({
                      angle: latestGradientResult.angle,
                      stops: latestGradientResult.stops.map((stop) => ({ color: stop.color, position: stop.position })),
