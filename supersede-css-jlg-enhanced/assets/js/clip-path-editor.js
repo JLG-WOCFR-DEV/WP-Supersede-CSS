@@ -8,11 +8,16 @@
     }
 
     function updatePreviewSize() {
-        const size = $('#ssc-clip-preview-size').val();
-        $('#ssc-clip-preview').css({
-            'width': size + 'px',
-            'height': size + 'px'
+        const size = parseInt($('#ssc-clip-preview-size').val(), 10);
+        const $preview = $('#ssc-clip-preview');
+        const wrapperWidth = $preview.parent().innerWidth() || size;
+        const appliedSize = Math.min(size, wrapperWidth);
+
+        $preview.css({
+            'width': appliedSize + 'px',
+            'height': ''
         });
+
         $('#ssc-clip-size-val').text(size + 'px');
     }
 
@@ -21,6 +26,7 @@
 
         $('#ssc-clip-preset').on('change', applyClipPath);
         $('#ssc-clip-preview-size').on('input', updatePreviewSize);
+        $(window).on('resize.sscClipPreview', updatePreviewSize);
 
         $('#ssc-clip-copy').on('click', () => {
             window.sscCopyToClipboard($('#ssc-clip-css').text(), {

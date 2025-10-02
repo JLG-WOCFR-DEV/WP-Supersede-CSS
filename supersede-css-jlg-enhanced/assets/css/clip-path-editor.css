@@ -4,12 +4,13 @@
     padding: 24px;
     background: var(--ssc-bg);
     border-radius: 8px;
+    width: 100%;
 }
 
 #ssc-clip-preview {
     background-size: cover;
     background-position: center;
-    height: 300px;
-    width: 300px;
+    width: min(100%, 300px);
+    aspect-ratio: 1 / 1;
     transition: all 0.3s ease;
 }
