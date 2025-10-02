@@ -2,15 +2,20 @@
     const restRoot = window.SSC && window.SSC.rest && window.SSC.rest.root ? window.SSC.rest.root : '';
     const restNonce = window.SSC && window.SSC.rest && window.SSC.rest.nonce ? window.SSC.rest.nonce : '';
     const localized = window.SSC_TOKENS_DATA || {};
+    const defaultTokenTypes = {
+        color: { label: 'Couleur', input: 'color' },
+        text: { label: 'Texte', input: 'text', placeholder: 'Ex. 16px ou clamp(1rem, 2vw, 2rem)' },
+        number: { label: 'Nombre', input: 'number' },
+        spacing: { label: 'Espacement', input: 'text', placeholder: 'Ex. 16px 24px' },
+        font: { label: 'Typographie', input: 'text', placeholder: 'Ex. "Inter", sans-serif' },
+        shadow: { label: 'Ombre', input: 'textarea', placeholder: '0 2px 4px rgba(15, 23, 42, 0.25)', rows: 3 },
+        gradient: { label: 'Dégradé', input: 'textarea', placeholder: 'linear-gradient(135deg, #4f46e5, #7c3aed)', rows: 3 },
+    };
 
     let tokens = Array.isArray(localized.tokens) ? localized.tokens.slice() : [];
     let hasLocalChanges = false;
     let beforeUnloadHandler = null;
-    const tokenTypes = localized.types || {
-        color: { label: 'Couleur', input: 'color' },
-        text: { label: 'Texte', input: 'text' },
-        number: { label: 'Nombre', input: 'number' },
-    };
+    const tokenTypes = $.extend(true, {}, defaultTokenTypes, localized.types || {});
     const i18n = localized.i18n || {};
 
     function getUnsavedChangesMessage() {
@@ -61,6 +66,24 @@
     const groupDatalistId = 'ssc-token-groups-list';
     const duplicateRowClass = 'ssc-token-row--duplicate';
     const duplicateInputClass = 'token-field-input--duplicate';
+
+    function getDefaultTypeKey() {
+        if (tokenTypes.text) {
+            return 'text';
+        }
+
+        const keys = Object.keys(tokenTypes);
+        return keys.length ? keys[0] : 'text';
+    }
+
+    function getTypeMeta(typeKey) {
+        if (typeKey && Object.prototype.hasOwnProperty.call(tokenTypes, typeKey)) {
+            return tokenTypes[typeKey];
+        }
+
+        const fallbackKey = getDefaultTypeKey();
+        return tokenTypes[fallbackKey] || { label: fallbackKey, input: 'text' };
+    }
 
     function getCanonicalName(value) {
         const normalized = normalizeName(value);
@@ -298,7 +321,20 @@
         }
 
         const lines = registry.map(function(token) {
-            return '    ' + token.name + ': ' + token.value + ';';
+            const name = token && typeof token.name === 'string' ? token.name : '';
+            const rawValue = token && token.value != null ? String(token.value) : '';
+            const segments = rawValue.split(/\r?\n/);
+            const firstSegment = segments.shift() || '';
+            let line = '    ' + name + ': ' + firstSegment;
+
+            if (segments.length) {
+                const indented = segments.map(function(segment) {
+                    return '        ' + segment;
+                });
+                line += '\n' + indented.join('\n');
+            }
+
+            return line + ';';
         });
 
         return ':root {\n' + lines.join('\n') + '\n}';
@@ -361,7 +397,15 @@
     function createTokenRow(token, index) {
         const row = $('<div>', { class: 'ssc-token-row', 'data-index': index });
         const typeOptions = Object.keys(tokenTypes);
-        const valueType = token.type && tokenTypes[token.type] ? tokenTypes[token.type].input : 'text';
+        const resolvedType = (token && typeof token.type === 'string' && tokenTypes[token.type])
+            ? token.type
+            : getDefaultTypeKey();
+        if (token.type !== resolvedType) {
+            token.type = resolvedType;
+        }
+        const typeMeta = getTypeMeta(resolvedType);
+        const inputKind = typeMeta.input || 'text';
+        const currentValue = token.value == null ? '' : String(token.value);
 
         const nameInput = $('<input>', {
             type: 'text',
@@ -370,43 +414,56 @@
         });
 
         let valueInput;
-        if (valueType === 'color') {
-            const hasHexValue = typeof token.value === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(token.value.trim());
+        if (inputKind === 'textarea') {
+            valueInput = $('<textarea>', {
+                class: 'token-field-input token-value',
+                rows: typeMeta.rows || 3,
+            });
+            valueInput.val(currentValue);
+        } else if (inputKind === 'color') {
+            const hasHexValue = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(currentValue.trim());
             if (hasHexValue) {
                 valueInput = $('<input>', {
                     type: 'color',
                     class: 'token-field-input token-value',
-                    value: token.value.trim(),
+                    value: currentValue.trim(),
                 });
             } else {
                 valueInput = $('<input>', {
                     type: 'text',
                     class: 'token-field-input token-value',
-                    value: token.value || '',
+                    value: currentValue,
                     placeholder: '#000000',
                 });
             }
         } else {
             valueInput = $('<input>', {
-                type: valueType === 'number' ? 'number' : 'text',
+                type: inputKind === 'number' ? 'number' : 'text',
                 class: 'token-field-input token-value',
-                value: token.value || '',
+                value: currentValue,
             });
-            if (valueType === 'number') {
+            if (inputKind === 'number') {
                 valueInput.attr('step', '0.01');
+            }
+        }
+
+        if (typeMeta.placeholder && valueInput && valueInput.attr) {
+            if (inputKind !== 'color' || valueInput.attr('type') === 'text') {
+                valueInput.attr('placeholder', typeMeta.placeholder);
             }
         }
 
         const typeSelect = $('<select>', { class: 'token-field-input token-type' });
         typeOptions.forEach(function(optionKey) {
-            const optionMeta = tokenTypes[optionKey];
+            const optionMeta = getTypeMeta(optionKey);
             const optionLabel = optionMeta && optionMeta.label ? optionMeta.label : optionKey;
             const option = $('<option>', { value: optionKey, text: optionLabel });
-            if (optionKey === token.type) {
+            if (optionKey === resolvedType) {
                 option.prop('selected', true);
             }
             typeSelect.append(option);
         });
+        typeSelect.val(resolvedType);
 
         const groupInput = $('<input>', {
             type: 'text',
@@ -481,10 +538,17 @@
     }
 
     function addToken() {
+        const defaultType = tokenTypes.color ? 'color' : getDefaultTypeKey();
+        const defaultMeta = getTypeMeta(defaultType);
+        let defaultValue = defaultType === 'color' ? '#ffffff' : '';
+        if (defaultType !== 'color' && defaultMeta && typeof defaultMeta.placeholder === 'string') {
+            defaultValue = defaultMeta.placeholder;
+        }
+
         tokens.push({
             name: '--nouveau-token',
-            value: '#ffffff',
-            type: tokenTypes.color ? 'color' : 'text',
+            value: defaultValue,
+            type: defaultType,
             description: '',
             group: 'Général',
         });
