@@ -1,7 +1,9 @@
 .ssc-ve-tabs {
     display: flex;
+    flex-wrap: wrap;
     border-bottom: 1px solid var(--ssc-border);
     margin-bottom: 16px;
+    gap: 8px 12px;
 }
 
 .ssc-ve-tab {
@@ -13,6 +15,14 @@
     color: inherit;
     font: inherit;
     margin: 0;
+}
+
+@media (max-width: 600px) {
+    .ssc-ve-tab {
+        flex: 1 1 100%;
+        font-size: 0.95rem;
+        text-align: left;
+    }
 }
 
 .ssc-ve-tab.active {
