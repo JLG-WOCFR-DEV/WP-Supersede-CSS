@@ -7,7 +7,11 @@
     "env:stop": "wp-env stop",
     "env:destroy": "wp-env destroy --yes",
     "test:ui": "playwright test",
-    "test:ui:shell": "playwright test tests/ui/shell-accessibility.spec.js"
+    "test:ui:accessibility": "playwright test --project=chromium-accessibility",
+    "test:ui:tokens": "playwright test --project=chromium-tokens",
+    "test:ui:visual-effects": "playwright test --project=chromium-visual-effects",
+    "test:ui:import-export": "playwright test --project=chromium-import-export",
+    "test:ui:css-utilities": "playwright test --project=chromium-css-utilities"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.1",

@@ -17,9 +17,32 @@ module.exports = defineConfig({
     locale: 'en-US',
     baseURL,
   },
+  // Suite names double as CLI filters. Run a specific suite with:
+  // `npx playwright test --project=<suite-name>`
   projects: [
     {
-      name: 'chromium',
+      name: 'chromium-accessibility',
+      testMatch: /.*accessibility\.spec\.js$/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'chromium-tokens',
+      testMatch: /tokens\.spec\.js$/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'chromium-visual-effects',
+      testMatch: /visual-effects\.spec\.js$/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'chromium-import-export',
+      testMatch: /import-export\.spec\.js$/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'chromium-css-utilities',
+      testMatch: /css-utilities\.spec\.js$/,
       use: { ...devices['Desktop Chrome'] },
     },
   ],

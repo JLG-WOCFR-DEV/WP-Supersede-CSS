@@ -1,29 +1,10 @@
 const { test, expect } = require('@playwright/test');
+const { authenticate, getAdminUrl } = require('./utils/auth');
 
 const ADMIN_PATH = '/wp-admin/admin.php?page=supersede-css-jlg-tokens';
-const DEFAULT_USERNAME = process.env.WP_USERNAME || 'admin';
-const DEFAULT_PASSWORD = process.env.WP_PASSWORD || 'password';
 
 function getAdminTokensUrl(testInfo) {
-  const baseURL = testInfo.project.use.baseURL || 'http://localhost:8889';
-  return new URL(ADMIN_PATH, baseURL).toString();
-}
-
-async function authenticate(page, adminUrl, credentials) {
-  const loginUrl = `/wp-login.php?redirect_to=${encodeURIComponent(adminUrl)}`;
-  await page.goto(loginUrl, { waitUntil: 'domcontentloaded' });
-
-  const usernameInput = page.locator('#user_login');
-  if (await usernameInput.isVisible()) {
-    await usernameInput.fill(credentials.username);
-    await page.locator('#user_pass').fill(credentials.password);
-    await Promise.all([
-      page.waitForNavigation({ waitUntil: 'networkidle' }),
-      page.locator('#wp-submit').click(),
-    ]);
-  }
-
-  await page.goto(adminUrl, { waitUntil: 'networkidle' });
+  return getAdminUrl(testInfo, ADMIN_PATH);
 }
 
 async function waitForPluginReady(page) {
@@ -61,10 +42,7 @@ test.describe('Token manager admin UI', () => {
   test('adds, edits and deletes tokens with live CSS preview updates', async ({ page }, testInfo) => {
     const adminTokensUrl = getAdminTokensUrl(testInfo);
 
-    await authenticate(page, adminTokensUrl, {
-      username: DEFAULT_USERNAME,
-      password: DEFAULT_PASSWORD,
-    });
+    await authenticate(page, adminTokensUrl);
 
     let { restRoot, nonce } = await waitForPluginReady(page);
     let tokensEndpoint = new URL('tokens', restRoot).toString();
@@ -165,10 +143,7 @@ test.describe('Token manager admin UI', () => {
   test('shows localized toast message when copying tokens', async ({ page }, testInfo) => {
     const adminTokensUrl = getAdminTokensUrl(testInfo);
 
-    await authenticate(page, adminTokensUrl, {
-      username: DEFAULT_USERNAME,
-      password: DEFAULT_PASSWORD,
-    });
+    await authenticate(page, adminTokensUrl);
 
     await waitForPluginReady(page);
 
@@ -187,10 +162,7 @@ test.describe('Token manager admin UI', () => {
   test('prevents saving tokens with duplicate names', async ({ page }, testInfo) => {
     const adminTokensUrl = getAdminTokensUrl(testInfo);
 
-    await authenticate(page, adminTokensUrl, {
-      username: DEFAULT_USERNAME,
-      password: DEFAULT_PASSWORD,
-    });
+    await authenticate(page, adminTokensUrl);
 
     let { restRoot, nonce } = await waitForPluginReady(page);
     let tokensEndpoint = new URL('tokens', restRoot).toString();
@@ -315,10 +287,7 @@ test.describe('Token manager admin UI', () => {
   test('API surfaces duplicate conflicts when normalization detects collisions', async ({ page }, testInfo) => {
     const adminTokensUrl = getAdminTokensUrl(testInfo);
 
-    await authenticate(page, adminTokensUrl, {
-      username: DEFAULT_USERNAME,
-      password: DEFAULT_PASSWORD,
-    });
+    await authenticate(page, adminTokensUrl);
 
     let { restRoot, nonce } = await waitForPluginReady(page);
     let tokensEndpoint = new URL('tokens', restRoot).toString();
