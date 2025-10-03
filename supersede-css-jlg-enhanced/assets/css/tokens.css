@@ -5,10 +5,10 @@
 }
 
 .ssc-token-group {
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--ssc-border);
     border-radius: 6px;
     padding: 12px;
-    background: #fff;
+    background: var(--ssc-card);
 }
 
 .ssc-token-group h4 {
@@ -37,7 +37,7 @@
 
 .ssc-token-field__help {
     font-size: 12px;
-    color: #475569;
+    color: var(--ssc-muted);
     line-height: 1.4;
 }
 
@@ -67,4 +67,14 @@
 
 .token-field-input--duplicate:focus {
     box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.35), 0 0 0 3px rgba(220, 38, 38, 0.2);
+}
+
+.ssc-dark .ssc-token-group {
+    border-color: var(--ssc-border);
+    border-color: color-mix(in srgb, var(--ssc-border) 80%, #000 20%);
+}
+
+.ssc-dark .ssc-token-field__help {
+    color: var(--ssc-muted);
+    color: color-mix(in srgb, var(--ssc-muted) 55%, var(--ssc-text) 45%);
 }
