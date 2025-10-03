@@ -37,9 +37,15 @@
         const thicknessValue = $('#ssc-tron-thickness-val');
         const speedValue = $('#ssc-tron-speed-val');
 
-        sizeValue.text(size + 'px').attr('aria-live', 'polite');
-        thicknessValue.text(thickness + 'px').attr('aria-live', 'polite');
-        speedValue.text(speed + 's').attr('aria-live', 'polite');
+        const updateLiveValue = (element, text) => {
+            element
+                .text(text)
+                .attr('aria-live', 'polite');
+        };
+
+        updateLiveValue(sizeValue, `${size}px`);
+        updateLiveValue(thicknessValue, `${thickness}px`);
+        updateLiveValue(speedValue, `${speed}s`);
 
         const keyframes = `@keyframes ssc-tron-scroll {
   from { background-position: 0 0; }
