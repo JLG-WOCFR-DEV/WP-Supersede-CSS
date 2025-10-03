@@ -1,8 +1,11 @@
 (function($) {
+    let nextStopId = 0;
+    const createStop = (color, position) => ({ id: nextStopId++, color, position });
+
     let colorStops = [
-        { color: '#ee7752', position: 0 },
-        { color: '#e73c7e', position: 50 },
-        { color: '#23a6d5', position: 100 }
+        createStop('#ee7752', 0),
+        createStop('#e73c7e', 50),
+        createStop('#23a6d5', 100)
     ];
     let gradientType = 'linear-gradient';
     let gradientAngle = 90;
@@ -13,25 +16,25 @@
 
         colorStops.forEach((stop, index) => {
             const stopUI = $(`
-                <div class="ssc-grad-stop" data-index="${index}" style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
+                <div class="ssc-grad-stop" data-stop-id="${stop.id}" style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
                     <input type="color" class="ssc-grad-prop" data-prop="color" value="${stop.color}">
                     <input type="range" class="ssc-grad-prop" data-prop="position" min="0" max="100" value="${stop.position}" style="flex: 1;">
-                    <span>${stop.position}%</span>
+                    <span class="ssc-grad-stop-position-display">${stop.position}%</span>
                     <button class="button button-link-delete ssc-grad-remove-stop">X</button>
                 </div>
             `);
             uiContainer.append(stopUI);
         });
-        
+
         $('<button class="button" id="ssc-grad-add-stop" style="margin-top: 10px;">+ Ajouter une couleur</button>').appendTo(uiContainer);
 
         generateGradientCSS();
     }
 
     function generateGradientCSS() {
-        colorStops.sort((a, b) => a.position - b.position);
+        const sortedStops = [...colorStops].sort((a, b) => a.position - b.position);
 
-        const stopsValue = colorStops.map(s => `${s.color} ${s.position}%`).join(', ');
+        const stopsValue = sortedStops.map(s => `${s.color} ${s.position}%`).join(', ');
         const angleValue = `${gradientAngle}deg`;
         
         let gradientValue = '';
@@ -53,10 +56,24 @@
 
         // Event Delegation for changes
         $('#ssc-grad-stops-ui').on('input', '.ssc-grad-prop', function() {
-            const index = $(this).closest('.ssc-grad-stop').data('index');
-            const prop = $(this).data('prop');
-            colorStops[index][prop] = $(this).val();
-            renderUI();
+            const $input = $(this);
+            const $stop = $input.closest('.ssc-grad-stop');
+            const stopId = $stop.data('stop-id');
+            const prop = $input.data('prop');
+            const value = $input.val();
+
+            const stop = colorStops.find(s => s.id === stopId);
+            if (!stop) {
+                return;
+            }
+
+            stop[prop] = value;
+
+            if (prop === 'position') {
+                $stop.find('.ssc-grad-stop-position-display').text(`${value}%`);
+            }
+
+            generateGradientCSS();
         });
 
         $('#ssc-grad-stops-ui').on('click', '.ssc-grad-remove-stop', function() {
@@ -64,13 +81,17 @@
                 window.sscToast('Un dégradé doit avoir au moins 2 couleurs.');
                 return;
             }
-            const index = $(this).closest('.ssc-grad-stop').data('index');
+            const stopId = $(this).closest('.ssc-grad-stop').data('stop-id');
+            const index = colorStops.findIndex(stop => stop.id === stopId);
+            if (index === -1) {
+                return;
+            }
             colorStops.splice(index, 1);
             renderUI();
         });
 
         $('#ssc-grad-stops-ui').on('click', '#ssc-grad-add-stop', () => {
-            colorStops.push({ color: '#ffffff', position: 100 });
+            colorStops.push(createStop('#ffffff', 100));
             renderUI();
         });
 
