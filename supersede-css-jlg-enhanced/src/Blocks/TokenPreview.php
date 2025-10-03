@@ -24,7 +24,18 @@ final class TokenPreview
      */
     public static function render(array $attributes = [], string $content = '', $block = null): string
     {
-        $tokens = TokenRegistry::getRegistry();
+        $tokens = array_values(array_filter(
+            TokenRegistry::getRegistry(),
+            static function ($token): bool {
+                if (!is_array($token)) {
+                    return false;
+                }
+
+                $name = $token['name'] ?? '';
+
+                return is_string($name) && $name !== '';
+            }
+        ));
         $cachedCss = ssc_get_cached_css();
         $baseCss = '.ssc-token-preview{display:grid;gap:1.25rem;margin:0;padding:0;}'
             .'.ssc-token-preview__items{display:grid;gap:0.75rem;}'
