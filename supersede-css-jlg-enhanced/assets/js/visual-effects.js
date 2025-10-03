@@ -6,6 +6,45 @@
     const hasI18n = typeof window !== 'undefined' && window.wp && window.wp.i18n;
     const { __ } = hasI18n ? window.wp.i18n : fallbackI18n;
 
+    const motionPreference = (() => {
+        const listeners = new Set();
+        const supportsMatchMedia = typeof window !== 'undefined' && typeof window.matchMedia === 'function';
+        const mediaQuery = supportsMatchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+        let matches = mediaQuery ? mediaQuery.matches : false;
+
+        function handleChange(event) {
+            matches = event.matches;
+            listeners.forEach((listener) => listener(matches));
+        }
+
+        if (mediaQuery) {
+            if (typeof mediaQuery.addEventListener === 'function') {
+                mediaQuery.addEventListener('change', handleChange);
+            } else if (typeof mediaQuery.addListener === 'function') {
+                mediaQuery.addListener(handleChange);
+            }
+        }
+
+        return {
+            matches: () => matches,
+            subscribe(listener) {
+                if (typeof listener !== 'function') {
+                    return () => {};
+                }
+                listeners.add(listener);
+                return () => listeners.delete(listener);
+            },
+        };
+    })();
+
+    function shouldReduceMotion() {
+        return motionPreference.matches();
+    }
+
+    function onMotionPreferenceChange(listener) {
+        return motionPreference.subscribe(listener);
+    }
+
     $(document).ready(function() {
         if (!$('.ssc-ve-tabs').length) return;
 
@@ -91,7 +130,8 @@
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         let time = 0;
-        
+        let animationFrameId = null;
+
         const settings = {
             scanlineColor: '#00ff00', scanlineOpacity: 0.4, scanlineSpeed: 0.5,
             noiseIntensity: 0.1, chromaticAberration: 1
@@ -111,12 +151,27 @@
             return {r: +r, g: +g, b: +b};
         }
 
-        function draw() {
-            if (canvas.offsetWidth === 0) { requestAnimationFrame(draw); return; }
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
+        function ensureCanvasSize() {
+            const width = canvas.offsetWidth;
+            const height = canvas.offsetHeight;
+            if (width === 0 || height === 0) {
+                return false;
+            }
+            if (canvas.width !== width) {
+                canvas.width = width;
+            }
+            if (canvas.height !== height) {
+                canvas.height = height;
+            }
+            return true;
+        }
+
+        function renderFrame(frameTime) {
+            if (!ensureCanvasSize()) {
+                return false;
+            }
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
+
             const imageData = ctx.createImageData(canvas.width, canvas.height);
             const data = imageData.data;
             for (let i = 0; i < data.length; i += 4) {
@@ -133,24 +188,74 @@
                 { color: `rgba(0, 0, 255, ${settings.scanlineOpacity / 2})`, offset: -settings.chromaticAberration }
             ];
 
+            const scanlineOffset = (frameTime * settings.scanlineSpeed * 10) % 4;
             offsets.forEach(({ color, offset }) => {
                 ctx.fillStyle = color;
-                const scanlineOffset = (time * settings.scanlineSpeed * 10) % 4;
                 for (let y = scanlineOffset; y < canvas.height; y += 4) {
                     ctx.fillRect(offset, y, canvas.width, 2);
                 }
             });
-            
-            time += 0.016;
-            requestAnimationFrame(draw);
+
+            return true;
         }
 
-        $('.ssc-crt-control').on('input', function() { 
+        function stopAnimation() {
+            if (animationFrameId !== null) {
+                window.cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        }
+
+        function drawStaticFrame() {
+            stopAnimation();
+            if (!renderFrame(0)) {
+                window.setTimeout(() => {
+                    if (shouldReduceMotion()) {
+                        drawStaticFrame();
+                    }
+                }, 100);
+            }
+        }
+
+        function step() {
+            if (renderFrame(time)) {
+                time += 0.016;
+            }
+        }
+
+        function loop() {
+            if (shouldReduceMotion()) {
+                drawStaticFrame();
+                return;
+            }
+            step();
+            animationFrameId = window.requestAnimationFrame(loop);
+        }
+
+        function restartAnimation() {
+            stopAnimation();
+            time = 0;
+            if (shouldReduceMotion()) {
+                drawStaticFrame();
+                return;
+            }
+            step();
+            animationFrameId = window.requestAnimationFrame(loop);
+        }
+
+        $('.ssc-crt-control').on('input', function() {
             const prop = this.id;
             const value = $(this).is('input[type="color"]') ? $(this).val() : parseFloat($(this).val());
             settings[prop] = value;
+            if (shouldReduceMotion()) {
+                drawStaticFrame();
+            }
         });
-        draw();
+
+        restartAnimation();
+        onMotionPreferenceChange(() => {
+            restartAnimation();
+        });
     }
 
 
@@ -339,7 +444,7 @@
             const speed = Number.isNaN(speedValue) ? gradientDefaults.speed : speedValue;
             const gradientString = `linear-gradient(${angle}deg, ${stopList})`;
             const keyframes = `@keyframes ssc-gradient-anim { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }`;
-            const css = `${keyframes}\n.ssc-bg-gradient {\n  background: ${gradientString};\n  background-size: 400% 400%;\n  animation: ssc-gradient-anim ${speed}s ease infinite;\n}`;
+            const css = `${keyframes}\n.ssc-bg-gradient {\n  background: ${gradientString};\n  background-size: 400% 400%;\n  animation: ssc-gradient-anim ${speed}s ease infinite;\n}\n@media (prefers-reduced-motion: reduce) {\n  .ssc-bg-gradient {\n    animation: none;\n  }\n}`;
 
             return {
                 errors,
@@ -367,6 +472,7 @@
             let css = '';
             const preview = $('#ssc-bg-preview');
             preview.empty().removeAttr('style').css('animation', '').removeClass('ssc-bg-stars ssc-bg-gradient');
+            const reduceMotion = shouldReduceMotion();
 
             if (type === 'stars') {
                 setValidationState(true);
@@ -383,6 +489,12 @@
                 for (let i = 0; i < count; i++) {
                     boxShadows.push(`${Math.random() * 2000}px ${Math.random() * 2000}px ${color}`);
                 }
+                const reduceMotionBlock = `@media (prefers-reduced-motion: reduce) {
+  .ssc-bg-stars::after {
+    animation: none;
+    transform: none;
+  }
+}`;
                 css = `${keyframes}
 .ssc-bg-stars {
   background: #000000;
@@ -400,7 +512,7 @@
   box-shadow: ${boxShadows.join(', ')};
   animation: ssc-stars-anim ${animationDuration}s linear infinite;
 }
-`;
+${reduceMotionBlock}`;
 
                 $('style#ssc-stars-preview-style').remove();
                 $(`<style id="ssc-stars-preview-style">${css}</style>`).appendTo('head');
@@ -435,7 +547,7 @@
                 preview.addClass('ssc-bg-gradient').css({
                     background: gradientResult.gradientString,
                     backgroundSize: '400% 400%',
-                    animation: `ssc-gradient-anim ${gradientResult.speed}s ease infinite`,
+                    animation: reduceMotion ? 'none' : `ssc-gradient-anim ${gradientResult.speed}s ease infinite`,
                 });
             }
 
@@ -533,6 +645,7 @@
 
         // Appel initial pour afficher l'aperçu par défaut
         generateBackgroundCSS();
+        onMotionPreferenceChange(generateBackgroundCSS);
     }
 
     // --- Module 3: ECG ---
@@ -560,6 +673,7 @@
             const zIndex = $('#ssc-ecg-z-index').val();
             const speed = preset === 'fast' ? '1.2s' : (preset === 'critical' ? '0.8s' : '2s');
             const logoSize = $('#ssc-ecg-logo-size').val();
+            const reduceMotion = shouldReduceMotion();
 
             $('#ssc-ecg-top-val').text(top + '%');
             $('#ssc-ecg-z-index-val').text(zIndex);
@@ -572,12 +686,20 @@
             if (!$('style#ssc-ecg-anim').length) $('<style id="ssc-ecg-anim">@keyframes ssc-ecg-line{to{stroke-dashoffset:0}}</style>').appendTo('head');
 
             previewSvg.css({ 'top': `${top}%`, 'transform': 'translateY(-50%)', 'z-index': zIndex });
-            previewPath.attr('d', paths[preset]).css({ 'stroke': color, 'stroke-dasharray': 1000, 'stroke-dashoffset': 1000, 'animation': `ssc-ecg-line ${speed} linear infinite` });
+            const dashOffset = reduceMotion ? 0 : 1000;
+            const animationValue = reduceMotion ? 'none' : `ssc-ecg-line ${speed} linear infinite`;
+            previewPath.attr('d', paths[preset]).css({ 'stroke': color, 'stroke-dasharray': 1000, 'stroke-dashoffset': dashOffset, 'animation': animationValue });
 
             const css = `@keyframes ssc-ecg-line{to{stroke-dashoffset:0}}
 .ssc-ecg-container { position: relative; } /* Conteneur parent */
 .ssc-ecg-line-svg { position: absolute; top: ${top}%; left: 0; width: 100%; height: auto; transform: translateY(-50%); z-index: ${zIndex}; }
-.ssc-ecg-path-animated { fill:none; stroke:${color}; stroke-width:2; stroke-dasharray:1000; stroke-dashoffset:1000; animation:ssc-ecg-line ${speed} linear infinite; filter:drop-shadow(0 0 5px ${color}) }`;
+.ssc-ecg-path-animated { fill:none; stroke:${color}; stroke-width:2; stroke-dasharray:1000; stroke-dashoffset:1000; animation:ssc-ecg-line ${speed} linear infinite; filter:drop-shadow(0 0 5px ${color}) }
+@media (prefers-reduced-motion: reduce) {
+  .ssc-ecg-path-animated {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}`;
             $('#ssc-ecg-css').text(css.trim());
         }
 
@@ -609,5 +731,6 @@
              });
         });
         generateECGCSS();
+        onMotionPreferenceChange(generateECGCSS);
     }
 })(jQuery);
