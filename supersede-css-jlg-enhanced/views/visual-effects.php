@@ -18,11 +18,26 @@ if (!defined('ABSPATH')) {
                 <h3><?php esc_html_e('Paramètres de l\'effet CRT', 'supersede-css-jlg'); ?></h3>
                 <p class="description"><?php esc_html_e('Cet effet est purement décoratif et ne génère pas de CSS à exporter.', 'supersede-css-jlg'); ?></p>
                 <div class="ssc-grid-three">
-                    <div><label><?php esc_html_e('Couleur Scanline', 'supersede-css-jlg'); ?></label><input type="color" class="ssc-crt-control" id="scanlineColor" value="#00ff00"></div>
-                    <div><label><?php esc_html_e('Opacité Scanline', 'supersede-css-jlg'); ?></label><input type="range" class="ssc-crt-control" id="scanlineOpacity" min="0" max="1" value="0.4" step="0.05"></div>
-                    <div><label><?php esc_html_e('Vitesse Scanline', 'supersede-css-jlg'); ?></label><input type="range" class="ssc-crt-control" id="scanlineSpeed" min="0.1" max="2" value="0.5" step="0.1"></div>
-                    <div><label><?php esc_html_e('Intensité Bruit', 'supersede-css-jlg'); ?></label><input type="range" class="ssc-crt-control" id="noiseIntensity" min="0" max="0.5" value="0.1" step="0.02"></div>
-                    <div><label><?php esc_html_e('Aberration Chromatique', 'supersede-css-jlg'); ?></label><input type="range" class="ssc-crt-control" id="chromaticAberration" min="0" max="5" value="1" step="0.5"></div>
+                    <div>
+                        <label for="scanlineColor"><?php esc_html_e('Couleur Scanline', 'supersede-css-jlg'); ?></label>
+                        <input type="color" class="ssc-crt-control" id="scanlineColor" value="#00ff00">
+                    </div>
+                    <div>
+                        <label for="scanlineOpacity"><?php esc_html_e('Opacité Scanline', 'supersede-css-jlg'); ?></label>
+                        <input type="range" class="ssc-crt-control" id="scanlineOpacity" min="0" max="1" value="0.4" step="0.05">
+                    </div>
+                    <div>
+                        <label for="scanlineSpeed"><?php esc_html_e('Vitesse Scanline', 'supersede-css-jlg'); ?></label>
+                        <input type="range" class="ssc-crt-control" id="scanlineSpeed" min="0.1" max="2" value="0.5" step="0.1">
+                    </div>
+                    <div>
+                        <label for="noiseIntensity"><?php esc_html_e('Intensité du bruit', 'supersede-css-jlg'); ?></label>
+                        <input type="range" class="ssc-crt-control" id="noiseIntensity" min="0" max="0.5" value="0.1" step="0.02">
+                    </div>
+                    <div>
+                        <label for="chromaticAberration"><?php esc_html_e('Aberration chromatique', 'supersede-css-jlg'); ?></label>
+                        <input type="range" class="ssc-crt-control" id="chromaticAberration" min="0" max="5" value="1" step="0.5">
+                    </div>
                 </div>
             </div>
             <div class="ssc-pane">
@@ -36,18 +51,18 @@ if (!defined('ABSPATH')) {
          <div class="ssc-two" style="align-items: flex-start;">
             <div class="ssc-pane">
                 <h3><?php esc_html_e('Paramètres de l\'ECG', 'supersede-css-jlg'); ?></h3>
-                <label><strong><?php esc_html_e('Preset de Rythme', 'supersede-css-jlg'); ?></strong></label>
+                <label for="ssc-ecg-preset"><strong><?php esc_html_e('Preset de rythme', 'supersede-css-jlg'); ?></strong></label>
                 <select id="ssc-ecg-preset" class="regular-text"><option value="stable"><?php esc_html_e('Stable', 'supersede-css-jlg'); ?></option><option value="fast"><?php esc_html_e('Rapide', 'supersede-css-jlg'); ?></option><option value="critical"><?php esc_html_e('Critique', 'supersede-css-jlg'); ?></option></select>
-                <label style="margin-top:16px;"><strong><?php esc_html_e('Couleur de la ligne', 'supersede-css-jlg'); ?></strong></label>
+                <label for="ssc-ecg-color" style="margin-top:16px;"><strong><?php esc_html_e('Couleur de la ligne', 'supersede-css-jlg'); ?></strong></label>
                 <input type="color" id="ssc-ecg-color" value="#00ff00">
-                <label style="margin-top:16px;"><strong><?php esc_html_e('Positionnement (top)', 'supersede-css-jlg'); ?></strong></label>
+                <label for="ssc-ecg-top" style="margin-top:16px;"><strong><?php esc_html_e('Positionnement (top)', 'supersede-css-jlg'); ?></strong></label>
                 <input type="range" id="ssc-ecg-top" min="0" max="100" value="50" step="1"><span id="ssc-ecg-top-val"><?php echo esc_html__('50%', 'supersede-css-jlg'); ?></span>
-                <label style="margin-top:16px;"><strong><?php esc_html_e('Superposition (z-index)', 'supersede-css-jlg'); ?></strong></label>
+                <label for="ssc-ecg-z-index" style="margin-top:16px;"><strong><?php esc_html_e('Superposition (z-index)', 'supersede-css-jlg'); ?></strong></label>
                 <input type="range" id="ssc-ecg-z-index" min="-10" max="10" value="1" step="1"><span id="ssc-ecg-z-index-val"><?php echo esc_html__('1', 'supersede-css-jlg'); ?></span>
                 <hr>
-                <label><strong><?php esc_html_e('Logo/Image au centre', 'supersede-css-jlg'); ?></strong></label>
+                <label for="ssc-ecg-upload-btn"><strong><?php esc_html_e('Logo/Image au centre', 'supersede-css-jlg'); ?></strong></label>
                 <button id="ssc-ecg-upload-btn" class="button"><?php esc_html_e('Choisir une image', 'supersede-css-jlg'); ?></button>
-                <label style="margin-top:16px;"><strong><?php esc_html_e('Taille du logo', 'supersede-css-jlg'); ?></strong></label>
+                <label for="ssc-ecg-logo-size" style="margin-top:16px;"><strong><?php esc_html_e('Taille du logo', 'supersede-css-jlg'); ?></strong></label>
                 <input type="range" id="ssc-ecg-logo-size" min="20" max="200" value="100" step="1"><span id="ssc-ecg-logo-size-val"><?php echo esc_html__('100px', 'supersede-css-jlg'); ?></span>
                 <hr>
                 <pre id="ssc-ecg-css" class="ssc-code ssc-code-small" style="margin-top:16px;"></pre>
@@ -67,8 +82,9 @@ if (!defined('ABSPATH')) {
          <div class="ssc-two" style="align-items: flex-start;">
             <div class="ssc-pane">
                 <h3><?php esc_html_e('Paramètres du Fond', 'supersede-css-jlg'); ?></h3>
+                <label for="ssc-bg-type" class="screen-reader-text"><?php esc_html_e('Type de fond', 'supersede-css-jlg'); ?></label>
                 <select id="ssc-bg-type" class="regular-text"><option value="stars"><?php esc_html_e('Étoiles', 'supersede-css-jlg'); ?></option><option value="gradient"><?php esc_html_e('Dégradé', 'supersede-css-jlg'); ?></option></select>
-                <div id="ssc-bg-controls-stars"><label><?php esc_html_e('Couleur', 'supersede-css-jlg'); ?></label><input type="color" id="starColor" value="#FFFFFF"><label><?php esc_html_e('Nombre', 'supersede-css-jlg'); ?></label><input type="range" id="starCount" min="50" max="500" value="200" step="10"></div>
+                <div id="ssc-bg-controls-stars"><label for="starColor"><?php esc_html_e('Couleur', 'supersede-css-jlg'); ?></label><input type="color" id="starColor" value="#FFFFFF"><label for="starCount"><?php esc_html_e('Nombre', 'supersede-css-jlg'); ?></label><input type="range" id="starCount" min="50" max="500" value="200" step="10"></div>
                 <div id="ssc-bg-controls-gradient" style="display:none;">
                     <div class="ssc-gradient-angle">
                         <label for="gradientAngle"><?php esc_html_e('Angle du dégradé', 'supersede-css-jlg'); ?></label>
@@ -76,7 +92,7 @@ if (!defined('ABSPATH')) {
                     </div>
                     <div class="ssc-gradient-stops-wrapper">
                         <div class="ssc-gradient-stops-header">
-                            <label><?php esc_html_e('Arrêts de couleur', 'supersede-css-jlg'); ?></label>
+                            <label for="ssc-gradient-stops-list"><?php esc_html_e('Arrêts de couleur', 'supersede-css-jlg'); ?></label>
                             <button type="button" class="button" id="ssc-add-gradient-stop"><?php esc_html_e('Ajouter un arrêt', 'supersede-css-jlg'); ?></button>
                         </div>
                         <div id="ssc-gradient-stops-list" class="ssc-gradient-stops" role="list"></div>
