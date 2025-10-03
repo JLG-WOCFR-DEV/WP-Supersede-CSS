@@ -75,7 +75,10 @@ if (!defined('ABSPATH')) {
                         id="ssc-element-picker-toggle"
                         title="<?php echo esc_attr__('Cibler un élément', 'supersede-css-jlg'); ?>"
                         aria-label="<?php echo esc_attr__('Cibler un élément', 'supersede-css-jlg'); ?>"
-                    >🎯</button>
+                    >
+                        🎯
+                        <span class="screen-reader-text"><?php esc_html_e('Cibler un élément', 'supersede-css-jlg'); ?></span>
+                    </button>
                 </div>
                 <div class="ssc-responsive-toggles">
                     <button
@@ -83,19 +86,28 @@ if (!defined('ABSPATH')) {
                         data-vp="desktop"
                         title="<?php echo esc_attr__('Desktop', 'supersede-css-jlg'); ?>"
                         aria-label="<?php echo esc_attr__('Desktop', 'supersede-css-jlg'); ?>"
-                    >🖥️</button>
+                    >
+                        🖥️
+                        <span class="screen-reader-text"><?php esc_html_e('Basculer vers la vue ordinateur', 'supersede-css-jlg'); ?></span>
+                    </button>
                     <button
                         class="button"
                         data-vp="tablet"
                         title="<?php echo esc_attr__('Tablet', 'supersede-css-jlg'); ?>"
                         aria-label="<?php echo esc_attr__('Tablet', 'supersede-css-jlg'); ?>"
-                    >📲</button>
+                    >
+                        📲
+                        <span class="screen-reader-text"><?php esc_html_e('Basculer vers la vue tablette', 'supersede-css-jlg'); ?></span>
+                    </button>
                     <button
                         class="button"
                         data-vp="mobile"
                         title="<?php echo esc_attr__('Mobile', 'supersede-css-jlg'); ?>"
                         aria-label="<?php echo esc_attr__('Mobile', 'supersede-css-jlg'); ?>"
-                    >📱</button>
+                    >
+                        📱
+                        <span class="screen-reader-text"><?php esc_html_e('Basculer vers la vue mobile', 'supersede-css-jlg'); ?></span>
+                    </button>
                 </div>
             </div>
             <div class="ssc-preview-frame-container">
