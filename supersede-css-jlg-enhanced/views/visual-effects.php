@@ -6,6 +6,7 @@ if (!defined('ABSPATH')) {
 <div class="ssc-app ssc-fullwidth">
     <h2><?php esc_html_e('🎬 Générateur d\'Effets Visuels', 'supersede-css-jlg'); ?></h2>
     <p><?php esc_html_e('Une collection d\'effets visuels avancés pour animer vos fonds, images et conteneurs.', 'supersede-css-jlg'); ?></p>
+    <p class="description"><?php esc_html_e('Les aperçus respectent automatiquement la préférence système « réduire les animations ». Lorsque cette option est active, les effets sont figés pour afficher une version statique.', 'supersede-css-jlg'); ?></p>
     <div class="ssc-ve-tabs" role="tablist" aria-label="<?php echo esc_attr__('Types d\'effets visuels', 'supersede-css-jlg'); ?>">
         <button type="button" class="ssc-ve-tab active" id="ssc-ve-tab-backgrounds" role="tab" aria-selected="true" aria-controls="ssc-ve-panel-backgrounds" data-tab="backgrounds"><?php esc_html_e('🌌 Fonds Animés', 'supersede-css-jlg'); ?></button>
         <button type="button" class="ssc-ve-tab" id="ssc-ve-tab-ecg" role="tab" aria-selected="false" aria-controls="ssc-ve-panel-ecg" data-tab="ecg"><?php esc_html_e('❤️ ECG / Battement de Cœur', 'supersede-css-jlg'); ?></button>
