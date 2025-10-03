@@ -747,6 +747,65 @@
         refreshCssFromTokens();
         fetchTokensFromServer();
 
+        const helpToggleElement = document.getElementById('ssc-token-help-toggle');
+        const layoutContainer = document.querySelector('.ssc-token-layout');
+        const helpStateLabel = helpToggleElement ? helpToggleElement.querySelector('.ssc-token-help__state') : null;
+        const helpStorageKey = 'sscTokenHelpCollapsed';
+
+        if (helpToggleElement) {
+            const expandedText = helpStateLabel
+                ? (helpStateLabel.getAttribute('data-expanded') || helpStateLabel.textContent || '')
+                : '';
+            const collapsedText = helpStateLabel
+                ? (helpStateLabel.getAttribute('data-collapsed') || helpStateLabel.textContent || expandedText)
+                : expandedText;
+
+            const applyHelpState = function(collapsed) {
+                if (layoutContainer) {
+                    layoutContainer.classList.toggle('ssc-token-layout--help-collapsed', collapsed);
+                }
+                if (helpStateLabel) {
+                    helpStateLabel.textContent = collapsed ? collapsedText : expandedText;
+                }
+            };
+
+            const persistHelpState = function(collapsed) {
+                try {
+                    window.localStorage.setItem(helpStorageKey, collapsed ? '1' : '0');
+                } catch (error) {
+                    // Ignore persistence errors (private mode, disabled storage, etc.)
+                }
+            };
+
+            let isRestoringHelpState = true;
+
+            helpToggleElement.addEventListener('toggle', function() {
+                const collapsed = !helpToggleElement.open;
+                applyHelpState(collapsed);
+                if (!isRestoringHelpState) {
+                    persistHelpState(collapsed);
+                }
+            });
+
+            let storedValue = null;
+            try {
+                storedValue = window.localStorage.getItem(helpStorageKey);
+            } catch (error) {
+                storedValue = null;
+            }
+
+            if (storedValue === '1') {
+                helpToggleElement.removeAttribute('open');
+            } else if (storedValue === '0') {
+                helpToggleElement.setAttribute('open', 'open');
+            } else {
+                applyHelpState(!helpToggleElement.open);
+            }
+
+            isRestoringHelpState = false;
+            applyHelpState(!helpToggleElement.open);
+        }
+
         $('#ssc-token-add').on('click', function(event) {
             event.preventDefault();
             addToken();
