@@ -319,7 +319,7 @@ class Layout {
                     <span class="ssc-topbar-label">WP Admin</span>
                 </a>
                 <span class="ssc-title">Supersede CSS</span><span class="ssc-spacer"></span>
-                <button type="button" class="button" id="ssc-theme" aria-label="Basculer le thème clair ou sombre">
+                <button type="button" class="button" id="ssc-theme" aria-label="Basculer le thème clair ou sombre" aria-pressed="false">
                     <span aria-hidden="true">🌓</span>
                     <span class="ssc-topbar-label">Thème</span>
                 </button>
