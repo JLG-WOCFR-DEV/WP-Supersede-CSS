@@ -70,10 +70,32 @@ if (!defined('ABSPATH')) {
                 <div class="ssc-url-bar">
                     <input type="url" id="ssc-preview-url" value="<?php echo esc_url($preview_url); ?>">
                     <button class="button" id="ssc-preview-load"><?php echo esc_html__('Load', 'supersede-css-jlg'); ?></button>
-                    <button class="button" id="ssc-element-picker-toggle" title="<?php echo esc_attr__('Cibler un élément', 'supersede-css-jlg'); ?>">🎯</button>
+                    <button
+                        class="button"
+                        id="ssc-element-picker-toggle"
+                        title="<?php echo esc_attr__('Cibler un élément', 'supersede-css-jlg'); ?>"
+                        aria-label="<?php echo esc_attr__('Cibler un élément', 'supersede-css-jlg'); ?>"
+                    >🎯</button>
                 </div>
                 <div class="ssc-responsive-toggles">
-                    <button class="button button-primary" data-vp="desktop" title="<?php echo esc_attr__('Desktop', 'supersede-css-jlg'); ?>">🖥️</button><button class="button" data-vp="tablet" title="<?php echo esc_attr__('Tablet', 'supersede-css-jlg'); ?>">📲</button><button class="button" data-vp="mobile" title="<?php echo esc_attr__('Mobile', 'supersede-css-jlg'); ?>">📱</button>
+                    <button
+                        class="button button-primary"
+                        data-vp="desktop"
+                        title="<?php echo esc_attr__('Desktop', 'supersede-css-jlg'); ?>"
+                        aria-label="<?php echo esc_attr__('Desktop', 'supersede-css-jlg'); ?>"
+                    >🖥️</button>
+                    <button
+                        class="button"
+                        data-vp="tablet"
+                        title="<?php echo esc_attr__('Tablet', 'supersede-css-jlg'); ?>"
+                        aria-label="<?php echo esc_attr__('Tablet', 'supersede-css-jlg'); ?>"
+                    >📲</button>
+                    <button
+                        class="button"
+                        data-vp="mobile"
+                        title="<?php echo esc_attr__('Mobile', 'supersede-css-jlg'); ?>"
+                        aria-label="<?php echo esc_attr__('Mobile', 'supersede-css-jlg'); ?>"
+                    >📱</button>
                 </div>
             </div>
             <div class="ssc-preview-frame-container">
