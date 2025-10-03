@@ -70,10 +70,34 @@ if (!defined('ABSPATH')) {
                 <div class="ssc-url-bar">
                     <input type="url" id="ssc-preview-url" value="<?php echo esc_url($preview_url); ?>">
                     <button class="button" id="ssc-preview-load"><?php echo esc_html__('Load', 'supersede-css-jlg'); ?></button>
-                    <button class="button" id="ssc-element-picker-toggle" title="<?php echo esc_attr__('Cibler un élément', 'supersede-css-jlg'); ?>">🎯</button>
+                    <?php
+                    $element_picker_label = __('Activer le ciblage d\'élément', 'supersede-css-jlg');
+                    ?>
+                    <button class="button" id="ssc-element-picker-toggle" title="<?php echo esc_attr($element_picker_label); ?>" aria-label="<?php echo esc_attr($element_picker_label); ?>">
+                        <span aria-hidden="true">🎯</span>
+                        <span class="screen-reader-text"><?php echo esc_html($element_picker_label); ?></span>
+                    </button>
                 </div>
                 <div class="ssc-responsive-toggles">
-                    <button class="button button-primary" data-vp="desktop" title="<?php echo esc_attr__('Desktop', 'supersede-css-jlg'); ?>">🖥️</button><button class="button" data-vp="tablet" title="<?php echo esc_attr__('Tablet', 'supersede-css-jlg'); ?>">📲</button><button class="button" data-vp="mobile" title="<?php echo esc_attr__('Mobile', 'supersede-css-jlg'); ?>">📱</button>
+                    <?php
+                    $responsive_labels = [
+                        'desktop' => __('Prévisualiser en mode bureau', 'supersede-css-jlg'),
+                        'tablet'  => __('Prévisualiser en mode tablette', 'supersede-css-jlg'),
+                        'mobile'  => __('Prévisualiser en mode mobile', 'supersede-css-jlg'),
+                    ];
+                    ?>
+                    <button class="button button-primary" data-vp="desktop" title="<?php echo esc_attr($responsive_labels['desktop']); ?>" aria-label="<?php echo esc_attr($responsive_labels['desktop']); ?>">
+                        <span aria-hidden="true">🖥️</span>
+                        <span class="screen-reader-text"><?php echo esc_html($responsive_labels['desktop']); ?></span>
+                    </button>
+                    <button class="button" data-vp="tablet" title="<?php echo esc_attr($responsive_labels['tablet']); ?>" aria-label="<?php echo esc_attr($responsive_labels['tablet']); ?>">
+                        <span aria-hidden="true">📲</span>
+                        <span class="screen-reader-text"><?php echo esc_html($responsive_labels['tablet']); ?></span>
+                    </button>
+                    <button class="button" data-vp="mobile" title="<?php echo esc_attr($responsive_labels['mobile']); ?>" aria-label="<?php echo esc_attr($responsive_labels['mobile']); ?>">
+                        <span aria-hidden="true">📱</span>
+                        <span class="screen-reader-text"><?php echo esc_html($responsive_labels['mobile']); ?></span>
+                    </button>
                 </div>
             </div>
             <div class="ssc-preview-frame-container">
