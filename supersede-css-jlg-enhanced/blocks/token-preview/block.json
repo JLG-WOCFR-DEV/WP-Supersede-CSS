@@ -1,0 +1,15 @@
+{
+  "apiVersion": 3,
+  "name": "supersede/token-preview",
+  "version": "1.0.0",
+  "title": "Supersede Token Preview",
+  "category": "widgets",
+  "icon": "admin-customizer",
+  "description": "Affiche un aperçu des tokens Supersede CSS disponibles directement dans l’éditeur.",
+  "textdomain": "supersede-css-jlg",
+  "supports": {
+    "html": false,
+    "reusable": false
+  },
+  "editorScript": "file:./index.js"
+}

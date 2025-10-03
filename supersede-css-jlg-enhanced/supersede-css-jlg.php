@@ -10,6 +10,7 @@
  */
 if (!defined('ABSPATH')) { exit; }
 
+use SSC\Blocks\TokenPreview;
 use SSC\Support\CssSanitizer;
 
 define('SSC_VERSION','10.0.5');
@@ -158,4 +159,17 @@ add_action('enqueue_block_editor_assets', 'ssc_enqueue_block_editor_inline_css')
 add_action('plugins_loaded', function() {
     load_plugin_textdomain('supersede-css-jlg', false, dirname(plugin_basename(__FILE__)) . '/languages');
 });
+
+if (!function_exists('ssc_register_blocks')) {
+    function ssc_register_blocks(): void
+    {
+        if (!function_exists('register_block_type')) {
+            return;
+        }
+
+        TokenPreview::register();
+    }
+}
+
+add_action('init', 'ssc_register_blocks');
 
