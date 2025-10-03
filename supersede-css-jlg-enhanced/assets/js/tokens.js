@@ -735,6 +735,57 @@
     }
 
     $(document).ready(function() {
+        const tokenLayout = $('.ssc-token-layout');
+        const helpPane = $('#ssc-token-help');
+        const helpToggle = $('#ssc-token-help-toggle');
+        const helpStorageKey = 'ssc-token-help-collapsed';
+
+        if (helpToggle.length && helpPane.length && tokenLayout.length) {
+            const expandedLabel = helpToggle.data('expandedLabel');
+            const collapsedLabel = helpToggle.data('collapsedLabel');
+
+            const setHelpState = function(collapsed, persist) {
+                tokenLayout.toggleClass('ssc-help-collapsed', collapsed);
+                helpPane.attr('aria-hidden', collapsed ? 'true' : 'false');
+
+                if (collapsed) {
+                    helpPane.attr('hidden', 'hidden');
+                } else {
+                    helpPane.removeAttr('hidden');
+                }
+
+                helpToggle.attr('aria-expanded', collapsed ? 'false' : 'true');
+
+                const label = collapsed ? collapsedLabel : expandedLabel;
+                if (typeof label === 'string' && label.length) {
+                    helpToggle.text(label);
+                }
+
+                if (persist) {
+                    try {
+                        window.localStorage.setItem(helpStorageKey, collapsed ? '1' : '0');
+                    } catch (storageError) {
+                        // Ignore storage errors (private mode, quota, etc.).
+                    }
+                }
+            };
+
+            let initialCollapsed = false;
+            try {
+                initialCollapsed = window.localStorage.getItem(helpStorageKey) === '1';
+            } catch (storageError) {
+                initialCollapsed = false;
+            }
+
+            setHelpState(initialCollapsed, false);
+
+            helpToggle.on('click', function(event) {
+                event.preventDefault();
+                const collapsed = !tokenLayout.hasClass('ssc-help-collapsed');
+                setHelpState(collapsed, true);
+            });
+        }
+
         if (!builder.length || !cssTextarea.length) {
             return;
         }

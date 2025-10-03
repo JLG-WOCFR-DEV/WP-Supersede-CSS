@@ -1,3 +1,56 @@
+.ssc-token-layout {
+    grid-template-columns: minmax(280px, 1fr) minmax(0, 2fr);
+    transition: grid-template-columns 0.3s ease;
+}
+
+.ssc-token-layout.ssc-help-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.ssc-token-layout.ssc-help-collapsed .ssc-token-editor {
+    grid-column: 1 / -1;
+}
+
+#ssc-token-help[hidden] {
+    display: none !important;
+}
+
+.ssc-token-help__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.ssc-token-help__toggle.button {
+    margin-left: auto;
+    height: auto;
+    line-height: 1.4;
+    padding: 4px 12px;
+    white-space: nowrap;
+}
+
+.ssc-token-help__content {
+    margin-top: 12px;
+    display: grid;
+    gap: 12px;
+}
+
+.ssc-token-layout.ssc-help-collapsed .ssc-token-help__content {
+    display: none;
+}
+
+@media (max-width: 782px) {
+    .ssc-token-layout,
+    .ssc-token-layout.ssc-help-collapsed {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ssc-token-help__toggle.button {
+        margin-left: 0;
+    }
+}
+
 .ssc-token-builder {
     display: flex;
     flex-direction: column;

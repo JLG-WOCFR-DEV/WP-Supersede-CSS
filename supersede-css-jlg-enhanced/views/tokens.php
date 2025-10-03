@@ -62,21 +62,35 @@ if (function_exists('wp_localize_script')) {
         <p><?php esc_html_e('Cet outil vous aide à centraliser les valeurs fondamentales de votre design (couleurs, polices, espacements…) pour les réutiliser facilement et maintenir une cohérence parfaite sur votre site.', 'supersede-css-jlg'); ?></p>
     </div>
 
-    <div class="ssc-two" style="margin-top:16px; align-items: flex-start;">
-        <div class="ssc-pane">
-            <h3><?php esc_html_e('👨‍🏫 Qu\'est-ce qu\'un Token (ou Variable CSS) ?', 'supersede-css-jlg'); ?></h3>
-            <p><?php printf(wp_kses_post(__('Imaginez que vous décidiez d\'utiliser une couleur bleue spécifique (%s) pour tous vos boutons et titres. Si un jour vous voulez changer ce bleu, vous devriez chercher et remplacer cette valeur partout dans votre code. C\'est long et risqué !', 'supersede-css-jlg')), '<code>#3498db</code>'); ?></p>
-            <p><?php printf(wp_kses_post(__('Un %1$s est un « raccourci ». Vous donnez un nom facile à retenir à votre couleur, comme %2$s. Ensuite, vous utilisez ce nom partout où vous avez besoin de ce bleu.', 'supersede-css-jlg')), '<strong>token</strong>', '<code>--couleur-principale</code>'); ?></p>
-            <p><?php echo wp_kses_post(__('<strong>Le jour où vous voulez changer de couleur, il suffit de modifier la valeur du token en un seul endroit, et la modification s\'applique partout !</strong>', 'supersede-css-jlg')); ?></p>
-            <hr>
-            <h4><?php esc_html_e('Exemple Concret', 'supersede-css-jlg'); ?></h4>
-            <p><?php printf(wp_kses_post(__('<strong>1. Définition du Token :</strong><br>On définit le token une seule fois, généralement sur l\'élément %s (la racine de votre page).', 'supersede-css-jlg')), '<code>:root</code>'); ?></p>
-            <pre class="ssc-code">:root {
+    <div class="ssc-two ssc-token-layout" style="margin-top:16px; align-items: flex-start;">
+        <div class="ssc-pane ssc-token-help" id="ssc-token-help">
+            <div class="ssc-token-help__header">
+                <h3><?php esc_html_e('👨‍🏫 Qu\'est-ce qu\'un Token (ou Variable CSS) ?', 'supersede-css-jlg'); ?></h3>
+                <button
+                    type="button"
+                    id="ssc-token-help-toggle"
+                    class="button button-secondary ssc-token-help__toggle"
+                    data-expanded-label="<?php esc_attr_e('Masquer l’aide pédagogique', 'supersede-css-jlg'); ?>"
+                    data-collapsed-label="<?php esc_attr_e('Afficher l’aide pédagogique', 'supersede-css-jlg'); ?>"
+                    aria-controls="ssc-token-help"
+                    aria-expanded="true"
+                >
+                    <?php esc_html_e('Masquer l’aide pédagogique', 'supersede-css-jlg'); ?>
+                </button>
+            </div>
+            <div class="ssc-token-help__content">
+                <p><?php printf(wp_kses_post(__('Imaginez que vous décidiez d\'utiliser une couleur bleue spécifique (%s) pour tous vos boutons et titres. Si un jour vous voulez changer ce bleu, vous devriez chercher et remplacer cette valeur partout dans votre code. C\'est long et risqué !', 'supersede-css-jlg')), '<code>#3498db</code>'); ?></p>
+                <p><?php printf(wp_kses_post(__('Un %1$s est un « raccourci ». Vous donnez un nom facile à retenir à votre couleur, comme %2$s. Ensuite, vous utilisez ce nom partout où vous avez besoin de ce bleu.', 'supersede-css-jlg')), '<strong>token</strong>', '<code>--couleur-principale</code>'); ?></p>
+                <p><?php echo wp_kses_post(__('<strong>Le jour où vous voulez changer de couleur, il suffit de modifier la valeur du token en un seul endroit, et la modification s\'applique partout !</strong>', 'supersede-css-jlg')); ?></p>
+                <hr>
+                <h4><?php esc_html_e('Exemple Concret', 'supersede-css-jlg'); ?></h4>
+                <p><?php printf(wp_kses_post(__('<strong>1. Définition du Token :</strong><br>On définit le token une seule fois, généralement sur l\'élément %s (la racine de votre page).', 'supersede-css-jlg')), '<code>:root</code>'); ?></p>
+                <pre class="ssc-code">:root {
    --couleur-principale: #3498db;
    --radius-arrondi: 8px;
 }</pre>
-            <p><?php printf(wp_kses_post(__('<strong>2. Utilisation des Tokens :</strong><br>Ensuite, on utilise la fonction %s pour appeler la valeur du token.', 'supersede-css-jlg')), '<code>var()</code>'); ?></p>
-            <pre class="ssc-code">.mon-bouton {
+                <p><?php printf(wp_kses_post(__('<strong>2. Utilisation des Tokens :</strong><br>Ensuite, on utilise la fonction %s pour appeler la valeur du token.', 'supersede-css-jlg')), '<code>var()</code>'); ?></p>
+                <pre class="ssc-code">.mon-bouton {
    background-color: var(--couleur-principale);
    border-radius: var(--radius-arrondi);
    color: white;
@@ -85,8 +99,9 @@ if (function_exists('wp_localize_script')) {
 .mon-titre {
    color: var(--couleur-principale);
 }</pre>
+            </div>
         </div>
-        <div class="ssc-pane">
+        <div class="ssc-pane ssc-token-editor">
             <h3><?php esc_html_e('🎨 Éditeur Visuel de Tokens', 'supersede-css-jlg'); ?></h3>
             <p><?php esc_html_e('Gérez vos tokens sous forme de fiches structurées : nom technique, valeur, type de champ, description et groupe d\'appartenance. Chaque catégorie est listée séparément pour garder une vision claire de votre système de design.', 'supersede-css-jlg'); ?></p>
 
