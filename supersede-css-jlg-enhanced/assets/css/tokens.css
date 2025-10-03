@@ -2,6 +2,10 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+    --ssc-token-duplicate-surface: color-mix(in srgb, var(--ssc-card) 88%, var(--ssc-border) 12%);
+    --ssc-token-duplicate-border: color-mix(in srgb, var(--ssc-border) 70%, var(--ssc-text) 30%);
+    --ssc-token-duplicate-outline: color-mix(in srgb, var(--ssc-border) 65%, transparent);
+    --ssc-token-duplicate-focus-ring: color-mix(in srgb, var(--ssc-border) 45%, transparent);
 }
 
 .ssc-token-group {
@@ -55,23 +59,29 @@
 }
 
 .ssc-token-row--duplicate {
-    background-color: rgba(220, 38, 38, 0.08);
+    background-color: var(--ssc-token-duplicate-surface);
     border-radius: 4px;
     padding: 4px;
 }
 
 .token-field-input--duplicate {
-    border-color: #dc2626;
-    box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.35);
+    border-color: var(--ssc-token-duplicate-border);
+    box-shadow: 0 0 0 1px var(--ssc-token-duplicate-outline);
 }
 
 .token-field-input--duplicate:focus {
-    box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.35), 0 0 0 3px rgba(220, 38, 38, 0.2);
+    box-shadow: 0 0 0 1px var(--ssc-token-duplicate-outline), 0 0 0 3px var(--ssc-token-duplicate-focus-ring);
+}
+
+.ssc-dark .ssc-token-builder {
+    --ssc-token-duplicate-surface: color-mix(in srgb, var(--ssc-card) 75%, var(--ssc-border) 25%);
+    --ssc-token-duplicate-border: color-mix(in srgb, var(--ssc-border) 85%, var(--ssc-text) 15%);
+    --ssc-token-duplicate-outline: color-mix(in srgb, var(--ssc-border) 75%, transparent);
+    --ssc-token-duplicate-focus-ring: color-mix(in srgb, var(--ssc-border) 55%, transparent);
 }
 
 .ssc-dark .ssc-token-group {
-    border-color: var(--ssc-border);
-    border-color: color-mix(in srgb, var(--ssc-border) 80%, #000 20%);
+    border-color: color-mix(in srgb, var(--ssc-border) 82%, var(--ssc-text) 18%);
 }
 
 .ssc-dark .ssc-token-field__help {
