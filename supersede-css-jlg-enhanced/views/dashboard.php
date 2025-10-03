@@ -19,6 +19,12 @@ if (!defined('ABSPATH')) {
     </div>
 
     <div class="ssc-panel" style="margin-top: 24px;">
+        <h2><?php esc_html_e('🧩 Nouveau : Bloc « Token Preview »', 'supersede-css-jlg'); ?></h2>
+        <p><?php echo esc_html__('Dans l’éditeur de blocs WordPress, insérez le bloc « Supersede › Token Preview » pour visualiser instantanément les tokens et presets activés (couleurs, espacements, etc.).', 'supersede-css-jlg'); ?></p>
+        <p><?php echo esc_html__('Le bloc injecte automatiquement les mêmes styles que le frontal : plus besoin de copier les classes manuellement, il suffit de placer le bloc à l’endroit voulu pour partager votre bibliothèque de tokens avec l’équipe éditoriale.', 'supersede-css-jlg'); ?></p>
+    </div>
+
+    <div class="ssc-panel" style="margin-top: 24px;">
         <h2><?php esc_html_e('💡 Comprendre le Workflow (Créer et Activer un Style)', 'supersede-css-jlg'); ?></h2>
         <p><?php printf(wp_kses_post(__('Pour utiliser efficacement les modules créatifs comme %1$s ou %2$s, suivez ces 3 étapes logiques :', 'supersede-css-jlg')), '<strong>Avatar Glow</strong>', '<strong>Preset Designer</strong>'); ?></p>
         <ol style="list-style-type: decimal; margin-left: 20px;">
