@@ -147,9 +147,17 @@
         if (localStorage.getItem('ssc-theme') === 'dark') {
             body.addClass('ssc-dark');
         }
+
+        const updateThemeToggleAria = () => {
+            themeToggle.attr('aria-pressed', body.hasClass('ssc-dark') ? 'true' : 'false');
+        };
+
+        updateThemeToggleAria();
+
         themeToggle.on('click', function() {
             body.toggleClass('ssc-dark');
             localStorage.setItem('ssc-theme', body.hasClass('ssc-dark') ? 'dark' : 'light');
+            updateThemeToggleAria();
         });
 
         // --- Mobile Sidebar Toggle ---
