@@ -44,4 +44,59 @@ test.describe('Command palette accessibility', () => {
     await expect(searchInput).toBeVisible();
     await expect(searchInput).toHaveAccessibleName(expectedLabel);
   });
+
+  test('supports keyboard navigation across the results', async ({ page }, testInfo) => {
+    const baseURL = testInfo.project.use.baseURL || 'http://localhost:8889';
+    const adminUrl = new URL(ADMIN_PATH, baseURL).toString();
+
+    await authenticate(page, adminUrl, {
+      username: DEFAULT_USERNAME,
+      password: DEFAULT_PASSWORD,
+    });
+
+    const commandPaletteButton = page.locator('#ssc-cmdk');
+    await expect(commandPaletteButton).toBeVisible();
+    await commandPaletteButton.click();
+
+    const searchInput = page.locator('#ssc-cmdp-search');
+    await expect(searchInput).toBeVisible();
+    await expect(searchInput).toBeFocused();
+
+    const resultsList = page.locator('#ssc-cmdp-results');
+    const options = resultsList.locator('[role="option"]');
+    await expect(options.first()).toBeVisible();
+    const optionCount = await options.count();
+    expect(optionCount).toBeGreaterThanOrEqual(2);
+
+    await searchInput.press('ArrowDown');
+    const firstOption = options.first();
+    const firstId = await firstOption.getAttribute('id');
+    expect(firstId).not.toBeNull();
+    await expect(firstOption).toHaveAttribute('aria-selected', 'true');
+    await expect(resultsList).toHaveAttribute('aria-activedescendant', firstId);
+    await expect(searchInput).toBeFocused();
+
+    await searchInput.press('ArrowDown');
+    const secondOption = options.nth(1);
+    const secondId = await secondOption.getAttribute('id');
+    expect(secondId).not.toBeNull();
+    await expect(secondOption).toHaveAttribute('aria-selected', 'true');
+    await expect(firstOption).toHaveAttribute('aria-selected', 'false');
+    await expect(resultsList).toHaveAttribute('aria-activedescendant', secondId);
+
+    await searchInput.press('End');
+    const lastOption = options.nth(optionCount - 1);
+    const lastId = await lastOption.getAttribute('id');
+    expect(lastId).not.toBeNull();
+    await expect(lastOption).toHaveAttribute('aria-selected', 'true');
+    await expect(resultsList).toHaveAttribute('aria-activedescendant', lastId);
+
+    await searchInput.press('Home');
+    await expect(firstOption).toHaveAttribute('aria-selected', 'true');
+    await expect(resultsList).toHaveAttribute('aria-activedescendant', firstId);
+
+    await searchInput.press('ArrowUp');
+    await expect(firstOption).toHaveAttribute('aria-selected', 'true');
+    await expect(resultsList).toHaveAttribute('aria-activedescendant', firstId);
+  });
 });

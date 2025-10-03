@@ -285,6 +285,9 @@
         let previouslyFocusedCommandElement = null;
         let paletteFocusableElements = $();
         let isCommandPaletteOpen = false;
+        let optionElements = [];
+        let activeOptionIndex = -1;
+        let optionIdCounter = 0;
 
         const updatePaletteFocusableElements = () => {
             const focusable = cmdp.find(focusableSelectors).filter(':visible');
@@ -392,14 +395,56 @@
             }}
         );
 
+        const setActiveOption = (index, { scrollIntoView = false } = {}) => {
+            if (!optionElements.length || index < 0) {
+                activeOptionIndex = -1;
+                optionElements.forEach(option => {
+                    option.attr('aria-selected', 'false');
+                    option.removeClass('is-active');
+                });
+                resultsList.removeAttr('aria-activedescendant');
+                return;
+            }
+
+            const boundedIndex = Math.max(0, Math.min(index, optionElements.length - 1));
+            activeOptionIndex = boundedIndex;
+
+            optionElements.forEach((option, idx) => {
+                const isActive = idx === activeOptionIndex;
+                option.attr('aria-selected', isActive ? 'true' : 'false');
+                option.toggleClass('is-active', isActive);
+            });
+
+            const activeOption = optionElements[activeOptionIndex];
+            if (activeOption && activeOption.length) {
+                resultsList.attr('aria-activedescendant', activeOption.attr('id'));
+                if (scrollIntoView && typeof activeOption[0].scrollIntoView === 'function') {
+                    activeOption[0].scrollIntoView({ block: 'nearest' });
+                }
+            }
+        };
+
+        const activateOption = (index) => {
+            if (index < 0 || index >= optionElements.length) {
+                return;
+            }
+            optionElements[index].trigger('click');
+        };
+
         function renderResults(query = '') {
             resultsList.empty();
-            const filtered = query 
+            optionElements = [];
+            const filtered = query
                 ? commands.filter(c => c.name.toLowerCase().includes(query.toLowerCase()))
                 : commands;
 
             filtered.forEach(c => {
-                const link = $(`<a href="#">${c.name}</a>`).attr('role', 'option');
+                const optionId = `ssc-cmdp-option-${++optionIdCounter}`;
+                const link = $(`<a href="#">${c.name}</a>`).attr({
+                    role: 'option',
+                    id: optionId,
+                    'aria-selected': 'false'
+                });
                 link.on('click', (e) => {
                     e.preventDefault();
                     closeCommandPalette();
@@ -409,9 +454,11 @@
                         c.handler();
                     }
                 });
+                optionElements.push(link);
                 resultsList.append($('<li></li>').append(link));
             });
             const resultCount = filtered.length;
+            setActiveOption(resultCount ? 0 : -1);
             if (typeof window !== 'undefined' && window.wp && wp.a11y && typeof wp.a11y.speak === 'function') {
                 const announcement = getCommandPaletteResultsAnnouncement(resultCount);
                 if (announcement) {
@@ -432,6 +479,39 @@
         });
 
         searchInput.on('input', () => renderResults(searchInput.val()));
+
+        searchInput.on('keydown', function(e) {
+            const key = e.key;
+            if (!['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter'].includes(key)) {
+                return;
+            }
+
+            if (key === 'Enter') {
+                if (activeOptionIndex >= 0) {
+                    e.preventDefault();
+                    activateOption(activeOptionIndex);
+                }
+                return;
+            }
+
+            if (!optionElements.length) {
+                return;
+            }
+
+            e.preventDefault();
+
+            if (key === 'ArrowDown') {
+                const nextIndex = activeOptionIndex < 0 ? 0 : activeOptionIndex + 1;
+                setActiveOption(nextIndex, { scrollIntoView: true });
+            } else if (key === 'ArrowUp') {
+                const previousIndex = activeOptionIndex <= 0 ? 0 : activeOptionIndex - 1;
+                setActiveOption(previousIndex, { scrollIntoView: true });
+            } else if (key === 'Home') {
+                setActiveOption(0, { scrollIntoView: true });
+            } else if (key === 'End') {
+                setActiveOption(optionElements.length - 1, { scrollIntoView: true });
+            }
+        });
 
         $(document).on('keydown', function(e) {
             const key = typeof e.key === 'string' ? e.key.toLowerCase() : e.key;
