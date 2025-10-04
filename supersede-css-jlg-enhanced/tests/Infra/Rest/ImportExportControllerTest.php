@@ -99,6 +99,62 @@ final class ImportExportControllerTest extends WP_UnitTestCase
         ], $stored);
     }
 
+    public function test_import_config_returns_ok_for_valid_tokens_registry_payload(): void
+    {
+        $payload = [
+            'modules' => ['tokens'],
+            'options' => [
+                'ssc_tokens_registry' => [
+                    [
+                        'name' => 'primary-color',
+                        'value' => ' #0ea5e9 ',
+                        'type' => 'color',
+                        'description' => " Couleur principale ",
+                        'group' => 'Identité ',
+                    ],
+                    [
+                        'name' => 'Heading Font',
+                        'value' => "\n\t'Inter', sans-serif\n",
+                        'type' => 'font',
+                        'description' => "Police titres",
+                        'group' => '',
+                    ],
+                ],
+            ],
+        ];
+
+        $request = new WP_REST_Request('POST', '/ssc/v1/import-config');
+        $request->set_body(wp_json_encode($payload));
+
+        $response = $this->controller->importConfig($request);
+
+        $this->assertSame(200, $response->get_status());
+
+        $data = $response->get_data();
+        $this->assertIsArray($data);
+        $this->assertTrue($data['ok']);
+        $this->assertContains('ssc_tokens_registry', $data['applied']);
+        $this->assertSame([], $data['skipped']);
+
+        $stored = get_option('ssc_tokens_registry');
+        $this->assertSame([
+            [
+                'name' => '--primary-color',
+                'value' => '#0ea5e9',
+                'type' => 'color',
+                'description' => 'Couleur principale',
+                'group' => 'Identité',
+            ],
+            [
+                'name' => '--Heading-Font',
+                'value' => "'Inter', sans-serif",
+                'type' => 'font',
+                'description' => 'Police titres',
+                'group' => 'Général',
+            ],
+        ], $stored);
+    }
+
     public function test_import_config_skips_duplicate_tokens(): void
     {
         $payload = [
