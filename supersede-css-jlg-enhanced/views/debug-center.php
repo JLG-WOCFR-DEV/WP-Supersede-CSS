@@ -57,12 +57,49 @@ $css_revisions     = isset($css_revisions) && is_array($css_revisions) ? $css_re
     </div>
 
     <div class="ssc-panel" style="margin-top: 16px;">
-        <h2><?php echo esc_html__('Révisions CSS enregistrées', 'supersede-css-jlg'); ?></h2>
-        <p class="description" style="margin-bottom: 12px;">
-            <?php echo esc_html__('Chaque sauvegarde conserve une version du CSS avec horodatage et auteur. Utilisez cette liste pour restaurer un état précédent en un clic.', 'supersede-css-jlg'); ?>
-        </p>
+        <div class="ssc-panel-header">
+            <div>
+                <h2><?php echo esc_html__('Révisions CSS enregistrées', 'supersede-css-jlg'); ?></h2>
+                <p class="description" style="margin-bottom: 12px;">
+                    <?php echo esc_html__('Chaque sauvegarde conserve une version du CSS avec horodatage et auteur. Utilisez cette liste pour restaurer ou comparer des états précédents.', 'supersede-css-jlg'); ?>
+                </p>
+            </div>
+            <div class="ssc-panel-actions">
+                <button type="button" class="button button-secondary" id="ssc-export-css" <?php disabled(empty($css_revisions)); ?>>
+                    <?php esc_html_e('Exporter le CSS sélectionné', 'supersede-css-jlg'); ?>
+                </button>
+            </div>
+        </div>
+        <?php
+        $revision_users = [];
+        foreach ($css_revisions as $revision_item) {
+            if (!empty($revision_item['author'])) {
+                $revision_users[] = (string) $revision_item['author'];
+            }
+        }
+        $revision_users = array_values(array_unique($revision_users));
+        ?>
+        <div class="ssc-filter-bar" id="ssc-revision-filters">
+            <div class="ssc-filter">
+                <label for="ssc-revision-date-start"><?php esc_html_e('Du', 'supersede-css-jlg'); ?></label>
+                <input type="date" id="ssc-revision-date-start" data-filter="date-start" />
+            </div>
+            <div class="ssc-filter">
+                <label for="ssc-revision-date-end"><?php esc_html_e('Au', 'supersede-css-jlg'); ?></label>
+                <input type="date" id="ssc-revision-date-end" data-filter="date-end" />
+            </div>
+            <div class="ssc-filter">
+                <label for="ssc-revision-user"><?php esc_html_e('Utilisateur', 'supersede-css-jlg'); ?></label>
+                <select id="ssc-revision-user" data-filter="user">
+                    <option value=""><?php esc_html_e('Tous', 'supersede-css-jlg'); ?></option>
+                    <?php foreach ($revision_users as $revision_user) : ?>
+                        <option value="<?php echo esc_attr($revision_user); ?>"><?php echo esc_html($revision_user); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        </div>
         <?php if (!empty($css_revisions)) : ?>
-            <table class="widefat striped">
+            <table class="widefat striped" id="ssc-revisions-table">
                 <thead>
                     <tr>
                         <th><?php esc_html_e('Horodatage (UTC)', 'supersede-css-jlg'); ?></th>
@@ -74,10 +111,17 @@ $css_revisions     = isset($css_revisions) && is_array($css_revisions) ? $css_re
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($css_revisions as $revision) :
+                    <?php foreach ($css_revisions as $index => $revision) :
                         $revision_id   = isset($revision['id']) ? (string) $revision['id'] : '';
                         $option_name   = isset($revision['option']) ? (string) $revision['option'] : '';
                         $timestamp     = isset($revision['timestamp']) ? (string) $revision['timestamp'] : '';
+                        $iso_timestamp = '';
+                        if ($timestamp !== '') {
+                            $timestamp_gmt = strtotime($timestamp . ' UTC');
+                            if ($timestamp_gmt !== false) {
+                                $iso_timestamp = gmdate('Y-m-d\TH:i:s\Z', $timestamp_gmt);
+                            }
+                        }
                         $author        = isset($revision['author']) ? (string) $revision['author'] : '';
                         $css_source    = isset($revision['css']) ? (string) $revision['css'] : '';
                         $css_length    = strlen($css_source);
@@ -97,7 +141,12 @@ $css_revisions     = isset($css_revisions) && is_array($css_revisions) ? $css_re
                             }
                         }
                         ?>
-                        <tr>
+                        <tr
+                            data-index="<?php echo esc_attr((string) $index); ?>"
+                            data-revision-id="<?php echo esc_attr($revision_id); ?>"
+                            data-timestamp="<?php echo esc_attr($iso_timestamp); ?>"
+                            data-author="<?php echo esc_attr($author); ?>"
+                        >
                             <td><?php echo esc_html($timestamp); ?></td>
                             <td><code><?php echo esc_html($option_name); ?></code></td>
                             <td><?php echo esc_html($author); ?></td>
@@ -142,32 +191,135 @@ $css_revisions     = isset($css_revisions) && is_array($css_revisions) ? $css_re
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            <p id="ssc-revision-empty" class="description" hidden><?php esc_html_e('Aucune révision ne correspond aux filtres sélectionnés.', 'supersede-css-jlg'); ?></p>
+            <div class="ssc-revision-diff" aria-live="polite">
+                <h3><?php esc_html_e('Comparer des révisions', 'supersede-css-jlg'); ?></h3>
+                <div class="ssc-diff-controls">
+                    <label for="ssc-diff-base" class="screen-reader-text"><?php esc_html_e('Révision de base', 'supersede-css-jlg'); ?></label>
+                    <select id="ssc-diff-base">
+                        <?php foreach ($css_revisions as $index => $revision) :
+                            $revision_id = isset($revision['id']) ? (string) $revision['id'] : '';
+                            $timestamp   = isset($revision['timestamp']) ? (string) $revision['timestamp'] : '';
+                            $author      = isset($revision['author']) ? (string) $revision['author'] : '';
+                            ?>
+                            <option value="<?php echo esc_attr($revision_id); ?>" data-index="<?php echo esc_attr((string) $index); ?>">
+                                <?php echo esc_html(sprintf('%1$s — %2$s', $timestamp, $author)); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <label for="ssc-diff-compare" class="screen-reader-text"><?php esc_html_e('Révision à comparer', 'supersede-css-jlg'); ?></label>
+                    <select id="ssc-diff-compare">
+                        <?php foreach ($css_revisions as $index => $revision) :
+                            $revision_id = isset($revision['id']) ? (string) $revision['id'] : '';
+                            $timestamp   = isset($revision['timestamp']) ? (string) $revision['timestamp'] : '';
+                            $author      = isset($revision['author']) ? (string) $revision['author'] : '';
+                            ?>
+                            <option value="<?php echo esc_attr($revision_id); ?>" data-index="<?php echo esc_attr((string) $index); ?>">
+                                <?php echo esc_html(sprintf('%1$s — %2$s', $timestamp, $author)); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button type="button" class="button" id="ssc-diff-load"><?php esc_html_e('Afficher le diff', 'supersede-css-jlg'); ?></button>
+                </div>
+                <div id="ssc-diff-output" class="ssc-diff-output" data-placeholder="<?php echo esc_attr__('Sélectionnez deux révisions pour visualiser leurs différences.', 'supersede-css-jlg'); ?>"></div>
+            </div>
+            <script type="application/json" id="ssc-revisions-data"><?php echo wp_json_encode($css_revisions); ?></script>
         <?php else : ?>
             <p><?php esc_html_e('Aucune révision enregistrée pour le moment.', 'supersede-css-jlg'); ?></p>
         <?php endif; ?>
     </div>
 
     <div class="ssc-panel" style="margin-top: 16px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <h2><?php echo esc_html__('Journal d\'Activité Récent', 'supersede-css-jlg'); ?></h2>
-            <button id="ssc-clear-log" class="button button-link-delete"><?php esc_html_e('Vider le journal', 'supersede-css-jlg'); ?></button>
+        <div class="ssc-panel-header">
+            <div>
+                <h2><?php echo esc_html__('Journal d\'Activité Récent', 'supersede-css-jlg'); ?></h2>
+                <p class="description" style="margin-bottom: 12px;">
+                    <?php echo esc_html__('Affinez le journal grâce aux filtres pour cibler les actions qui vous intéressent puis exportez les données au format souhaité.', 'supersede-css-jlg'); ?>
+                </p>
+            </div>
+            <div class="ssc-panel-actions">
+                <button type="button" class="button" id="ssc-export-log-json" <?php disabled(empty($log_entries)); ?>><?php esc_html_e('Exporter en JSON', 'supersede-css-jlg'); ?></button>
+                <button type="button" class="button" id="ssc-export-log-csv" <?php disabled(empty($log_entries)); ?>><?php esc_html_e('Exporter en CSV', 'supersede-css-jlg'); ?></button>
+                <button id="ssc-clear-log" class="button button-link-delete"><?php esc_html_e('Vider le journal', 'supersede-css-jlg'); ?></button>
+            </div>
+        </div>
+        <?php
+        $log_users   = [];
+        $log_actions = [];
+        foreach ($log_entries as $entry) {
+            if (!empty($entry['user'])) {
+                $log_users[] = (string) $entry['user'];
+            }
+            if (!empty($entry['action'])) {
+                $log_actions[] = (string) $entry['action'];
+            }
+        }
+        $log_users   = array_values(array_unique($log_users));
+        $log_actions = array_values(array_unique($log_actions));
+        ?>
+        <div class="ssc-filter-bar" id="ssc-log-filters">
+            <div class="ssc-filter">
+                <label for="ssc-log-date-start"><?php esc_html_e('Du', 'supersede-css-jlg'); ?></label>
+                <input type="date" id="ssc-log-date-start" data-filter="date-start" />
+            </div>
+            <div class="ssc-filter">
+                <label for="ssc-log-date-end"><?php esc_html_e('Au', 'supersede-css-jlg'); ?></label>
+                <input type="date" id="ssc-log-date-end" data-filter="date-end" />
+            </div>
+            <div class="ssc-filter">
+                <label for="ssc-log-user"><?php esc_html_e('Utilisateur', 'supersede-css-jlg'); ?></label>
+                <select id="ssc-log-user" data-filter="user">
+                    <option value=""><?php esc_html_e('Tous', 'supersede-css-jlg'); ?></option>
+                    <?php foreach ($log_users as $log_user) : ?>
+                        <option value="<?php echo esc_attr($log_user); ?>"><?php echo esc_html($log_user); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="ssc-filter">
+                <label for="ssc-log-action"><?php esc_html_e('Action', 'supersede-css-jlg'); ?></label>
+                <select id="ssc-log-action" data-filter="action">
+                    <option value=""><?php esc_html_e('Toutes', 'supersede-css-jlg'); ?></option>
+                    <?php foreach ($log_actions as $log_action) : ?>
+                        <option value="<?php echo esc_attr($log_action); ?>"><?php echo esc_html($log_action); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
         </div>
         <?php if (!empty($log_entries)) : ?>
-            <table class="widefat striped"><thead><tr>
+            <table class="widefat striped" id="ssc-log-table"><thead><tr>
                 <th><?php esc_html_e('Date (UTC)', 'supersede-css-jlg'); ?></th>
                 <th><?php esc_html_e('Utilisateur', 'supersede-css-jlg'); ?></th>
                 <th><?php esc_html_e('Action', 'supersede-css-jlg'); ?></th>
                 <th><?php esc_html_e('Données', 'supersede-css-jlg'); ?></th>
             </tr></thead><tbody>
-                <?php foreach ($log_entries as $row) : ?>
-                    <tr>
-                        <td><?php echo esc_html($row['t'] ?? ''); ?></td>
-                        <td><?php echo esc_html($row['user'] ?? ''); ?></td>
-                        <td><strong><?php echo esc_html($row['action'] ?? ''); ?></strong></td>
+                <?php foreach ($log_entries as $log_index => $row) : ?>
+                    <?php
+                    $log_timestamp = isset($row['t']) ? (string) $row['t'] : '';
+                    $log_iso       = '';
+                    if ($log_timestamp !== '') {
+                        $log_time = strtotime($log_timestamp . ' UTC');
+                        if ($log_time !== false) {
+                            $log_iso = gmdate('Y-m-d\TH:i:s\Z', $log_time);
+                        }
+                    }
+                    $log_user   = isset($row['user']) ? (string) $row['user'] : '';
+                    $log_action = isset($row['action']) ? (string) $row['action'] : '';
+                    ?>
+                    <tr
+                        data-index="<?php echo esc_attr((string) $log_index); ?>"
+                        data-timestamp="<?php echo esc_attr($log_iso); ?>"
+                        data-user="<?php echo esc_attr($log_user); ?>"
+                        data-action="<?php echo esc_attr($log_action); ?>"
+                    >
+                        <td><?php echo esc_html($log_timestamp); ?></td>
+                        <td><?php echo esc_html($log_user); ?></td>
+                        <td><strong><?php echo esc_html($log_action); ?></strong></td>
                         <td><code><?php echo esc_html(json_encode($row['data'] ?? [])); ?></code></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody></table>
+            <p id="ssc-log-empty" class="description" hidden><?php esc_html_e('Aucune entrée ne correspond aux filtres sélectionnés.', 'supersede-css-jlg'); ?></p>
+            <script type="application/json" id="ssc-log-data"><?php echo wp_json_encode($log_entries); ?></script>
         <?php else : ?>
             <p><?php esc_html_e('Aucune entrée dans le journal.', 'supersede-css-jlg'); ?></p>
         <?php endif; ?>

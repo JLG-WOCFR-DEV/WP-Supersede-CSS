@@ -37,8 +37,13 @@
 }
 
 .ssc-two { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
-@media (max-width: 782px) { .ssc-two { grid-template-columns: 1fr; } }
+@media (max-width: 782px) {
+    .ssc-two { grid-template-columns: 1fr; }
+    .ssc-filter { flex:1 1 140px; }
+}
 .ssc-pane, .ssc-panel { background:var(--ssc-card); border:1px solid var(--ssc-border); border-radius:12px; padding:16px; }
+.ssc-panel-header { display:flex; flex-wrap:wrap; justify-content:space-between; gap:16px; align-items:flex-start; margin-bottom:12px; }
+.ssc-panel-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 .ssc-actions { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
 .ssc-code { background:#0f172a; color:#e5e7eb; border-radius:8px; padding:12px; overflow:auto; font-family: monospace; font-size: 13px; line-height: 1.6; }
 .ssc-list { list-style:none; padding:0; margin:0; display:grid; gap:8px;}
@@ -65,6 +70,29 @@
 .ssc-dark #ssc-danger-desc {
     color: #ffffff !important;
 }
+
+
+.ssc-filter-bar { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; padding:8px 12px; border-radius:10px; background:rgba(15,23,42,0.04); border:1px solid var(--ssc-border); transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+.ssc-filter-bar.is-active { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
+.ssc-filter { min-width:140px; }
+.ssc-filter label { font-weight:600; display:block; margin-bottom:4px; color:var(--ssc-muted); }
+.ssc-filter input,
+.ssc-filter select { width:100%; min-width:140px; }
+
+.ssc-revision-diff { margin-top:24px; border-top:1px solid var(--ssc-border); padding-top:16px; }
+.ssc-revision-diff h3 { margin-top:0; }
+.ssc-diff-controls { display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+.ssc-diff-output { margin-top:16px; padding:16px; border:1px dashed var(--ssc-border); border-radius:12px; min-height:120px; background:rgba(15,23,42,0.02); color:var(--ssc-muted); font-family:monospace; white-space:pre-wrap; overflow:auto; }
+.ssc-diff-output.has-diff { border-style:solid; background:#0f172a; color:#e5e7eb; }
+.ssc-diff-output table.diff { width:100%; font-size:13px; }
+.ssc-diff-output table.diff td { font-family:monospace; }
+
+.ssc-panel .widefat tbody tr.is-selected { outline:2px solid #2563eb; outline-offset:-2px; background:rgba(37,99,235,0.08); }
+.ssc-panel .widefat tbody tr:not(.is-selected):hover { background:rgba(37,99,235,0.06); cursor:pointer; }
+
+.ssc-panel-actions .button-link-delete { margin-left:auto; }
+
+.ssc-panel .description + .ssc-filter-bar { margin-top:0; }
 
 
 /* Utilities Page */
