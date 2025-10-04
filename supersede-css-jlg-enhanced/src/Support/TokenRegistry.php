@@ -208,6 +208,64 @@ final class TokenRegistry
     }
 
     /**
+     * @param array{name?: mixed, value?: mixed, type?: mixed, description?: mixed, group?: mixed} $token
+     * @return array{name: string, value: string, type: string, description: string, group: string}|null
+     */
+    public static function normalizeToken(array $token): ?array
+    {
+        $rawName = isset($token['name']) ? (string) $token['name'] : '';
+        $rawName = trim($rawName);
+        if ($rawName === '') {
+            return null;
+        }
+
+        if (strpos($rawName, '--') !== 0) {
+            $rawName = '--' . ltrim($rawName, '-');
+        }
+
+        $normalizedName = '--' . preg_replace('/[^a-z0-9_-]+/i', '-', ltrim($rawName, '-'));
+        if ($normalizedName === '--') {
+            return null;
+        }
+
+        $rawType = isset($token['type']) ? (string) $token['type'] : 'text';
+        $type = isset(self::SUPPORTED_TYPES[$rawType]) ? $rawType : 'text';
+        $typeMeta = self::SUPPORTED_TYPES[$type];
+        $inputKind = $typeMeta['input'];
+
+        $valueRaw = isset($token['value']) ? (string) $token['value'] : '';
+        $sanitizedValue = $inputKind === 'textarea'
+            ? sanitize_textarea_field($valueRaw)
+            : sanitize_text_field($valueRaw);
+
+        if (trim($sanitizedValue) === '') {
+            return null;
+        }
+
+        if ($inputKind === 'textarea') {
+            $value = preg_replace("/\r\n?/", "\n", $sanitizedValue);
+        } else {
+            $value = trim($sanitizedValue);
+        }
+
+        $description = isset($token['description'])
+            ? sanitize_textarea_field((string) $token['description'])
+            : '';
+        $group = isset($token['group']) ? sanitize_text_field((string) $token['group']) : '';
+        if ($group === '') {
+            $group = 'Général';
+        }
+
+        return [
+            'name' => $normalizedName,
+            'value' => $value,
+            'type' => $type,
+            'description' => $description,
+            'group' => $group,
+        ];
+    }
+
+    /**
      * @param array<int, array{name?: mixed, value?: mixed, type?: mixed, description?: mixed, group?: mixed}> $tokens
      * @return array{tokens: array<int, array{name: string, value: string, type: string, description: string, group: string}>, duplicates: array<int, array{canonical: string, variants: array<int, string>, conflicts: array<int, array{name: string, value: string}>}>}
      */
@@ -248,39 +306,12 @@ final class TokenRegistry
             }
             $conflictTokensByKey[$normalizedKey][] = $token;
 
-            $rawType = isset($token['type']) ? (string) $token['type'] : 'text';
-            $type = isset(self::SUPPORTED_TYPES[$rawType]) ? $rawType : 'text';
-            $typeMeta = self::SUPPORTED_TYPES[$type];
-            $inputKind = $typeMeta['input'];
-
-            $valueRaw = isset($token['value']) ? (string) $token['value'] : '';
-            $sanitizedValue = $inputKind === 'textarea'
-                ? sanitize_textarea_field($valueRaw)
-                : sanitize_text_field($valueRaw);
-
-            if (trim($sanitizedValue) === '') {
+            $normalizedToken = self::normalizeToken($token);
+            if ($normalizedToken === null) {
                 continue;
             }
 
-            if ($inputKind === 'textarea') {
-                $value = preg_replace("/\r\n?/", "\n", $sanitizedValue);
-            } else {
-                $value = trim($sanitizedValue);
-            }
-
-            $description = isset($token['description']) ? sanitize_textarea_field((string) $token['description']) : '';
-            $group = isset($token['group']) ? sanitize_text_field((string) $token['group']) : '';
-            if ($group === '') {
-                $group = 'Général';
-            }
-
-            $normalizedToken = [
-                'name' => $normalizedName,
-                'value' => $value,
-                'type' => $type,
-                'description' => $description,
-                'group' => $group,
-            ];
+            $normalizedToken['name'] = $normalizedName;
 
             if (array_key_exists($normalizedKey, $normalizedByName)) {
                 $duplicateKeys[$normalizedKey] = true;

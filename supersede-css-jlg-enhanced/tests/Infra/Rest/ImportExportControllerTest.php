@@ -58,6 +58,46 @@ final class ImportExportControllerTest extends WP_UnitTestCase
         );
     }
 
+    public function test_import_config_applies_tokens_registry(): void
+    {
+        $payload = [
+            'modules' => ['tokens'],
+            'options' => [
+                'ssc_tokens_registry' => [
+                    [
+                        'name' => 'Spacing Large',
+                        'value' => ' 24px ',
+                        'type' => 'spacing',
+                        'description' => 'Spacing value',
+                        'group' => 'Layout',
+                    ],
+                ],
+            ],
+        ];
+
+        $request = new WP_REST_Request('POST', '/ssc/v1/import-config');
+        $request->set_body(wp_json_encode($payload));
+
+        $response = $this->controller->importConfig($request);
+        $this->assertSame(200, $response->get_status());
+        $data = $response->get_data();
+        $this->assertTrue($data['ok']);
+        $this->assertContains('ssc_tokens_registry', $data['applied']);
+        $this->assertSame([], $data['skipped']);
+
+        $stored = get_option('ssc_tokens_registry');
+        $this->assertIsArray($stored);
+        $this->assertSame([
+            [
+                'name' => '--Spacing-Large',
+                'value' => '24px',
+                'type' => 'spacing',
+                'description' => 'Spacing value',
+                'group' => 'Layout',
+            ],
+        ], $stored);
+    }
+
     public function test_import_config_skips_duplicate_tokens(): void
     {
         $payload = [
