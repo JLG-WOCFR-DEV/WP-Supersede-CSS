@@ -2,6 +2,7 @@
     const restRoot = window.SSC && window.SSC.rest && window.SSC.rest.root ? window.SSC.rest.root : '';
     const restNonce = window.SSC && window.SSC.rest && window.SSC.rest.nonce ? window.SSC.rest.nonce : '';
     const localized = window.SSC_TOKENS_DATA || {};
+    let defaultContext = typeof localized.defaultContext === 'string' ? localized.defaultContext : ':root';
     const defaultTokenTypes = {
         color: {
             label: 'Couleur',
@@ -66,7 +67,23 @@
         },
     };
 
-    let tokens = Array.isArray(localized.tokens) ? localized.tokens.slice() : [];
+    const contextOptions = Array.isArray(localized.contexts) ? localized.contexts : [];
+    const contextOptionValues = [];
+    const contextMetaMap = new Map();
+    const activePreviewContexts = new Set();
+    let contextsDirty = false;
+
+    defaultContext = normalizeContextValue(defaultContext, ':root');
+
+    contextOptions.forEach(function(context) {
+        registerContextMeta(context, true);
+    });
+
+    if (contextOptionValues.indexOf(defaultContext) === -1) {
+        registerContextMeta({ value: defaultContext, label: defaultContext }, true);
+    }
+
+    let tokens = prepareIncomingTokens(localized.tokens);
     let hasLocalChanges = false;
     let beforeUnloadHandler = null;
     const tokenTypes = $.extend(true, {}, defaultTokenTypes, localized.types || {});
@@ -117,6 +134,9 @@
     const cssTextarea = $('#ssc-tokens');
     const reloadButton = $('#ssc-tokens-reload');
     const previewStyle = $('#ssc-tokens-preview-style');
+    const previewContextSwitcher = $('#ssc-preview-context-switcher');
+    const previewContextPanel = previewContextSwitcher.length ? previewContextSwitcher.closest('.ssc-preview-context-panel') : $();
+    const previewContainer = $('#ssc-tokens-preview');
     const groupDatalistId = 'ssc-token-groups-list';
     const duplicateRowClass = 'ssc-token-row--duplicate';
     const duplicateInputClass = 'token-field-input--duplicate';
@@ -370,28 +390,48 @@
     }
 
     function generateCss(registry) {
-        if (!registry || !registry.length) {
-            return ':root {\n}\n';
+        if (!Array.isArray(registry) || !registry.length) {
+            return defaultContext + ' {\n}\n';
         }
 
-        const lines = registry.map(function(token) {
-            const name = token && typeof token.name === 'string' ? token.name : '';
-            const rawValue = token && token.value != null ? String(token.value) : '';
-            const segments = rawValue.split(/\r?\n/);
-            const firstSegment = segments.shift() || '';
-            let line = '    ' + name + ': ' + firstSegment;
+        const groups = {};
+        const order = [];
 
-            if (segments.length) {
-                const indented = segments.map(function(segment) {
-                    return '        ' + segment;
-                });
-                line += '\n' + indented.join('\n');
+        registry.forEach(function(token) {
+            if (!token || typeof token !== 'object') {
+                return;
             }
 
-            return line + ';';
+            const context = normalizeContextValue(token.context, defaultContext);
+            if (!groups[context]) {
+                groups[context] = [];
+                order.push(context);
+            }
+            groups[context].push(token);
         });
 
-        return ':root {\n' + lines.join('\n') + '\n}';
+        const sections = order.map(function(context) {
+            const lines = groups[context].map(function(token) {
+                const name = token && typeof token.name === 'string' ? token.name : '';
+                const rawValue = token && token.value != null ? String(token.value) : '';
+                const segments = rawValue.split(/\r?\n/);
+                const firstSegment = segments.shift() || '';
+                let line = '    ' + name + ': ' + firstSegment;
+
+                if (segments.length) {
+                    const indented = segments.map(function(segment) {
+                        return '        ' + segment;
+                    });
+                    line += '\n' + indented.join('\n');
+                }
+
+                return line + ';';
+            });
+
+            return context + ' {\n' + lines.join('\n') + '\n}';
+        });
+
+        return sections.join('\n\n');
     }
 
     function applyCss(css) {
@@ -405,6 +445,267 @@
 
     function refreshCssFromTokens() {
         applyCss(generateCss(tokens));
+    }
+
+    function normalizeContextValue(value, fallbackValue) {
+        const fallbackContext = typeof fallbackValue === 'string' && fallbackValue.trim() !== ''
+            ? fallbackValue.trim()
+            : ':root';
+
+        if (typeof value !== 'string') {
+            return fallbackContext;
+        }
+
+        const trimmed = value.trim();
+        if (trimmed === '') {
+            return fallbackContext;
+        }
+
+        const collapsed = trimmed.replace(/\s+/g, ' ');
+        const sanitized = collapsed.replace(/\{/g, '').trim();
+
+        return sanitized === '' ? fallbackContext : sanitized;
+    }
+
+    function registerContextMeta(meta, addToOrder) {
+        if (!meta || typeof meta.value !== 'string') {
+            return null;
+        }
+
+        const normalizedValue = normalizeContextValue(meta.value, defaultContext);
+        const existing = contextMetaMap.get(normalizedValue);
+        const nextMeta = existing ? $.extend(true, {}, existing) : { value: normalizedValue };
+        let mutated = !existing;
+
+        nextMeta.value = normalizedValue;
+
+        const providedLabel = typeof meta.label === 'string' ? meta.label.trim() : '';
+        const existingLabel = existing && typeof existing.label === 'string' ? existing.label : '';
+        if (providedLabel !== '') {
+            if (providedLabel !== existingLabel) {
+                nextMeta.label = providedLabel;
+                mutated = true;
+            }
+        } else if (!nextMeta.label || nextMeta.label.trim() === '') {
+            nextMeta.label = normalizedValue;
+            mutated = mutated || !existing;
+        }
+
+        if (meta.preview && typeof meta.preview === 'object') {
+            const existingPreview = existing && existing.preview ? JSON.stringify(existing.preview) : null;
+            const incomingPreview = JSON.stringify(meta.preview);
+            if (existingPreview !== incomingPreview) {
+                nextMeta.preview = meta.preview;
+                mutated = true;
+            }
+        }
+
+        contextMetaMap.set(normalizedValue, nextMeta);
+
+        if (addToOrder && contextOptionValues.indexOf(normalizedValue) === -1) {
+            contextOptionValues.push(normalizedValue);
+            mutated = true;
+        }
+
+        if (mutated) {
+            contextsDirty = true;
+        }
+
+        return nextMeta;
+    }
+
+    function getContextMeta(contextValue) {
+        if (typeof contextValue !== 'string') {
+            return null;
+        }
+
+        const normalized = normalizeContextValue(contextValue, defaultContext);
+        if (contextMetaMap.has(normalized)) {
+            return contextMetaMap.get(normalized);
+        }
+
+        return registerContextMeta({ value: normalized }, false);
+    }
+
+    function prepareIncomingTokens(collection) {
+        if (!Array.isArray(collection)) {
+            return [];
+        }
+
+        const prepared = [];
+
+        collection.forEach(function(item) {
+            if (!item || typeof item !== 'object') {
+                return;
+            }
+
+            const clone = $.extend(true, {}, item);
+            clone.context = normalizeContextValue(clone.context, defaultContext);
+            registerContextMeta({ value: clone.context }, true);
+            prepared.push(clone);
+        });
+
+        return prepared;
+    }
+
+    function updateSupportedContextsFromResponse(payload) {
+        if (!payload || typeof payload !== 'object') {
+            return;
+        }
+
+        if (Array.isArray(payload.contexts)) {
+            payload.contexts.forEach(function(context) {
+                registerContextMeta(context, true);
+            });
+        }
+
+        if (typeof payload.defaultContext === 'string') {
+            const normalizedDefault = normalizeContextValue(payload.defaultContext, defaultContext);
+            if (normalizedDefault !== defaultContext) {
+                defaultContext = normalizedDefault;
+                registerContextMeta({ value: defaultContext }, true);
+            }
+        }
+    }
+
+    function buildPreviewContextId(value) {
+        return 'ssc-preview-context-' + normalizeContextValue(value, defaultContext).replace(/[^a-zA-Z0-9_-]/g, '-');
+    }
+
+    function applyPreviewContext(meta, shouldEnable) {
+        if (!meta || !previewContainer.length) {
+            return;
+        }
+
+        const normalized = normalizeContextValue(meta.value, defaultContext);
+        const config = meta.preview && typeof meta.preview === 'object' ? meta.preview : null;
+
+        if (shouldEnable) {
+            activePreviewContexts.add(normalized);
+        } else {
+            activePreviewContexts.delete(normalized);
+        }
+
+        if (!config) {
+            return;
+        }
+
+        if (config.type === 'class' && config.value) {
+            previewContainer.toggleClass(config.value, shouldEnable);
+            return;
+        }
+
+        if (config.type === 'attribute' && config.name) {
+            if (shouldEnable) {
+                previewContainer.attr(config.name, config.value != null ? config.value : '');
+            } else {
+                let keepAttribute = false;
+                activePreviewContexts.forEach(function(activeValue) {
+                    if (keepAttribute) {
+                        return;
+                    }
+                    const activeMeta = contextMetaMap.get(activeValue);
+                    if (!activeMeta || !activeMeta.preview) {
+                        return;
+                    }
+                    const activeConfig = activeMeta.preview;
+                    if (activeConfig.type === 'attribute' && activeConfig.name === config.name) {
+                        keepAttribute = true;
+                        previewContainer.attr(activeConfig.name, activeConfig.value != null ? activeConfig.value : '');
+                    }
+                });
+                if (!keepAttribute) {
+                    previewContainer.removeAttr(config.name);
+                }
+            }
+        }
+    }
+
+    function handlePreviewContextChange(event) {
+        const checkbox = $(event.target);
+        if (!checkbox.length) {
+            return;
+        }
+
+        const rawValue = checkbox.data('context');
+        const meta = getContextMeta(rawValue);
+        applyPreviewContext(meta, checkbox.is(':checked'));
+    }
+
+    function buildPreviewContextSwitch() {
+        if (!previewContextSwitcher.length) {
+            contextsDirty = false;
+            return;
+        }
+
+        if (!contextsDirty && previewContextSwitcher.children().length) {
+            return;
+        }
+
+        const contextsForPreview = contextOptionValues
+            .map(function(value) {
+                return contextMetaMap.get(value);
+            })
+            .filter(function(meta) {
+                return meta && meta.value !== defaultContext && meta.preview && typeof meta.preview === 'object';
+            });
+
+        const toDisable = [];
+        activePreviewContexts.forEach(function(activeValue) {
+            const stillAvailable = contextsForPreview.some(function(meta) {
+                return meta.value === activeValue;
+            });
+            if (!stillAvailable) {
+                toDisable.push(activeValue);
+            }
+        });
+        toDisable.forEach(function(value) {
+            const meta = contextMetaMap.get(value);
+            if (meta) {
+                applyPreviewContext(meta, false);
+            } else {
+                activePreviewContexts.delete(value);
+            }
+        });
+
+        if (!contextsForPreview.length) {
+            previewContextSwitcher.empty();
+            previewContextSwitcher.attr('hidden', 'hidden');
+            if (previewContextPanel.length) {
+                previewContextPanel.attr('hidden', 'hidden').attr('aria-hidden', 'true');
+            }
+            contextsDirty = false;
+            return;
+        }
+
+        if (previewContextPanel.length) {
+            previewContextPanel.removeAttr('hidden').attr('aria-hidden', 'false');
+        }
+        previewContextSwitcher.removeAttr('hidden');
+        previewContextSwitcher.empty();
+        previewContextSwitcher.off('change', 'input[type="checkbox"]', handlePreviewContextChange);
+
+        contextsForPreview.forEach(function(meta) {
+            const contextId = buildPreviewContextId(meta.value);
+            const isActive = activePreviewContexts.has(meta.value);
+            const checkbox = $('<input>', {
+                type: 'checkbox',
+                id: contextId,
+                'data-context': meta.value,
+                class: 'ssc-preview-context-toggle-input',
+            }).prop('checked', isActive);
+            const label = $('<label>', {
+                class: 'ssc-preview-context-toggle',
+                for: contextId,
+            });
+            label.append(checkbox);
+            label.append($('<span>', { text: meta.label || meta.value }));
+            previewContextSwitcher.append(label);
+            applyPreviewContext(meta, isActive);
+        });
+
+        previewContextSwitcher.on('change', 'input[type="checkbox"]', handlePreviewContextChange);
+        contextsDirty = false;
     }
 
     function normalizeName(value) {
@@ -466,6 +767,10 @@
         const typeMeta = getTypeMeta(resolvedType);
         const inputKind = typeMeta.input || 'text';
         const currentValue = token.value == null ? '' : String(token.value);
+        const resolvedContext = normalizeContextValue(token.context, defaultContext);
+        if (token.context !== resolvedContext) {
+            token.context = resolvedContext;
+        }
 
         const nameInput = $('<input>', {
             type: 'text',
@@ -537,6 +842,38 @@
             list: groupDatalistId,
         });
 
+        const contextSelect = $('<select>', { class: 'token-field-input token-context' });
+        const appendedContexts = new Set();
+
+        contextOptionValues.forEach(function(optionValue) {
+            const meta = contextMetaMap.get(optionValue);
+            if (!meta) {
+                return;
+            }
+
+            const option = $('<option>', {
+                value: meta.value,
+                text: meta.label || meta.value,
+            });
+
+            if (meta.value === resolvedContext) {
+                option.prop('selected', true);
+            }
+
+            contextSelect.append(option);
+            appendedContexts.add(meta.value);
+        });
+
+        if (!appendedContexts.has(resolvedContext)) {
+            contextSelect.append($('<option>', {
+                value: resolvedContext,
+                text: resolvedContext,
+                selected: true,
+            }));
+        }
+
+        contextSelect.val(resolvedContext);
+
         const descriptionInput = $('<textarea>', {
             class: 'token-field-input token-description',
             rows: 2,
@@ -553,6 +890,7 @@
         const valueField = createField(i18n.valueLabel || 'Valeur', valueInput, typeMeta.help);
         const typeField = createField(i18n.typeLabel || 'Type', typeSelect);
         const groupField = createField(i18n.groupLabel || 'Groupe', groupInput);
+        const contextField = createField(i18n.contextLabel || 'Contexte', contextSelect);
         const descriptionField = createField(i18n.descriptionLabel || 'Description', descriptionInput);
 
         if (typeMeta.help && valueField) {
@@ -567,6 +905,7 @@
         row.append(valueField);
         row.append(typeField);
         row.append(groupField);
+        row.append(contextField);
         row.append(descriptionField);
         row.append(deleteButton);
 
@@ -630,6 +969,7 @@
             type: defaultType,
             description: '',
             group: 'Général',
+            context: defaultContext,
         });
         setHasLocalChanges(true);
         renderTokens();
@@ -647,7 +987,11 @@
         if (!tokens[index]) {
             return;
         }
-        tokens[index][key] = value;
+        if (key === 'context') {
+            tokens[index][key] = normalizeContextValue(value, defaultContext);
+        } else {
+            tokens[index][key] = value;
+        }
         setHasLocalChanges(true);
     }
 
@@ -664,10 +1008,12 @@
                 }
             },
         }).done(function(response) {
+            updateSupportedContextsFromResponse(response);
             if (!hasLocalChanges) {
                 if (response && Array.isArray(response.tokens)) {
-                    tokens = response.tokens;
+                    tokens = prepareIncomingTokens(response.tokens);
                     renderTokens();
+                    buildPreviewContextSwitch();
                     setHasLocalChanges(false);
                 }
                 if (response && typeof response.css === 'string') {
@@ -677,6 +1023,10 @@
                 }
             } else {
                 refreshCssFromTokens();
+            }
+
+            if (contextsDirty) {
+                buildPreviewContextSwitch();
             }
         });
     }
@@ -708,9 +1058,11 @@
                 }
             },
         }).done(function(response) {
+            updateSupportedContextsFromResponse(response);
             if (response && Array.isArray(response.tokens)) {
-                tokens = response.tokens;
+                tokens = prepareIncomingTokens(response.tokens);
                 renderTokens();
+                buildPreviewContextSwitch();
             }
             if (response && typeof response.css === 'string') {
                 applyCss(response.css);
@@ -721,6 +1073,10 @@
             setHasLocalChanges(false);
             if (typeof window.sscToast === 'function') {
                 window.sscToast(i18n.saveSuccess || 'Tokens enregistrés');
+            }
+
+            if (contextsDirty) {
+                buildPreviewContextSwitch();
             }
         }).fail(function(jqXHR) {
             const response = jqXHR && jqXHR.responseJSON ? jqXHR.responseJSON : null;
@@ -795,6 +1151,7 @@
         }
 
         renderTokens();
+        buildPreviewContextSwitch();
         refreshCssFromTokens();
         fetchTokensFromServer();
 
@@ -876,6 +1233,15 @@
             setHasLocalChanges(true);
             updateToken(index, 'group', newGroup);
             renderTokens();
+            refreshCssFromTokens();
+        });
+
+        builder.on('change', '.token-context', function() {
+            const index = $(this).closest('.ssc-token-row').data('index');
+            const normalizedContext = normalizeContextValue($(this).val(), defaultContext);
+            $(this).val(normalizedContext);
+            setHasLocalChanges(true);
+            updateToken(index, 'context', normalizedContext);
             refreshCssFromTokens();
         });
 

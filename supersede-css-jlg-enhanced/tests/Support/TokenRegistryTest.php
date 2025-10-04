@@ -112,6 +112,11 @@ if ($normalized === [] || $normalized[0]['name'] !== '--BrandPrimary') {
     exit(1);
 }
 
+if (!isset($normalized[0]['context']) || $normalized[0]['context'] !== ':root') {
+    fwrite(STDERR, 'TokenRegistry::normalizeRegistry should assign the default context when none is provided.' . PHP_EOL);
+    exit(1);
+}
+
 $registryResult = TokenRegistry::saveRegistry([
     [
         'name' => '--BrandPrimary',
@@ -131,6 +136,11 @@ if ($registryResult['duplicates'] !== []) {
 
 if ($registry === [] || $registry[0]['name'] !== '--BrandPrimary') {
     fwrite(STDERR, 'TokenRegistry::saveRegistry should preserve the original token casing.' . PHP_EOL);
+    exit(1);
+}
+
+if (!isset($registry[0]['context']) || $registry[0]['context'] !== ':root') {
+    fwrite(STDERR, 'TokenRegistry::saveRegistry should persist the default context.' . PHP_EOL);
     exit(1);
 }
 
@@ -164,6 +174,11 @@ if ($refreshedRegistry === [] || $refreshedRegistry[0]['name'] !== '--BrandPrima
     exit(1);
 }
 
+if (!isset($refreshedRegistry[0]['context']) || $refreshedRegistry[0]['context'] !== ':root') {
+    fwrite(STDERR, 'TokenRegistry::getRegistry should retain context metadata after regeneration.' . PHP_EOL);
+    exit(1);
+}
+
 if (!isset($ssc_options_store['ssc_tokens_css']) || strpos($ssc_options_store['ssc_tokens_css'], '--BrandPrimary') === false) {
     fwrite(STDERR, 'TokenRegistry::getRegistry should regenerate CSS when missing.' . PHP_EOL);
     exit(1);
@@ -173,6 +188,11 @@ $roundTripRegistry = TokenRegistry::convertCssToRegistry($ssc_options_store['ssc
 
 if ($roundTripRegistry === [] || $roundTripRegistry[0]['name'] !== '--BrandPrimary') {
     fwrite(STDERR, 'convertCssToRegistry should keep the original casing after import.' . PHP_EOL);
+    exit(1);
+}
+
+if (!isset($roundTripRegistry[0]['context']) || $roundTripRegistry[0]['context'] !== ':root') {
+    fwrite(STDERR, 'convertCssToRegistry should default the context to :root when unspecified.' . PHP_EOL);
     exit(1);
 }
 
@@ -190,6 +210,7 @@ $existingTokens = [
         'type' => 'color',
         'description' => 'Primary brand color.',
         'group' => 'Brand',
+        'context' => ':root',
     ],
     [
         'name' => '--SpacingSmall',
@@ -197,6 +218,7 @@ $existingTokens = [
         'type' => 'number',
         'description' => 'Small spacing token.',
         'group' => 'Spacing',
+        'context' => ':root',
     ],
 ];
 
@@ -234,8 +256,18 @@ if ($mergedTokens[0]['value'] !== '#123456') {
     exit(1);
 }
 
+if (!isset($mergedTokens[0]['context']) || $mergedTokens[0]['context'] !== ':root') {
+    fwrite(STDERR, 'mergeMetadata should restore the context from the existing registry when names match.' . PHP_EOL);
+    exit(1);
+}
+
 if ($mergedTokens[1]['type'] !== 'text' || $mergedTokens[1]['group'] !== 'Legacy') {
     fwrite(STDERR, 'mergeMetadata should leave unmatched tokens untouched.' . PHP_EOL);
+    exit(1);
+}
+
+if (!isset($mergedTokens[1]['context']) || $mergedTokens[1]['context'] !== ':root') {
+    fwrite(STDERR, 'mergeMetadata should default the context to :root for unmatched tokens.' . PHP_EOL);
     exit(1);
 }
 
@@ -264,6 +296,11 @@ if ($savedRegistry === [] || $savedRegistry[0]['name'] !== '--spacing_small') {
     exit(1);
 }
 
+if (!isset($savedRegistry[0]['context']) || $savedRegistry[0]['context'] !== ':root') {
+    fwrite(STDERR, 'saveRegistry should assign the default context for underscored tokens.' . PHP_EOL);
+    exit(1);
+}
+
 $supportedTypes = TokenRegistry::getSupportedTypes();
 
 if (!isset($supportedTypes['color']['label']) || $supportedTypes['color']['label'] !== '[supersede-css-jlg] Couleur') {
@@ -283,6 +320,38 @@ if (!isset($supportedTypes['shadow']['help']) || strpos($supportedTypes['shadow'
     exit(1);
 }
 
+$supportedContexts = TokenRegistry::getSupportedContexts();
+
+if (!is_array($supportedContexts) || $supportedContexts === []) {
+    fwrite(STDERR, 'getSupportedContexts should expose at least the default context.' . PHP_EOL);
+    exit(1);
+}
+
+if ($supportedContexts[0]['value'] !== ':root') {
+    fwrite(STDERR, 'getSupportedContexts should list :root as the first context.' . PHP_EOL);
+    exit(1);
+}
+
+if (strpos($supportedContexts[0]['label'], '[supersede-css-jlg]') !== 0) {
+    fwrite(STDERR, 'getSupportedContexts should return translated labels.' . PHP_EOL);
+    exit(1);
+}
+
+$darkContextFound = false;
+foreach ($supportedContexts as $contextMeta) {
+    if (($contextMeta['value'] ?? '') === '[data-theme="dark"]') {
+        $darkContextFound = isset($contextMeta['preview'])
+            && is_array($contextMeta['preview'])
+            && ($contextMeta['preview']['type'] ?? '') === 'attribute';
+        break;
+    }
+}
+
+if (!$darkContextFound) {
+    fwrite(STDERR, 'getSupportedContexts should describe the dark theme context with preview metadata.' . PHP_EOL);
+    exit(1);
+}
+
 if (!isset($ssc_options_store['ssc_tokens_registry']) || !is_array($ssc_options_store['ssc_tokens_registry'])) {
     fwrite(STDERR, 'saveRegistry should persist the registry with the underscored token.' . PHP_EOL);
     exit(1);
@@ -295,6 +364,11 @@ if ($storedRegistry === [] || $storedRegistry[0]['name'] !== '--spacing_small') 
     exit(1);
 }
 
+if (!isset($storedRegistry[0]['context']) || $storedRegistry[0]['context'] !== ':root') {
+    fwrite(STDERR, 'Persisted registry should keep the default context for underscored tokens.' . PHP_EOL);
+    exit(1);
+}
+
 if (!isset($ssc_options_store['ssc_tokens_css']) || strpos($ssc_options_store['ssc_tokens_css'], '--spacing_small') === false) {
     fwrite(STDERR, 'Persisted CSS should include the underscored token name.' . PHP_EOL);
     exit(1);
@@ -304,6 +378,11 @@ $roundTrip = TokenRegistry::getRegistry();
 
 if ($roundTrip === [] || $roundTrip[0]['name'] !== '--spacing_small') {
     fwrite(STDERR, 'getRegistry should return tokens with underscores intact.' . PHP_EOL);
+    exit(1);
+}
+
+if (!isset($roundTrip[0]['context']) || $roundTrip[0]['context'] !== ':root') {
+    fwrite(STDERR, 'getRegistry should return tokens with their context metadata intact.' . PHP_EOL);
     exit(1);
 }
 
@@ -321,6 +400,11 @@ $registryFromCommentedCss = TokenRegistry::convertCssToRegistry($cssWithLeadingC
 
 if ($registryFromCommentedCss === [] || $registryFromCommentedCss[0]['name'] !== '--comment-prefixed') {
     fwrite(STDERR, 'convertCssToRegistry should parse tokens after comment delimiters.' . PHP_EOL);
+    exit(1);
+}
+
+if (!isset($registryFromCommentedCss[0]['context']) || $registryFromCommentedCss[0]['context'] !== ':root') {
+    fwrite(STDERR, 'convertCssToRegistry should default the context for tokens parsed after comments.' . PHP_EOL);
     exit(1);
 }
 
@@ -347,6 +431,11 @@ $annotatedRegistry = TokenRegistry::convertCssToRegistry($annotatedCss);
 
 if ($annotatedRegistry === [] || $annotatedRegistry[0]['name'] !== '--my-token') {
     fwrite(STDERR, 'convertCssToRegistry should capture tokens defined after annotated comments.' . PHP_EOL);
+    exit(1);
+}
+
+if (!isset($annotatedRegistry[0]['context']) || $annotatedRegistry[0]['context'] !== ':root') {
+    fwrite(STDERR, 'convertCssToRegistry should assign the default context when parsing annotated tokens.' . PHP_EOL);
     exit(1);
 }
 
@@ -391,5 +480,10 @@ if ($normalizedMultiline === [] || $normalizedMultiline[0]['type'] !== 'shadow')
 
 if ($normalizedMultiline[0]['value'] !== "0 2px 6px rgba(15, 23, 42, 0.12)\n0 12px 24px rgba(15, 23, 42, 0.16)") {
     fwrite(STDERR, 'normalizeRegistry should preserve multi-line textarea values.' . PHP_EOL);
+    exit(1);
+}
+
+if (!isset($normalizedMultiline[0]['context']) || $normalizedMultiline[0]['context'] !== ':root') {
+    fwrite(STDERR, 'normalizeRegistry should assign the default context for multi-line tokens.' . PHP_EOL);
     exit(1);
 }

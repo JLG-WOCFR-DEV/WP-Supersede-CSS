@@ -32,6 +32,8 @@ final class TokensController extends BaseController
             'tokens' => $registry,
             'css' => TokenRegistry::tokensToCss($registry),
             'types' => TokenRegistry::getSupportedTypes(),
+            'contexts' => TokenRegistry::getSupportedContexts(),
+            'defaultContext' => TokenRegistry::getDefaultContext(),
         ], 200);
     }
 
@@ -76,6 +78,8 @@ final class TokensController extends BaseController
             'ok' => true,
             'tokens' => $sanitized,
             'css' => TokenRegistry::tokensToCss($sanitized),
+            'contexts' => TokenRegistry::getSupportedContexts(),
+            'defaultContext' => TokenRegistry::getDefaultContext(),
         ], 200);
     }
 }
