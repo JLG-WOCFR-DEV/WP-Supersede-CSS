@@ -71,6 +71,15 @@
     let beforeUnloadHandler = null;
     const tokenTypes = $.extend(true, {}, defaultTokenTypes, localized.types || {});
     const i18n = localized.i18n || {};
+    const defaultGroupName = 'Général';
+    const diacriticRegex = /[\u0300-\u036f]/g;
+    const hasStringNormalize = typeof ''.normalize === 'function';
+    const localUiState = {
+        filters: {
+            query: '',
+            type: '',
+        },
+    };
 
     function getUnsavedChangesMessage() {
         return i18n.reloadConfirm || 'Des modifications locales non enregistrées seront perdues. Continuer ?';
@@ -104,8 +113,17 @@
         window.addEventListener('beforeunload', beforeUnloadHandler);
     }
 
-    function setHasLocalChanges(value) {
+    function setHasLocalChanges(value, metadata) {
         hasLocalChanges = Boolean(value);
+        if (metadata && metadata.filters) {
+            const filters = metadata.filters;
+            if (Object.prototype.hasOwnProperty.call(filters, 'query')) {
+                localUiState.filters.query = typeof filters.query === 'string' ? filters.query : '';
+            }
+            if (Object.prototype.hasOwnProperty.call(filters, 'type')) {
+                localUiState.filters.type = typeof filters.type === 'string' ? filters.type : '';
+            }
+        }
         if (hasLocalChanges) {
             ensureBeforeUnloadHandler();
         } else {
@@ -120,6 +138,9 @@
     const groupDatalistId = 'ssc-token-groups-list';
     const duplicateRowClass = 'ssc-token-row--duplicate';
     const duplicateInputClass = 'token-field-input--duplicate';
+    const searchInput = $('#ssc-token-search');
+    const typeFilterSelect = $('#ssc-token-type-filter');
+    const resultsCounter = $('#ssc-token-results-count');
 
     function getDefaultTypeKey() {
         if (tokenTypes.text) {
@@ -407,6 +428,223 @@
         applyCss(generateCss(tokens));
     }
 
+    function getFilterState() {
+        return {
+            query: localUiState.filters.query || '',
+            type: localUiState.filters.type || '',
+        };
+    }
+
+    function updateFilters(partial) {
+        if (!partial || typeof partial !== 'object') {
+            return;
+        }
+        if (Object.prototype.hasOwnProperty.call(partial, 'query')) {
+            const newQuery = partial.query;
+            localUiState.filters.query = typeof newQuery === 'string' ? newQuery : '';
+        }
+        if (Object.prototype.hasOwnProperty.call(partial, 'type')) {
+            const newType = partial.type;
+            localUiState.filters.type = typeof newType === 'string' ? newType : '';
+        }
+        setHasLocalChanges(hasLocalChanges, {
+            filters: {
+                query: localUiState.filters.query,
+                type: localUiState.filters.type,
+            },
+        });
+    }
+
+    function syncFilterControls() {
+        const filters = getFilterState();
+        if (searchInput.length) {
+            searchInput.val(filters.query);
+        }
+        if (typeFilterSelect.length) {
+            typeFilterSelect.val(filters.type);
+        }
+    }
+
+    function normalizeSearchTerm(value) {
+        if (typeof value !== 'string') {
+            return '';
+        }
+        let term = value.trim();
+        if (!term) {
+            return '';
+        }
+        if (hasStringNormalize) {
+            term = term.normalize('NFD').replace(diacriticRegex, '');
+        }
+        return term.toLowerCase();
+    }
+
+    function prepareSearchContent(value) {
+        const stringValue = typeof value === 'string' ? value : '';
+        if (!stringValue) {
+            return { original: '', normalized: '', map: [] };
+        }
+        const characters = Array.from(stringValue);
+        const normalizedCharacters = [];
+        const map = [];
+        characters.forEach(function(char, index) {
+            let normalizedChar = char;
+            if (hasStringNormalize && typeof normalizedChar.normalize === 'function') {
+                normalizedChar = normalizedChar.normalize('NFD').replace(diacriticRegex, '');
+            }
+            if (!normalizedChar) {
+                return;
+            }
+            for (let i = 0; i < normalizedChar.length; i += 1) {
+                normalizedCharacters.push(normalizedChar[i].toLowerCase());
+                map.push(index);
+            }
+        });
+        return {
+            original: stringValue,
+            normalized: normalizedCharacters.join(''),
+            map: map,
+        };
+    }
+
+    function escapeHtml(value) {
+        if (value == null) {
+            return '';
+        }
+        return String(value).replace(/[&<>"']/g, function(match) {
+            switch (match) {
+                case '&':
+                    return '&amp;';
+                case '<':
+                    return '&lt;';
+                case '>':
+                    return '&gt;';
+                case '"':
+                    return '&quot;';
+                case "'":
+                    return '&#039;';
+                default:
+                    return match;
+            }
+        });
+    }
+
+    function buildHighlightMarkup(value, normalizedQuery) {
+        const stringValue = typeof value === 'string' ? value : '';
+        if (!normalizedQuery) {
+            return escapeHtml(stringValue);
+        }
+        const prepared = prepareSearchContent(stringValue);
+        if (!prepared.normalized || !normalizedQuery) {
+            return escapeHtml(stringValue);
+        }
+        const queryLength = normalizedQuery.length;
+        if (!queryLength) {
+            return escapeHtml(stringValue);
+        }
+        const ranges = [];
+        let searchIndex = 0;
+        while (searchIndex <= prepared.normalized.length) {
+            const matchIndex = prepared.normalized.indexOf(normalizedQuery, searchIndex);
+            if (matchIndex === -1) {
+                break;
+            }
+            const endIndex = matchIndex + queryLength - 1;
+            const startOriginal = prepared.map[matchIndex];
+            const endOriginalIndex = prepared.map[endIndex];
+            if (startOriginal == null || endOriginalIndex == null) {
+                break;
+            }
+            ranges.push([startOriginal, endOriginalIndex + 1]);
+            searchIndex = matchIndex + queryLength;
+        }
+        if (!ranges.length) {
+            return escapeHtml(stringValue);
+        }
+        ranges.sort(function(a, b) {
+            return a[0] - b[0];
+        });
+        const merged = [ranges[0].slice()];
+        for (let i = 1; i < ranges.length; i += 1) {
+            const current = ranges[i];
+            const last = merged[merged.length - 1];
+            if (current[0] <= last[1]) {
+                last[1] = Math.max(last[1], current[1]);
+            } else {
+                merged.push(current.slice());
+            }
+        }
+        let result = '';
+        let pointer = 0;
+        merged.forEach(function(range) {
+            if (pointer < range[0]) {
+                result += escapeHtml(stringValue.slice(pointer, range[0]));
+            }
+            result += '<mark>' + escapeHtml(stringValue.slice(range[0], range[1])) + '</mark>';
+            pointer = range[1];
+        });
+        if (pointer < stringValue.length) {
+            result += escapeHtml(stringValue.slice(pointer));
+        }
+        return result;
+    }
+
+    function computeTokenHighlights(token, normalizedQuery) {
+        const fragments = [];
+        if (!normalizedQuery) {
+            return { hasMatch: true, fragments: fragments };
+        }
+        let hasMatch = false;
+        const groupValue = (token && typeof token.group === 'string' ? token.group : '').trim() || defaultGroupName;
+        const fields = [
+            { key: 'name', label: i18n.nameLabel || 'Nom', value: token && typeof token.name === 'string' ? token.name : '' },
+            { key: 'group', label: i18n.groupLabel || 'Groupe', value: groupValue },
+            { key: 'description', label: i18n.descriptionLabel || 'Description', value: token && typeof token.description === 'string' ? token.description : '' },
+        ];
+        fields.forEach(function(field) {
+            const normalized = normalizeSearchTerm(field.value);
+            if (normalized && normalized.indexOf(normalizedQuery) !== -1) {
+                hasMatch = true;
+                fragments.push({
+                    key: field.key,
+                    label: field.label,
+                    html: buildHighlightMarkup(field.value, normalizedQuery),
+                });
+            }
+        });
+        return { hasMatch: hasMatch, fragments: fragments };
+    }
+
+    function updateResultsCount(displayed, total) {
+        if (!resultsCounter.length) {
+            return;
+        }
+        let text = '';
+        if (!total) {
+            text = i18n.resultsCountZero || '';
+        } else if (!displayed) {
+            if (i18n.resultsCountZeroFiltered) {
+                text = i18n.resultsCountZeroFiltered
+                    .replace('%1$s', '0')
+                    .replace('%2$s', String(total));
+            } else if (i18n.resultsCountZero) {
+                text = i18n.resultsCountZero;
+            } else {
+                text = '0 / ' + total;
+            }
+        } else {
+            const template = displayed === 1 ? i18n.resultsCountSingular : i18n.resultsCountPlural;
+            if (template) {
+                text = template
+                    .replace('%1$s', String(displayed))
+                    .replace('%2$s', String(total));
+            } else {
+                text = displayed + ' / ' + total;
+            }
+        }
+        resultsCounter.text(text);
+    }
+
     function normalizeName(value) {
         if (typeof value !== 'string') {
             return '';
@@ -454,7 +692,7 @@
         return field;
     }
 
-    function createTokenRow(token, index) {
+    function createTokenRow(token, index, highlights) {
         const row = $('<div>', { class: 'ssc-token-row', 'data-index': index });
         const typeOptions = Object.keys(tokenTypes);
         const resolvedType = (token && typeof token.type === 'string' && tokenTypes[token.type])
@@ -533,7 +771,7 @@
         const groupInput = $('<input>', {
             type: 'text',
             class: 'token-field-input token-group',
-            value: token.group || 'Général',
+            value: token.group || defaultGroupName,
             list: groupDatalistId,
         });
 
@@ -568,6 +806,39 @@
         row.append(typeField);
         row.append(groupField);
         row.append(descriptionField);
+
+        if (Array.isArray(highlights) && highlights.length) {
+            row.addClass('ssc-token-row--matches');
+            const highlightContainer = $('<div>', { class: 'ssc-token-row__matches' });
+            if (i18n.matchesLabel) {
+                highlightContainer.append($('<span>', {
+                    class: 'ssc-token-row__matches-title',
+                    text: i18n.matchesLabel,
+                }));
+            }
+            highlights.forEach(function(fragment) {
+                if (!fragment || typeof fragment !== 'object') {
+                    return;
+                }
+                const item = $('<div>', { class: 'ssc-token-row__match' });
+                if (fragment.label) {
+                    item.append($('<span>', {
+                        class: 'ssc-token-row__match-label',
+                        text: fragment.label + ' : ',
+                    }));
+                }
+                const valueSpan = $('<span>', { class: 'ssc-token-row__match-value' });
+                if (fragment.html) {
+                    valueSpan.html(fragment.html);
+                } else if (fragment.value) {
+                    valueSpan.text(fragment.value);
+                }
+                item.append(valueSpan);
+                highlightContainer.append(item);
+            });
+            row.append(highlightContainer);
+        }
+
         row.append(deleteButton);
 
         return row;
@@ -578,41 +849,102 @@
             return;
         }
 
+        const totalTokens = tokens.length;
+        const filters = getFilterState();
+        const activeType = filters.type || '';
+        const rawQuery = filters.query || '';
+        const normalizedQuery = normalizeSearchTerm(rawQuery);
+
         builder.empty();
 
-        if (!tokens.length) {
+        const seenGroups = new Set();
+        const allGroups = [];
+        tokens.forEach(function(token) {
+            if (!token || typeof token !== 'object') {
+                return;
+            }
+            const groupName = (token.group || defaultGroupName).trim() || defaultGroupName;
+            if (!seenGroups.has(groupName)) {
+                seenGroups.add(groupName);
+                allGroups.push(groupName);
+            }
+        });
+        if (!allGroups.length) {
+            allGroups.push(defaultGroupName);
+        }
+        ensureGroupDatalist(allGroups);
+
+        if (!totalTokens) {
             builder.append($('<p>', {
                 class: 'ssc-token-empty',
                 text: i18n.emptyState || 'Aucun token pour le moment. Utilisez le bouton ci-dessous pour commencer.',
             }));
-            ensureGroupDatalist(['Général']);
+            updateResultsCount(0, 0);
             updateDuplicateHighlights([]);
             return;
         }
 
-        const groups = {};
-        const order = [];
-
+        const filteredItems = [];
         tokens.forEach(function(token, index) {
-            const groupName = (token.group || 'Général').trim() || 'Général';
-            if (!groups[groupName]) {
-                groups[groupName] = [];
-                order.push(groupName);
+            if (!token || typeof token !== 'object') {
+                return;
             }
-            groups[groupName].push({ token: token, index: index });
+            const tokenType = typeof token.type === 'string' ? token.type : '';
+            if (activeType && tokenType !== activeType) {
+                return;
+            }
+            let highlightFragments = null;
+            if (normalizedQuery) {
+                const highlightData = computeTokenHighlights(token, normalizedQuery);
+                if (!highlightData.hasMatch) {
+                    return;
+                }
+                highlightFragments = highlightData.fragments;
+            }
+            filteredItems.push({
+                token: token,
+                index: index,
+                highlights: highlightFragments,
+            });
         });
 
-        ensureGroupDatalist(order);
+        if (!filteredItems.length) {
+            builder.append($('<p>', {
+                class: 'ssc-token-empty',
+                text: i18n.emptyFilteredState || 'Aucun token ne correspond à votre recherche ou filtre actuel.',
+            }));
+            updateResultsCount(0, totalTokens);
+            updateDuplicateHighlights([]);
+            return;
+        }
+
+        const groupedItems = {};
+        const order = [];
+        filteredItems.forEach(function(item) {
+            const groupName = (item.token.group || defaultGroupName).trim() || defaultGroupName;
+            if (!groupedItems[groupName]) {
+                groupedItems[groupName] = [];
+                order.push(groupName);
+            }
+            groupedItems[groupName].push(item);
+        });
 
         order.forEach(function(groupName) {
             const section = $('<div>', { class: 'ssc-token-group' });
-            section.append($('<h4>', { text: groupName }));
-            groups[groupName].forEach(function(item) {
-                section.append(createTokenRow(item.token, item.index));
+            const heading = $('<h4>');
+            if (normalizedQuery) {
+                heading.html(buildHighlightMarkup(groupName, normalizedQuery));
+            } else {
+                heading.text(groupName);
+            }
+            section.append(heading);
+            groupedItems[groupName].forEach(function(item) {
+                section.append(createTokenRow(item.token, item.index, normalizedQuery ? item.highlights : null));
             });
             builder.append(section);
         });
 
+        updateResultsCount(filteredItems.length, totalTokens);
         refreshDuplicateState();
     }
 
@@ -629,7 +961,7 @@
             value: defaultValue,
             type: defaultType,
             description: '',
-            group: 'Général',
+            group: defaultGroupName,
         });
         setHasLocalChanges(true);
         renderTokens();
@@ -790,6 +1122,43 @@
             return;
         }
 
+        if (searchInput.length) {
+            if (i18n.searchPlaceholder) {
+                searchInput.attr('placeholder', i18n.searchPlaceholder);
+            }
+            if (i18n.searchLabel) {
+                searchInput.attr('aria-label', i18n.searchLabel);
+            }
+            const initialSearch = searchInput.val();
+            updateFilters({ query: typeof initialSearch === 'string' ? initialSearch : '' });
+            searchInput.on('input', function() {
+                const value = $(this).val();
+                updateFilters({ query: typeof value === 'string' ? value : '' });
+                renderTokens();
+            });
+        }
+
+        if (typeFilterSelect.length) {
+            if (i18n.typeFilterLabel) {
+                typeFilterSelect.attr('aria-label', i18n.typeFilterLabel);
+            }
+            if (i18n.typeFilterAll) {
+                const defaultOption = typeFilterSelect.find('option[value=""]');
+                if (defaultOption.length) {
+                    defaultOption.text(i18n.typeFilterAll);
+                }
+            }
+            const initialType = typeFilterSelect.val();
+            updateFilters({ type: typeof initialType === 'string' ? initialType : '' });
+            typeFilterSelect.on('change', function() {
+                const value = $(this).val();
+                updateFilters({ type: typeof value === 'string' ? value : '' });
+                renderTokens();
+            });
+        }
+
+        syncFilterControls();
+
         if (localized.css) {
             applyCss(localized.css);
         }
@@ -872,7 +1241,8 @@
 
         builder.on('change', '.token-group', function() {
             const index = $(this).closest('.ssc-token-row').data('index');
-            const newGroup = $(this).val().trim() || 'Général';
+            const rawValue = $(this).val();
+            const newGroup = (typeof rawValue === 'string' ? rawValue : '').trim() || defaultGroupName;
             setHasLocalChanges(true);
             updateToken(index, 'group', newGroup);
             renderTokens();
