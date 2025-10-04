@@ -208,12 +208,14 @@ final class TokenRegistry
     }
 
     /**
-     * @param array{name?: mixed, value?: mixed, type?: mixed, description?: mixed, group?: mixed} $token
-     * @return array{name: string, value: string, type: string, description: string, group: string}|null
+     * @param mixed $rawName
      */
-    public static function normalizeToken(array $token): ?array
+    private static function normalizeTokenName($rawName): ?string
     {
-        $rawName = isset($token['name']) ? (string) $token['name'] : '';
+        if (!is_string($rawName)) {
+            return null;
+        }
+
         $rawName = trim($rawName);
         if ($rawName === '') {
             return null;
@@ -224,7 +226,22 @@ final class TokenRegistry
         }
 
         $normalizedName = '--' . preg_replace('/[^a-z0-9_-]+/i', '-', ltrim($rawName, '-'));
-        if ($normalizedName === '--') {
+
+        if (!is_string($normalizedName) || $normalizedName === '--') {
+            return null;
+        }
+
+        return $normalizedName;
+    }
+
+    /**
+     * @param array{name?: mixed, value?: mixed, type?: mixed, description?: mixed, group?: mixed} $token
+     * @return array{name: string, value: string, type: string, description: string, group: string}|null
+     */
+    public static function normalizeToken(array $token): ?array
+    {
+        $normalizedName = self::normalizeTokenName($token['name'] ?? '');
+        if ($normalizedName === null) {
             return null;
         }
 
@@ -281,37 +298,23 @@ final class TokenRegistry
                 continue;
             }
 
-            $rawName = isset($token['name']) ? (string) $token['name'] : '';
-            $rawName = trim($rawName);
-            if ($rawName === '') {
-                continue;
-            }
-
-            if (strpos($rawName, '--') !== 0) {
-                $rawName = '--' . ltrim($rawName, '-');
-            }
-
-            $normalizedName = '--' . preg_replace('/[^a-z0-9_-]+/i', '-', ltrim($rawName, '-'));
-            if ($normalizedName === '--') {
-                continue;
-            }
-
-            $normalizedKey = strtolower($normalizedName);
-            if (!isset($variantsByKey[$normalizedKey])) {
-                $variantsByKey[$normalizedKey] = [];
-            }
-            $variantsByKey[$normalizedKey][] = $normalizedName;
-            if (!isset($conflictTokensByKey[$normalizedKey])) {
-                $conflictTokensByKey[$normalizedKey] = [];
-            }
-            $conflictTokensByKey[$normalizedKey][] = $token;
-
             $normalizedToken = self::normalizeToken($token);
             if ($normalizedToken === null) {
                 continue;
             }
 
-            $normalizedToken['name'] = $normalizedName;
+            $normalizedName = $normalizedToken['name'];
+            $normalizedKey = strtolower($normalizedName);
+
+            if (!isset($variantsByKey[$normalizedKey])) {
+                $variantsByKey[$normalizedKey] = [];
+            }
+            $variantsByKey[$normalizedKey][] = $normalizedName;
+
+            if (!isset($conflictTokensByKey[$normalizedKey])) {
+                $conflictTokensByKey[$normalizedKey] = [];
+            }
+            $conflictTokensByKey[$normalizedKey][] = $token;
 
             if (array_key_exists($normalizedKey, $normalizedByName)) {
                 $duplicateKeys[$normalizedKey] = true;
