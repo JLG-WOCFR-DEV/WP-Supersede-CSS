@@ -18,6 +18,7 @@ final class ImportExportControllerTest extends WP_UnitTestCase
         delete_option('ssc_css_desktop');
         delete_option('ssc_tokens_css');
         delete_option('ssc_tokens_registry');
+        delete_option('ssc_settings');
     }
 
     public function test_export_css_combines_tokens_and_active(): void
@@ -116,5 +117,54 @@ final class ImportExportControllerTest extends WP_UnitTestCase
         $this->assertFalse($data['ok']);
         $this->assertSame([], $data['applied']);
         $this->assertNotEmpty($data['skipped']);
+    }
+
+    public function test_import_config_handles_nested_settings_arrays(): void
+    {
+        $nestedSettings = [
+            'appearance' => [
+                'palette' => [
+                    'primary' => [
+                        'value' => '#ff0000',
+                        'enabled' => true,
+                    ],
+                ],
+            ],
+            'features' => [
+                'flags' => [
+                    [
+                        'name' => 'beta-feature',
+                        'enabled' => true,
+                        'metadata' => [
+                            'rollout' => ['percentage' => 25],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $payload = [
+            'modules' => ['settings'],
+            'options' => [
+                'ssc_settings' => $nestedSettings,
+            ],
+        ];
+
+        $request = new WP_REST_Request('POST', '/ssc/v1/import-config');
+        $request->set_body(wp_json_encode($payload));
+
+        $response = $this->controller->importConfig($request);
+
+        $this->assertSame(200, $response->get_status());
+        $data = $response->get_data();
+        $this->assertTrue($data['ok']);
+        $this->assertContains('ssc_settings', $data['applied']);
+
+        $stored = get_option('ssc_settings');
+        $this->assertIsArray($stored);
+        $this->assertArrayHasKey('appearance', $stored);
+        $this->assertArrayHasKey('features', $stored);
+        $this->assertIsArray($stored['appearance']['palette']);
+        $this->assertIsArray($stored['features']['flags']);
     }
 }

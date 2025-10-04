@@ -142,7 +142,8 @@ final class Sanitizer
         int $depth = 0,
         ?\SplObjectStorage $objectStack = null,
         ?int &$itemBudget = null,
-        string $parentPath = ''
+        string $parentPath = '',
+        ?array &$arrayReferenceStack = null
     ): ?array {
         if ($depth > self::IMPORT_MAX_DEPTH) {
             return null;
@@ -158,6 +159,10 @@ final class Sanitizer
 
         if ($itemBudget === null) {
             $itemBudget = self::IMPORT_MAX_ITEMS;
+        }
+
+        if ($arrayReferenceStack === null) {
+            $arrayReferenceStack = [];
         }
 
         $sanitized = [];
@@ -181,16 +186,15 @@ final class Sanitizer
                     continue;
                 }
 
-                if ($objectStack->contains($item)) {
-                    $this->recordDuplicateWarning($this->formatDuplicateKeyPath($parentPath, $sanitizedKey));
-                    continue;
-                }
+                $referenceId = $this->extractArrayReferenceId($value, $key);
 
-                try {
-                    $objectStack->attach($item);
-                } catch (\Exception $exception) {
-                    unset($exception);
-                    continue;
+                if ($referenceId !== null) {
+                    if (isset($arrayReferenceStack[$referenceId])) {
+                        $this->recordDuplicateWarning($this->formatDuplicateKeyPath($parentPath, $sanitizedKey));
+                        continue;
+                    }
+
+                    $arrayReferenceStack[$referenceId] = true;
                 }
 
                 $nested = $this->sanitizeImportArray(
@@ -198,10 +202,13 @@ final class Sanitizer
                     $depth + 1,
                     $objectStack,
                     $itemBudget,
-                    $this->formatDuplicateKeyPath($parentPath, $sanitizedKey)
+                    $this->formatDuplicateKeyPath($parentPath, $sanitizedKey),
+                    $arrayReferenceStack
                 );
 
-                $objectStack->detach($item);
+                if ($referenceId !== null) {
+                    unset($arrayReferenceStack[$referenceId]);
+                }
 
                 if ($nested === null) {
                     continue;
@@ -212,25 +219,45 @@ final class Sanitizer
             }
 
             if ($item instanceof \JsonSerializable) {
+                if ($objectStack->contains($item)) {
+                    $this->recordDuplicateWarning($this->formatDuplicateKeyPath($parentPath, $sanitizedKey));
+                    continue;
+                }
+
+                $objectStack->attach($item);
+
                 $encoded = json_encode($item);
                 if (is_string($encoded)) {
                     $sanitized[$sanitizedKey] = $this->sanitizeImportStringValue(
                         $encoded,
                         $depth,
                         $objectStack,
-                        $itemBudget
+                        $itemBudget,
+                        $arrayReferenceStack
                     );
                 }
+
+                $objectStack->detach($item);
                 continue;
             }
 
             if (is_object($item)) {
+                if ($objectStack->contains($item)) {
+                    $this->recordDuplicateWarning($this->formatDuplicateKeyPath($parentPath, $sanitizedKey));
+                    continue;
+                }
+
+                $objectStack->attach($item);
+
                 $sanitized[$sanitizedKey] = $this->sanitizeImportStringValue(
                     $this->encodeObject($item),
                     $depth,
                     $objectStack,
-                    $itemBudget
+                    $itemBudget,
+                    $arrayReferenceStack
                 );
+
+                $objectStack->detach($item);
                 continue;
             }
 
@@ -238,11 +265,41 @@ final class Sanitizer
                 (string) $item,
                 $depth,
                 $objectStack,
-                $itemBudget
+                $itemBudget,
+                $arrayReferenceStack
             );
         }
 
         return $sanitized;
+    }
+
+    /**
+     * @param array<int|string, mixed> $parent
+     * @param mixed $key
+     */
+    private function extractArrayReferenceId(array &$parent, $key): ?string
+    {
+        if (!class_exists(\ReflectionReference::class)) {
+            return null;
+        }
+
+        if (!is_int($key) && !is_string($key)) {
+            return null;
+        }
+
+        try {
+            $reference = \ReflectionReference::fromArrayElement($parent, $key);
+        } catch (\Throwable $exception) {
+            unset($exception);
+
+            return null;
+        }
+
+        if (!$reference instanceof \ReflectionReference) {
+            return null;
+        }
+
+        return $reference->getId();
     }
 
     private function encodeObject(object $value): string
@@ -310,7 +367,8 @@ final class Sanitizer
         string $value,
         int $depth = 0,
         ?\SplObjectStorage $objectStack = null,
-        ?int &$itemBudget = null
+        ?int &$itemBudget = null,
+        ?array &$arrayReferenceStack = null
     ): string {
         if (function_exists('wp_check_invalid_utf8')) {
             $value = wp_check_invalid_utf8($value);
@@ -327,7 +385,14 @@ final class Sanitizer
             $decoded = json_decode($trimmed, true);
 
             if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                $sanitized = $this->sanitizeImportArray($decoded, $depth + 1, $objectStack, $itemBudget);
+                $sanitized = $this->sanitizeImportArray(
+                    $decoded,
+                    $depth + 1,
+                    $objectStack,
+                    $itemBudget,
+                    '',
+                    $arrayReferenceStack
+                );
 
                 if ($sanitized !== null) {
                     $jsonOptions = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
