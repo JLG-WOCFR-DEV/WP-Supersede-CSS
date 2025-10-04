@@ -40,6 +40,7 @@ if (function_exists('wp_localize_script')) {
         'i18n' => [
             'addToken' => __('Ajouter un token', 'supersede-css-jlg'),
             'emptyState' => __('Aucun token pour le moment. Utilisez le bouton ci-dessous pour commencer.', 'supersede-css-jlg'),
+            'emptyFilteredState' => __('Aucun token ne correspond à votre recherche ou filtre actuel.', 'supersede-css-jlg'),
             'groupLabel' => __('Groupe', 'supersede-css-jlg'),
             'nameLabel' => __('Nom', 'supersede-css-jlg'),
             'valueLabel' => __('Valeur', 'supersede-css-jlg'),
@@ -52,6 +53,15 @@ if (function_exists('wp_localize_script')) {
             'duplicateListPrefix' => __('Doublons :', 'supersede-css-jlg'),
             'copySuccess' => __('Tokens copiés', 'supersede-css-jlg'),
             'reloadConfirm' => __('Des modifications locales non enregistrées seront perdues. Continuer ?', 'supersede-css-jlg'),
+            'searchLabel' => __('Rechercher un token', 'supersede-css-jlg'),
+            'searchPlaceholder' => __('Rechercher un token…', 'supersede-css-jlg'),
+            'typeFilterLabel' => __('Filtrer par type', 'supersede-css-jlg'),
+            'typeFilterAll' => __('Tous les types', 'supersede-css-jlg'),
+            'resultsCountZero' => __('Aucun token à afficher', 'supersede-css-jlg'),
+            'resultsCountZeroFiltered' => __('0 token affiché sur %2$s', 'supersede-css-jlg'),
+            'resultsCountSingular' => __('%1$s token affiché sur %2$s', 'supersede-css-jlg'),
+            'resultsCountPlural' => __('%1$s tokens affichés sur %2$s', 'supersede-css-jlg'),
+            'matchesLabel' => __('Correspondances', 'supersede-css-jlg'),
         ],
     ]);
 }
@@ -107,6 +117,25 @@ if (function_exists('wp_localize_script')) {
 
             <div class="ssc-token-toolbar" style="margin-bottom:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                 <button id="ssc-token-add" class="button"><?php esc_html_e('+ Ajouter un Token', 'supersede-css-jlg'); ?></button>
+                <input
+                    type="search"
+                    id="ssc-token-search"
+                    placeholder="<?php esc_attr_e('Rechercher un token…', 'supersede-css-jlg'); ?>"
+                    aria-label="<?php esc_attr_e('Rechercher un token', 'supersede-css-jlg'); ?>"
+                >
+                <select id="ssc-token-type-filter" aria-label="<?php esc_attr_e('Filtrer par type', 'supersede-css-jlg'); ?>">
+                    <option value=""><?php esc_html_e('Tous les types', 'supersede-css-jlg'); ?></option>
+                    <?php foreach ($token_types as $type_key => $meta) :
+                        if (!is_string($type_key) || $type_key === '') {
+                            continue;
+                        }
+
+                        $label = isset($meta['label']) ? $meta['label'] : $type_key;
+                        ?>
+                        <option value="<?php echo esc_attr($type_key); ?>"><?php echo esc_html($label); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <span id="ssc-token-results-count" class="ssc-token-results-count" aria-live="polite"></span>
             </div>
 
             <div id="ssc-token-builder" class="ssc-token-builder" aria-live="polite">
