@@ -193,13 +193,14 @@ final class Sanitizer
                 continue;
             }
 
-            $duplicatePath = $this->formatDuplicateKeyPath($parentPath, $sanitizedKey);
-
             if (array_key_exists($sanitizedKey, $sanitized)) {
+                $duplicatePath = $this->formatDuplicateKeyPath($parentPath, $sanitizedKey);
                 $this->recordDuplicateWarning($duplicatePath);
 
                 continue;
             }
+
+            $duplicatePath = $this->formatDuplicateKeyPath($parentPath, $sanitizedKey);
 
             $itemBudget--;
 
