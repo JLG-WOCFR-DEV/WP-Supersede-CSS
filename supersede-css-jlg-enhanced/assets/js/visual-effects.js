@@ -1237,8 +1237,12 @@ ${reduceMotionBlock}`;
                  });
              }
 
-             $.ajax({ url: SSC.rest.root + 'save-css', method: 'POST', data: requestData, beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
-             }).done(() => window.sscToast('Fond animé appliqué !'))
+            $.ajax({
+                url: SSC.rest.root + 'save-css',
+                method: 'POST',
+                data: requestData,
+                beforeSend: (xhr) => xhr.setRequestHeader('X-WP-Nonce', SSC.rest.nonce),
+            }).done(() => window.sscToast('Fond animé appliqué !'))
              .fail((jqXHR, textStatus, errorThrown) => {
                  console.error(errorMessage, { jqXHR, textStatus, errorThrown });
                  window.sscToast(
@@ -1334,8 +1338,12 @@ ${reduceMotionBlock}`;
                  .attr('aria-disabled', 'true')
                  .text(ecgApplyingLabel);
 
-             $.ajax({ url: SSC.rest.root + 'save-css', method: 'POST', data: { css, append: true, _wpnonce: SSC.rest.nonce }, beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
-             })
+            $.ajax({
+                url: SSC.rest.root + 'save-css',
+                method: 'POST',
+                data: { css, append: true, _wpnonce: SSC.rest.nonce },
+                beforeSend: (xhr) => xhr.setRequestHeader('X-WP-Nonce', SSC.rest.nonce),
+            })
              .done(() => window.sscToast('Effet ECG appliqué !'))
              .fail((jqXHR, textStatus, errorThrown) => {
                  console.error(errorMessage, { jqXHR, textStatus, errorThrown });
