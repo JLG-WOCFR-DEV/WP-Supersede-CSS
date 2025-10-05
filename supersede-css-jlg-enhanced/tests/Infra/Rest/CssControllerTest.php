@@ -82,7 +82,7 @@ final class CssControllerTest extends WP_UnitTestCase
         $initialSave = TokenRegistry::saveRegistry($initialRegistry);
         $this->assertSame([], $initialSave['duplicates']);
 
-        $tokenCss = ":root {\n    --first-token: #123456;\n    --second-token: 1.5rem;\n    --with-semicolon: 'foo;bar'\n}";
+        $tokenCss = ":root {\n    --first-token: #123456;\n    --second-token: 1.5rem;\n    --with-semicolon: 'foo;bar'\n}\n\n[data-theme=\"dark\"] {\n    --first-token: #0f172a\n}";
 
         $request = $this->createRequest([
             'option_name' => 'ssc_tokens_css',
@@ -108,6 +108,22 @@ final class CssControllerTest extends WP_UnitTestCase
 
         $this->assertSame($expectedRegistry, get_option('ssc_tokens_registry'));
         $this->assertSame($expectedRegistryCss, get_option('ssc_tokens_css'));
+
+        $data = $response->get_data();
+        $this->assertIsArray($data);
+        $this->assertArrayHasKey('tokens', $data);
+        $this->assertArrayHasKey('css', $data);
+        $this->assertSame($expectedRegistryCss, $data['css']);
+
+        $darkContextToken = null;
+        foreach ($data['tokens'] as $token) {
+            if (($token['name'] ?? '') === '--first-token' && ($token['context'] ?? '') === '[data-theme="dark"]') {
+                $darkContextToken = $token;
+                break;
+            }
+        }
+
+        $this->assertNotNull($darkContextToken, 'Response should include context-specific token metadata.');
 
         $withSemicolon = null;
         foreach ($expectedRegistry as $token) {

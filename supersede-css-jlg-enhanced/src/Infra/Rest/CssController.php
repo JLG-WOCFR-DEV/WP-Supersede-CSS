@@ -128,6 +128,8 @@ final class CssController extends BaseController
             $css_to_store = $incoming_css;
         }
 
+        $responsePayload = ['ok' => true];
+
         if ($option_name === 'ssc_tokens_css') {
             $tokens = TokenRegistry::convertCssToRegistry($css_to_store);
             $existingRegistry = TokenRegistry::getRegistry();
@@ -141,6 +143,8 @@ final class CssController extends BaseController
                 ], 422);
             }
             $css_to_store = TokenRegistry::tokensToCss($sanitizedTokens['tokens']);
+            $responsePayload['tokens'] = $sanitizedTokens['tokens'];
+            $responsePayload['css'] = $css_to_store;
         } else {
             update_option($option_name, $css_to_store, false);
         }
@@ -160,7 +164,7 @@ final class CssController extends BaseController
             ssc_invalidate_css_cache();
         }
 
-        return new WP_REST_Response(['ok' => true], 200);
+        return new WP_REST_Response($responsePayload, 200);
     }
 
     public function restoreCssRevision(WP_REST_Request $request): WP_REST_Response
