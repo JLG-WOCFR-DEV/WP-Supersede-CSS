@@ -3,8 +3,10 @@ if (!defined('ABSPATH')) {
     exit;
 }
 /** @var string $tokens_css */
-/** @var array<int, array{name: string, value: string, type: string, description: string, group: string}> $tokens_registry */
+/** @var array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}> $tokens_registry */
 /** @var array<string, array{label: string, input: string, placeholder?: string, help?: string, rows?: int}> $token_types */
+/** @var array<int, array{value: string, label: string, preview?: array<string, string>}> $token_contexts */
+/** @var string $default_context */
 
 if (function_exists('wp_localize_script')) {
     $localized_types = [];
@@ -37,6 +39,8 @@ if (function_exists('wp_localize_script')) {
         'tokens' => $tokens_registry,
         'types' => $localized_types,
         'css' => $tokens_css,
+        'contexts' => $token_contexts,
+        'defaultContext' => $default_context,
         'i18n' => [
             'addToken' => __('Ajouter un token', 'supersede-css-jlg'),
             'emptyState' => __('Aucun token pour le moment. Utilisez le bouton ci-dessous pour commencer.', 'supersede-css-jlg'),
@@ -46,6 +50,7 @@ if (function_exists('wp_localize_script')) {
             'valueLabel' => __('Valeur', 'supersede-css-jlg'),
             'typeLabel' => __('Type', 'supersede-css-jlg'),
             'descriptionLabel' => __('Description', 'supersede-css-jlg'),
+            'contextLabel' => __('Contexte', 'supersede-css-jlg'),
             'deleteLabel' => __('Supprimer', 'supersede-css-jlg'),
             'saveSuccess' => __('Tokens enregistrés', 'supersede-css-jlg'),
             'saveError' => __('Impossible d’enregistrer les tokens.', 'supersede-css-jlg'),
@@ -62,6 +67,8 @@ if (function_exists('wp_localize_script')) {
             'resultsCountSingular' => __('%1$s token affiché sur %2$s', 'supersede-css-jlg'),
             'resultsCountPlural' => __('%1$s tokens affichés sur %2$s', 'supersede-css-jlg'),
             'matchesLabel' => __('Correspondances', 'supersede-css-jlg'),
+            'previewContextLabel' => __('Contexte d’aperçu', 'supersede-css-jlg'),
+            'previewContextDefault' => __('Contexte par défaut', 'supersede-css-jlg'),
         ],
     ]);
 }
@@ -159,6 +166,10 @@ if (function_exists('wp_localize_script')) {
         <h3><?php esc_html_e('👁️ Aperçu en Direct', 'supersede-css-jlg'); ?></h3>
         <p><?php esc_html_e('Voyez comment vos tokens affectent les éléments. Le style de cet aperçu est directement contrôlé par le code CSS ci-dessus.', 'supersede-css-jlg'); ?></p>
         <style id="ssc-tokens-preview-style"></style>
+        <div class="ssc-preview-toolbar" style="margin-bottom:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <label for="ssc-preview-context"><?php esc_html_e('Contexte d’aperçu', 'supersede-css-jlg'); ?></label>
+            <select id="ssc-preview-context" aria-label="<?php esc_attr_e('Contexte d’aperçu', 'supersede-css-jlg'); ?>"></select>
+        </div>
         <div id="ssc-tokens-preview" style="padding: 24px; border: 2px dashed var(--couleur-principale, #ccc); border-radius: var(--radius-moyen, 8px); background: #fff;">
             <button class="button button-primary" style="background-color: var(--couleur-principale); border-radius: var(--radius-moyen);"><?php esc_html_e('Bouton Principal', 'supersede-css-jlg'); ?></button>
             <a href="#" style="color: var(--couleur-principale); margin-left: 16px;"><?php esc_html_e('Lien Principal', 'supersede-css-jlg'); ?></a>
