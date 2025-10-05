@@ -72,11 +72,58 @@
     margin: 0 0 8px;
 }
 
-.ssc-token-row {
+.ssc-token-row { 
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
     align-items: flex-end;
+}
+
+.ssc-token-row--matches {
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ssc-border) 75%, transparent 25%);
+    background: color-mix(in srgb, var(--ssc-card) 92%, var(--ssc-border) 8%);
+    padding: 12px;
+    width: 100%;
+}
+
+.ssc-token-row__matches {
+    flex: 1 1 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--ssc-card) 80%, var(--ssc-border) 20%);
+    margin-top: 4px;
+}
+
+.ssc-token-row__matches-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--ssc-muted) 70%, var(--ssc-text) 30%);
+    letter-spacing: 0.04em;
+}
+
+.ssc-token-row__match {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 12px;
+    color: color-mix(in srgb, var(--ssc-text) 70%, var(--ssc-muted) 30%);
+}
+
+.ssc-token-row__match-label {
+    font-weight: 600;
+}
+
+.ssc-token-row__match-value mark,
+.ssc-token-group h4 mark {
+    background: color-mix(in srgb, var(--ssc-accent, #0066ff) 25%, transparent);
+    color: inherit;
+    padding: 0 2px;
+    border-radius: 2px;
 }
 
 .ssc-token-field {
@@ -117,6 +164,10 @@
     padding: 4px;
 }
 
+.ssc-token-row--matches.ssc-token-row--duplicate {
+    padding: 12px;
+}
+
 .token-field-input--duplicate {
     border-color: var(--ssc-token-duplicate-border);
     box-shadow: 0 0 0 1px var(--ssc-token-duplicate-outline);
@@ -140,4 +191,21 @@
 .ssc-dark .ssc-token-field__help {
     color: var(--ssc-muted);
     color: color-mix(in srgb, var(--ssc-muted) 55%, var(--ssc-text) 45%);
+}
+
+.ssc-dark .ssc-token-row--matches {
+    background: color-mix(in srgb, var(--ssc-card) 80%, var(--ssc-border) 20%);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ssc-border) 55%, transparent 45%);
+}
+
+.ssc-dark .ssc-token-row__matches {
+    background: color-mix(in srgb, var(--ssc-card) 65%, var(--ssc-border) 35%);
+}
+
+.ssc-dark .ssc-token-row__matches-title {
+    color: color-mix(in srgb, var(--ssc-muted) 55%, var(--ssc-text) 45%);
+}
+
+.ssc-dark .ssc-token-row__match {
+    color: color-mix(in srgb, var(--ssc-text) 80%, var(--ssc-muted) 20%);
 }

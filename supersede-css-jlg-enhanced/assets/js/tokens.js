@@ -608,6 +608,7 @@
                 fragments.push({
                     key: field.key,
                     label: field.label,
+                    value: field.value,
                     html: buildHighlightMarkup(field.value, normalizedQuery),
                 });
             }
