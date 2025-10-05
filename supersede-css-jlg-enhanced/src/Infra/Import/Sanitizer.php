@@ -136,6 +136,21 @@ final class Sanitizer
 
     /**
      * @param mixed $value
+     * @return array<int, array<string, mixed>>|null
+     */
+    public function sanitizeImportVisualEffectsPresets($value): ?array
+    {
+        if (!is_array($value)) {
+            return null;
+        }
+
+        $sanitized = CssSanitizer::sanitizeVisualEffectsPresets($value);
+
+        return $sanitized === [] ? null : $sanitized;
+    }
+
+    /**
+     * @param mixed $value
      */
     public function sanitizeImportArray(
         $value,

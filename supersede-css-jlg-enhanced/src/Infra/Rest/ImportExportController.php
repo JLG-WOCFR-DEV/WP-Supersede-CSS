@@ -26,6 +26,7 @@ final class ImportExportController extends BaseController
         'ssc_css_mobile' => 'sanitizeImportCss',
         'ssc_presets' => 'sanitizeImportPresets',
         'ssc_avatar_glow_presets' => 'sanitizeImportAvatarGlowPresets',
+        'ssc_visual_effects_presets' => 'sanitizeImportVisualEffectsPresets',
         'ssc_admin_log' => 'sanitizeImportAdminLog',
         'ssc_settings' => 'sanitizeImportArray',
         'ssc_modules_enabled' => 'sanitizeImportArray',
@@ -236,6 +237,12 @@ final class ImportExportController extends BaseController
                     'label' => __('Presets & collections', 'supersede-css-jlg'),
                     'options' => [
                         'ssc_presets',
+                    ],
+                ],
+                'visual_effects' => [
+                    'label' => __('Presets Effets visuels', 'supersede-css-jlg'),
+                    'options' => [
+                        'ssc_visual_effects_presets',
                     ],
                 ],
                 'avatar' => [
