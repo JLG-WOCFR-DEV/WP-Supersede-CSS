@@ -193,6 +193,14 @@ final class Sanitizer
                 continue;
             }
 
+            $duplicatePath = $this->formatDuplicateKeyPath($parentPath, $sanitizedKey);
+
+            if (array_key_exists($sanitizedKey, $sanitized)) {
+                $this->recordDuplicateWarning($duplicatePath);
+
+                continue;
+            }
+
             $itemBudget--;
 
             if (is_array($item)) {
@@ -205,7 +213,7 @@ final class Sanitizer
 
                 if ($referenceId !== null) {
                     if (isset($arrayReferenceStack[$referenceId])) {
-                        $this->recordDuplicateWarning($this->formatDuplicateKeyPath($parentPath, $sanitizedKey));
+                        $this->recordDuplicateWarning($duplicatePath);
                         continue;
                     }
 
@@ -217,7 +225,7 @@ final class Sanitizer
                     $depth + 1,
                     $objectStack,
                     $itemBudget,
-                    $this->formatDuplicateKeyPath($parentPath, $sanitizedKey),
+                    $duplicatePath,
                     $arrayReferenceStack
                 );
 
@@ -235,7 +243,7 @@ final class Sanitizer
 
             if ($item instanceof \JsonSerializable) {
                 if ($objectStack->contains($item)) {
-                    $this->recordDuplicateWarning($this->formatDuplicateKeyPath($parentPath, $sanitizedKey));
+                    $this->recordDuplicateWarning($duplicatePath);
                     continue;
                 }
 
@@ -258,7 +266,7 @@ final class Sanitizer
 
             if (is_object($item)) {
                 if ($objectStack->contains($item)) {
-                    $this->recordDuplicateWarning($this->formatDuplicateKeyPath($parentPath, $sanitizedKey));
+                    $this->recordDuplicateWarning($duplicatePath);
                     continue;
                 }
 

@@ -47,4 +47,20 @@ final class SanitizerTest extends WP_UnitTestCase
         $duplicates = $sanitizer->consumeDuplicateWarnings();
         $this->assertNotEmpty($duplicates);
     }
+
+    public function test_sanitize_import_array_records_duplicate_keys(): void
+    {
+        $sanitizer = new Sanitizer();
+        $sanitizer->resetDuplicateWarnings();
+
+        $result = $sanitizer->sanitizeImportArray([
+            'Foo' => 'first',
+            'foo' => 'second',
+        ]);
+
+        $this->assertSame(['foo' => 'first'], $result);
+
+        $duplicates = $sanitizer->consumeDuplicateWarnings();
+        $this->assertSame(['foo'], $duplicates);
+    }
 }
