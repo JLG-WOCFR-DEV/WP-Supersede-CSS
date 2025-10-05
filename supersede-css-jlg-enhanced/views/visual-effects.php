@@ -103,8 +103,38 @@ if (!defined('ABSPATH')) {
                     <label for="gradientSpeed"><?php esc_html_e('Vitesse', 'supersede-css-jlg'); ?></label>
                     <input type="range" id="gradientSpeed" min="2" max="20" value="10" step="1">
                 </div>
-                 <pre id="ssc-bg-css" class="ssc-code"></pre>
-                <button id="ssc-bg-apply" class="button button-primary"><?php esc_html_e('Appliquer', 'supersede-css-jlg'); ?></button>
+                <label for="ssc-bg-preset-name" style="margin-top:16px;"><strong><?php esc_html_e('Nom du preset', 'supersede-css-jlg'); ?></strong></label>
+                <div class="ssc-ve-preset-save" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <input type="text" id="ssc-bg-preset-name" class="regular-text" placeholder="<?php echo esc_attr__('Nom du preset…', 'supersede-css-jlg'); ?>" style="flex:1 1 220px;">
+                    <button type="button" id="ssc-bg-save-preset" class="button button-secondary"><?php esc_html_e('Enregistrer le preset', 'supersede-css-jlg'); ?></button>
+                </div>
+                <div class="ssc-ve-code-actions" style="margin-top:16px; display:flex; gap:8px; align-items:flex-start; flex-wrap:wrap;">
+                    <pre id="ssc-bg-css" class="ssc-code" style="flex:1 1 100%;"></pre>
+                    <button type="button" id="ssc-bg-copy-css" class="button"><?php esc_html_e('Copier le CSS', 'supersede-css-jlg'); ?></button>
+                </div>
+                <button id="ssc-bg-apply" class="button button-primary" style="margin-top:8px;">
+                    <?php esc_html_e('Appliquer', 'supersede-css-jlg'); ?>
+                </button>
+                <div class="ssc-ve-presets-section" style="margin-top:24px;">
+                    <h4><?php esc_html_e('Presets enregistrés', 'supersede-css-jlg'); ?></h4>
+                    <p id="ssc-bg-presets-empty" class="description" style="display:none;">
+                        <?php esc_html_e('Aucun preset enregistré pour le moment.', 'supersede-css-jlg'); ?>
+                    </p>
+                    <table class="widefat striped" style="margin-top:12px;">
+                        <thead>
+                            <tr>
+                                <th scope="col"><?php esc_html_e('Nom', 'supersede-css-jlg'); ?></th>
+                                <th scope="col" style="width:120px;">
+                                    <?php esc_html_e('Type', 'supersede-css-jlg'); ?>
+                                </th>
+                                <th scope="col" style="width:220px;">
+                                    <?php esc_html_e('Actions', 'supersede-css-jlg'); ?>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="ssc-bg-presets-list"></tbody>
+                    </table>
+                </div>
             </div>
             <div class="ssc-pane">
                 <h3><?php esc_html_e('Aperçu', 'supersede-css-jlg'); ?></h3>

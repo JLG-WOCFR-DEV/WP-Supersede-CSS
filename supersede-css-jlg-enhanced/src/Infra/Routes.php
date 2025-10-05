@@ -9,6 +9,7 @@ use SSC\Infra\Rest\LogsController;
 use SSC\Infra\Rest\PresetsController;
 use SSC\Infra\Rest\SystemController;
 use SSC\Infra\Rest\TokensController;
+use SSC\Infra\Rest\VisualEffectsPresetsController;
 use SSC\Infra\Rest\ControllerInterface;
 
 if (!class_exists('\\SSC\\Support\\CssRevisions') && is_readable(__DIR__ . '/../Support/CssRevisions.php')) {
@@ -34,6 +35,7 @@ final class Routes
             new CssController($sanitizer),
             new TokensController(),
             new PresetsController(),
+            new VisualEffectsPresetsController(),
             new ImportExportController($sanitizer),
             new LogsController(),
             new SystemController(),
