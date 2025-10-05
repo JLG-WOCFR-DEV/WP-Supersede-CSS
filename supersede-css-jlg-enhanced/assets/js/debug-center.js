@@ -54,7 +54,7 @@
             php_version: translate('healthLabelPhpVersion', 'Version PHP'),
             rest_api_status: translate('healthLabelRestStatus', 'Statut de l’API REST'),
             asset_files_exist: translate('healthLabelAssets', 'Fichiers d’assets'),
-            composer_dependencies: translate('healthLabelComposer', 'Dépendances Composer')
+            plugin_integrity: translate('healthLabelIntegrity', 'Intégrité du plugin')
         };
 
         const updateCopyButton = (payload) => {
@@ -216,8 +216,8 @@
                 return sprintf(translate('healthMessageAssetStatus', 'Statut : %s'), asString);
             }
 
-            if (sourcePath.includes('composer_dependencies')) {
-                return sprintf(translate('healthMessageComposerStatus', 'État : %s'), asString);
+            if (sourcePath.includes('plugin_integrity')) {
+                return sprintf(translate('healthMessageIntegrityStatus', 'Intégrité : %s'), asString);
             }
 
             if (sourcePath.includes('rest_api_status')) {
@@ -236,8 +236,8 @@
                 return translate('healthActionAsset', 'Vérifiez que les fichiers d’assets du plugin sont présents (réinstallation ou permissions).');
             }
 
-            if (sourcePath.includes('composer_dependencies')) {
-                return translate('healthActionComposer', 'Installez ou rechargez les dépendances PHP via Composer.');
+            if (sourcePath.includes('plugin_integrity')) {
+                return translate('healthActionIntegrity', 'Vérifiez le chargement des classes et fonctions critiques du plugin.');
             }
 
             if (sourcePath.includes('rest_api_status')) {
