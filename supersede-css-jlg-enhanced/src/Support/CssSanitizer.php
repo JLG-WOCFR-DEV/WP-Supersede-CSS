@@ -2196,6 +2196,9 @@ final class CssSanitizer
         'contain-intrinsic-inline-size' => true,
         'contain-intrinsic-size' => true,
         'contain-intrinsic-width' => true,
+        'container' => true,
+        'container-name' => true,
+        'container-type' => true,
         'content' => true,
         'counter-increment' => true,
         'counter-reset' => true,
@@ -2461,6 +2464,7 @@ final class CssSanitizer
         'font-variation-',
         'text-emphasis-',
         'scrollbar-',
+        'container-',
     ];
 
     public static function sanitizeAvatarGlowPresets(array $presets): array
