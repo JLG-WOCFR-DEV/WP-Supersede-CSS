@@ -1,11 +1,11 @@
 <?php
-use SSC\Infra\Routes;
+use SSC\Infra\Rest\ImportExportController;
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-$modules = Routes::getConfigModules();
+$modules = ImportExportController::getConfigModules();
 
 if (function_exists('wp_set_script_translations')) {
     wp_set_script_translations('ssc-import-export', 'supersede-css-jlg', SSC_PLUGIN_DIR . 'languages');
