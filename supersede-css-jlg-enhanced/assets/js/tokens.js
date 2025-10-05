@@ -1072,12 +1072,41 @@
         const helpPane = $('#ssc-token-help');
         const helpToggle = $('#ssc-token-help-toggle');
         const helpStorageKey = 'ssc-token-help-collapsed';
+        const helpPaneElement = helpPane.get(0);
+        const focusableSelector = 'a[href], area[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
         if (helpToggle.length && helpPane.length && tokenLayout.length) {
             const expandedLabel = helpToggle.data('expandedLabel');
             const collapsedLabel = helpToggle.data('collapsedLabel');
 
             const setHelpState = function(collapsed, persist) {
+                if (collapsed && helpToggle.is(':focus')) {
+                    const fallbackTarget = tokenLayout
+                        .find(focusableSelector)
+                        .filter(function() {
+                            if (!$(this).is(':visible')) {
+                                return false;
+                            }
+
+                            if (this === helpToggle[0]) {
+                                return false;
+                            }
+
+                            if (helpPaneElement && helpPaneElement.contains(this)) {
+                                return false;
+                            }
+
+                            return true;
+                        })
+                        .first();
+
+                    if (fallbackTarget.length) {
+                        fallbackTarget.trigger('focus');
+                    } else {
+                        helpToggle.trigger('blur');
+                    }
+                }
+
                 tokenLayout.toggleClass('ssc-help-collapsed', collapsed);
                 helpPane.attr('aria-hidden', collapsed ? 'true' : 'false');
 
