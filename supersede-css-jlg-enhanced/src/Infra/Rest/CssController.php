@@ -76,7 +76,10 @@ final class CssController extends BaseController
                 if ($raw_value !== null) {
                     $segment_payload = true;
                     if (!is_string($raw_value)) {
-                        return new WP_REST_Response(['ok' => false, 'message' => 'Invalid CSS segment.'], 400);
+                        return new WP_REST_Response([
+                            'ok' => false,
+                            'message' => __('Invalid CSS segment.', 'supersede-css-jlg'),
+                        ], 400);
                     }
 
                     $sanitized_value = $this->sanitizer->sanitizeCssSegment($raw_value);
@@ -108,7 +111,10 @@ final class CssController extends BaseController
             $append = false;
         } else {
             if (!is_string($css_raw)) {
-                return new WP_REST_Response(['ok' => false, 'message' => 'Invalid CSS.'], 400);
+                return new WP_REST_Response([
+                    'ok' => false,
+                    'message' => __('Invalid CSS.', 'supersede-css-jlg'),
+                ], 400);
             }
 
             $incoming_css = CssSanitizer::sanitize(wp_unslash($css_raw));
@@ -233,6 +239,9 @@ final class CssController extends BaseController
             \SSC\Infra\Logger::add('css_resetted', []);
         }
 
-        return new WP_REST_Response(['ok' => true, 'message' => 'All CSS options have been reset.']);
+        return new WP_REST_Response([
+            'ok' => true,
+            'message' => __('All CSS options have been reset.', 'supersede-css-jlg'),
+        ]);
     }
 }

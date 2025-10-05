@@ -177,3 +177,15 @@ msgstr "Échec de l'enregistrement du fond animé."
 #: assets/js/visual-effects.js:315
 msgid "Impossible d'appliquer l'effet ECG."
 msgstr "Impossible d'appliquer l'effet ECG."
+
+#: src/Infra/Rest/CssController.php:80
+msgid "Invalid CSS segment."
+msgstr "Segment CSS invalide."
+
+#: src/Infra/Rest/CssController.php:112
+msgid "Invalid CSS."
+msgstr "CSS invalide."
+
+#: src/Infra/Rest/CssController.php:238
+msgid "All CSS options have been reset."
+msgstr "Toutes les options CSS ont été réinitialisées."
