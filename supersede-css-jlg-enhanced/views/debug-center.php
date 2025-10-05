@@ -37,7 +37,37 @@ $css_revisions     = isset($css_revisions) && is_array($css_revisions) ? $css_re
             <div class="ssc-actions">
                 <button class="button button-primary" id="ssc-health-run"><?php esc_html_e('Lancer Health Check', 'supersede-css-jlg'); ?></button>
             </div>
-            <pre id="ssc-health-json" class="ssc-code" style="max-height:120px; margin-top:10px;"></pre>
+            <div id="ssc-health-panel" class="ssc-health-panel" style="margin-top:10px;">
+                <div class="ssc-health-panel__top" style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
+                    <p class="description" style="margin:0; flex:1;">
+                        <?php
+                        $site_health_link = '<a href="' . esc_url(admin_url('site-health.php')) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Santé du site', 'supersede-css-jlg') . '</a>';
+                        echo wp_kses_post(sprintf(
+                            /* translators: 1: admin URL to the Site Health screen. */
+                            __('Ce contrôle complète l’outil Santé du site de WordPress. Comparez les résultats ou ouvrez directement %1$s pour poursuivre le diagnostic.', 'supersede-css-jlg'),
+                            $site_health_link
+                        ));
+                        ?>
+                    </p>
+                    <div class="ssc-health-panel__actions" style="display:flex; gap:8px;">
+                        <button type="button" class="button button-secondary" id="ssc-health-copy" disabled>
+                            <?php esc_html_e('Copier le JSON', 'supersede-css-jlg'); ?>
+                        </button>
+                    </div>
+                </div>
+                <div id="ssc-health-error" class="ssc-health-error" style="display:none; margin-top:10px; padding:8px 12px; border-left:4px solid #dc2626; background:#fef2f2; color:#991b1b;"></div>
+                <div id="ssc-health-summary" class="ssc-health-summary" style="margin-top:10px;">
+                    <p id="ssc-health-empty-state" class="description" style="margin:0;">
+                        <?php esc_html_e('Aucun diagnostic lancé pour le moment.', 'supersede-css-jlg'); ?>
+                    </p>
+                    <p id="ssc-health-summary-meta" class="ssc-health-summary-meta" style="margin:6px 0 0; font-weight:600; display:none;"></p>
+                    <ul id="ssc-health-summary-list" class="ssc-health-list" style="margin:8px 0 0; padding-left:0; list-style:none; display:none;"></ul>
+                </div>
+                <details id="ssc-health-details" class="ssc-health-details" style="margin-top:12px;" hidden>
+                    <summary><?php esc_html_e('Afficher le JSON brut', 'supersede-css-jlg'); ?></summary>
+                    <pre id="ssc-health-json-raw" class="ssc-code" style="max-height:200px; margin-top:8px;"></pre>
+                </details>
+            </div>
         </div>
     </div>
 
