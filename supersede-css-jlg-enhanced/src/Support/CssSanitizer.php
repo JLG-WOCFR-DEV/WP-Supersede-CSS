@@ -1615,6 +1615,164 @@ final class CssSanitizer
         return (string) \preg_replace('/' . \preg_quote(self::PLACEHOLDER_PREFIX, '/') . '[A-Z0-9_]*__/', '', $css);
     }
 
+    /**
+     * @param mixed $presets
+     * @return array<int, array<string, mixed>>
+     */
+    public static function sanitizeVisualEffectsPresets($presets): array
+    {
+        if (!is_array($presets)) {
+            return [];
+        }
+
+        $sanitized = [];
+
+        foreach ($presets as $preset) {
+            if (!is_array($preset)) {
+                continue;
+            }
+
+            $id = isset($preset['id']) ? sanitize_key((string) $preset['id']) : '';
+            if ($id === '') {
+                continue;
+            }
+
+            $name = isset($preset['name']) ? sanitize_text_field((string) $preset['name']) : '';
+            if ($name !== '') {
+                if (function_exists('mb_substr')) {
+                    $name = trim((string) mb_substr($name, 0, 180));
+                } else {
+                    $name = trim(substr($name, 0, 180));
+                }
+            }
+
+            $type = isset($preset['type']) ? sanitize_key((string) $preset['type']) : '';
+            if ($type !== 'stars' && $type !== 'gradient') {
+                continue;
+            }
+
+            $settings = self::sanitizeVisualEffectsPresetSettings($type, $preset['settings'] ?? null);
+            if ($settings === null) {
+                continue;
+            }
+
+            $sanitized[] = [
+                'id' => $id,
+                'name' => $name,
+                'type' => $type,
+                'settings' => $settings,
+            ];
+        }
+
+        return $sanitized;
+    }
+
+    /**
+     * @param mixed $settings
+     */
+    private static function sanitizeVisualEffectsPresetSettings(string $type, $settings): ?array
+    {
+        if ($type === 'stars') {
+            if (!is_array($settings)) {
+                $settings = [];
+            }
+
+            $color = isset($settings['color']) ? sanitize_hex_color((string) $settings['color']) : null;
+            if ($color === null) {
+                $color = '#ffffff';
+            }
+
+            $count = isset($settings['count']) ? (int) $settings['count'] : 200;
+            if ($count < 10) {
+                $count = 10;
+            } elseif ($count > 5000) {
+                $count = 5000;
+            }
+
+            return [
+                'color' => $color,
+                'count' => $count,
+            ];
+        }
+
+        if ($type === 'gradient') {
+            if (!is_array($settings)) {
+                return null;
+            }
+
+            $angle = isset($settings['angle']) ? (int) $settings['angle'] : 135;
+            if ($angle < 0) {
+                $angle = 0;
+            } elseif ($angle > 360) {
+                $angle = 360;
+            }
+
+            $speed = isset($settings['speed']) ? (int) $settings['speed'] : 10;
+            if ($speed < 2) {
+                $speed = 2;
+            } elseif ($speed > 120) {
+                $speed = 120;
+            }
+
+            $stopsInput = isset($settings['stops']) && is_array($settings['stops']) ? $settings['stops'] : [];
+            $stops = [];
+            $seen = [];
+
+            foreach ($stopsInput as $stop) {
+                if (!is_array($stop)) {
+                    continue;
+                }
+
+                $color = isset($stop['color']) ? sanitize_hex_color((string) $stop['color']) : null;
+                if ($color === null) {
+                    continue;
+                }
+
+                $position = isset($stop['position']) ? (int) $stop['position'] : null;
+                if ($position === null) {
+                    continue;
+                }
+
+                if ($position < 0) {
+                    $position = 0;
+                } elseif ($position > 100) {
+                    $position = 100;
+                }
+
+                $hash = $color . '|' . $position;
+                if (isset($seen[$hash])) {
+                    continue;
+                }
+
+                $seen[$hash] = true;
+                $stops[] = [
+                    'color' => $color,
+                    'position' => $position,
+                ];
+
+                if (count($stops) >= 24) {
+                    break;
+                }
+            }
+
+            if (count($stops) < 2) {
+                return null;
+            }
+
+            usort($stops, static function (array $a, array $b): int {
+                return $a['position'] <=> $b['position'];
+            });
+
+            return [
+                'angle' => $angle,
+                'speed' => $speed,
+                'stops' => array_values($stops),
+            ];
+        }
+
+        return null;
+    }
+
     public static function sanitizePresetCollection(array $presets): array
     {
         self::resetValueNormalizationCache();
