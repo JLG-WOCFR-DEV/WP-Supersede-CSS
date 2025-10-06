@@ -190,7 +190,7 @@ body.ssc-no-scroll {
     text-transform: uppercase;
     font-weight: var(--ssc-font-weight-semibold);
     color: var(--ssc-muted);
-    letter-spacing: 0.5px;
+    letter-spacing: 0.05em;
 }
 
 @media (max-width: 960px) {
