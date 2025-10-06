@@ -120,9 +120,9 @@ final class CssController extends BaseController
             $incoming_css = CssSanitizer::sanitize(wp_unslash($css_raw));
         }
 
-        $existing_css = get_option($option_name, '');
-        $existing_css = is_string($existing_css) ? $existing_css : '';
-        $existing_css = CssSanitizer::sanitize($existing_css);
+        $stored_css = get_option($option_name, '');
+        $stored_css = is_string($stored_css) ? $stored_css : '';
+        $existing_css = CssSanitizer::sanitize($stored_css);
 
         if ($append) {
             if ($incoming_css !== '' && strpos($existing_css, $incoming_css) === false) {
@@ -132,6 +132,13 @@ final class CssController extends BaseController
             }
         } else {
             $css_to_store = $incoming_css;
+        }
+
+        if ($css_to_store === $existing_css && $stored_css === $existing_css) {
+            return new WP_REST_Response([
+                'ok' => true,
+                'unchanged' => true,
+            ], 200);
         }
 
         if ($option_name === 'ssc_tokens_css') {

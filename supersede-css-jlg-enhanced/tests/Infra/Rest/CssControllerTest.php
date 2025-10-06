@@ -153,4 +153,67 @@ final class CssControllerTest extends WP_UnitTestCase
         $this->assertFalse(get_option('ssc_css_cache'));
         $this->assertFalse(get_option('ssc_css_cache_meta'));
     }
+
+    public function test_save_css_skips_revision_and_cache_invalidation_when_unchanged(): void
+    {
+        $css = 'body { color: #222; }';
+        $initialResponse = $this->controller->saveCss($this->createRequest([
+            'css' => $css,
+        ]));
+
+        $this->assertSame(200, $initialResponse->get_status());
+
+        $revisionsBefore = get_option('ssc_css_revisions', []);
+        update_option('ssc_css_cache', 'cached', false);
+        update_option('ssc_css_cache_meta', ['version' => 'legacy'], false);
+
+        $secondResponse = $this->controller->saveCss($this->createRequest([
+            'css' => $css,
+        ]));
+
+        $this->assertSame(200, $secondResponse->get_status());
+        $data = $secondResponse->get_data();
+        $this->assertIsArray($data);
+        $this->assertArrayHasKey('ok', $data);
+        $this->assertTrue($data['ok']);
+        $this->assertArrayHasKey('unchanged', $data);
+        $this->assertTrue($data['unchanged']);
+        $this->assertSame($revisionsBefore, get_option('ssc_css_revisions', []));
+        $this->assertSame('cached', get_option('ssc_css_cache'));
+        $this->assertSame(['version' => 'legacy'], get_option('ssc_css_cache_meta'));
+    }
+
+    public function test_save_tokens_skips_processing_when_css_matches_existing(): void
+    {
+        $tokenCss = ":root {\n    --primary-color: #112233;\n}";
+
+        $firstResponse = $this->controller->saveCss($this->createRequest([
+            'option_name' => 'ssc_tokens_css',
+            'css' => $tokenCss,
+        ]));
+
+        $this->assertSame(200, $firstResponse->get_status());
+
+        $registryBefore = get_option('ssc_tokens_registry');
+        $tokensCssBefore = get_option('ssc_tokens_css');
+        $revisionsBefore = get_option('ssc_css_revisions', []);
+        update_option('ssc_css_cache', 'cached', false);
+        update_option('ssc_css_cache_meta', ['version' => 'legacy'], false);
+
+        $secondResponse = $this->controller->saveCss($this->createRequest([
+            'option_name' => 'ssc_tokens_css',
+            'css' => $tokenCss,
+        ]));
+
+        $this->assertSame(200, $secondResponse->get_status());
+        $data = $secondResponse->get_data();
+        $this->assertIsArray($data);
+        $this->assertArrayHasKey('unchanged', $data);
+        $this->assertTrue($data['unchanged']);
+        $this->assertSame($registryBefore, get_option('ssc_tokens_registry'));
+        $this->assertSame($tokensCssBefore, get_option('ssc_tokens_css'));
+        $this->assertSame($revisionsBefore, get_option('ssc_css_revisions', []));
+        $this->assertSame('cached', get_option('ssc_css_cache'));
+        $this->assertSame(['version' => 'legacy'], get_option('ssc_css_cache_meta'));
+    }
 }
