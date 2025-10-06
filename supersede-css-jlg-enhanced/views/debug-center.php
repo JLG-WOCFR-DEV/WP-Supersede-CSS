@@ -35,9 +35,11 @@ $css_revisions     = isset($css_revisions) && is_array($css_revisions) ? $css_re
         <div class="ssc-pane">
             <h2><?php echo esc_html__('Actions Globales', 'supersede-css-jlg'); ?></h2>
             <div class="ssc-actions">
-                <button class="button button-primary" id="ssc-health-run"><?php esc_html_e('Lancer Health Check', 'supersede-css-jlg'); ?></button>
+                <button class="button button-primary" id="ssc-health-run" aria-controls="ssc-health-summary" aria-expanded="false">
+                    <?php esc_html_e('Lancer Health Check', 'supersede-css-jlg'); ?>
+                </button>
             </div>
-            <div id="ssc-health-panel" class="ssc-health-panel" style="margin-top:10px;">
+            <div id="ssc-health-panel" class="ssc-health-panel" style="margin-top:10px;" aria-live="polite">
                 <div class="ssc-health-panel__top" style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
                     <p class="description" style="margin:0; flex:1;">
                         <?php
@@ -55,12 +57,13 @@ $css_revisions     = isset($css_revisions) && is_array($css_revisions) ? $css_re
                         </button>
                     </div>
                 </div>
-                <div id="ssc-health-error" class="ssc-health-error" style="display:none; margin-top:10px; padding:8px 12px; border-left:4px solid #dc2626; background:#fef2f2; color:#991b1b;"></div>
-                <div id="ssc-health-summary" class="ssc-health-summary" style="margin-top:10px;">
-                    <p id="ssc-health-empty-state" class="description" style="margin:0;">
+                <div id="ssc-health-error" class="ssc-health-error" role="alert" aria-live="assertive" style="display:none; margin-top:10px; padding:8px 12px; border-left:4px solid #dc2626; background:#fef2f2; color:#991b1b;"></div>
+                <div id="ssc-health-summary" class="ssc-health-summary" style="margin-top:10px;" role="status" aria-live="polite">
+                    <p id="ssc-health-empty-state" class="description" style="margin:0;" aria-live="polite">
                         <?php esc_html_e('Aucun diagnostic lancé pour le moment.', 'supersede-css-jlg'); ?>
                     </p>
                     <p id="ssc-health-summary-meta" class="ssc-health-summary-meta" style="margin:6px 0 0; font-weight:600; display:none;"></p>
+                    <p id="ssc-health-summary-generated" class="ssc-health-summary-generated" style="margin:4px 0 0; color:#334155; display:none;"></p>
                     <ul id="ssc-health-summary-list" class="ssc-health-list" style="margin:8px 0 0; padding-left:0; list-style:none; display:none;"></ul>
                 </div>
                 <details id="ssc-health-details" class="ssc-health-details" style="margin-top:12px;" hidden>
