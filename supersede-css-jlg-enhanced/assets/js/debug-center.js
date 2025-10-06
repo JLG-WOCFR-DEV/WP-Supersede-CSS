@@ -27,12 +27,23 @@
         const healthPanel = $('#ssc-health-panel');
         const summaryList = $('#ssc-health-summary-list');
         const summaryMeta = $('#ssc-health-summary-meta');
+        const summaryGenerated = $('#ssc-health-summary-generated');
         const emptyState = $('#ssc-health-empty-state');
         const detailsPanel = $('#ssc-health-details');
         const errorNotice = $('#ssc-health-error');
         const copyButton = $('#ssc-health-copy');
 
         let lastHealthPayload = '';
+
+        const locale = (document.documentElement && document.documentElement.lang)
+            ? document.documentElement.lang
+            : ((navigator.language || navigator.userLanguage || 'en-US'));
+        const relativeTimeFormatter = (typeof Intl !== 'undefined' && typeof Intl.RelativeTimeFormat === 'function')
+            ? new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+            : null;
+        const dateTimeFormatter = (typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat === 'function')
+            ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' })
+            : null;
 
         const severityColors = {
             success: '#15803d',
@@ -57,6 +68,69 @@
             plugin_integrity: translate('healthLabelIntegrity', 'Intégrité du plugin')
         };
 
+        const formatDateTime = (isoString, fallbackIso) => {
+            const candidate = (typeof isoString === 'string' && isoString.length)
+                ? isoString
+                : ((typeof fallbackIso === 'string' && fallbackIso.length) ? fallbackIso : null);
+
+            if (!candidate) {
+                return null;
+            }
+
+            const parsed = new Date(candidate);
+
+            if (Number.isNaN(parsed.getTime())) {
+                return null;
+            }
+
+            if (dateTimeFormatter) {
+                try {
+                    return dateTimeFormatter.format(parsed);
+                } catch (err) {
+                    // Fallback to native formatting below.
+                }
+            }
+
+            try {
+                return parsed.toLocaleString(locale);
+            } catch (err) {
+                return parsed.toISOString();
+            }
+        };
+
+        const formatDuration = (seconds) => {
+            if (typeof seconds !== 'number' || Number.isNaN(seconds) || seconds <= 0) {
+                return translate('durationLessThanSecond', 'moins d’une seconde');
+            }
+
+            const units = [
+                { limit: 60, divisor: 1, unit: 'second', fallback: 'durationSeconds' },
+                { limit: 3600, divisor: 60, unit: 'minute', fallback: 'durationMinutes' },
+                { limit: 86400, divisor: 3600, unit: 'hour', fallback: 'durationHours' },
+                { limit: Infinity, divisor: 86400, unit: 'day', fallback: 'durationDays' },
+            ];
+
+            for (let i = 0; i < units.length; i += 1) {
+                const { limit, divisor, unit, fallback } = units[i];
+
+                if (seconds < limit) {
+                    const value = Math.max(1, Math.round(seconds / divisor));
+
+                    if (relativeTimeFormatter) {
+                        try {
+                            return relativeTimeFormatter.format(value, unit);
+                        } catch (err) {
+                            // Continue to fallback formatting.
+                        }
+                    }
+
+                    return sprintf(translate(fallback, '%d'), value);
+                }
+            }
+
+            return sprintf(translate('durationDays', '%d'), Math.round(seconds / 86400));
+        };
+
         const updateCopyButton = (payload) => {
             if (!copyButton.length) {
                 return;
@@ -67,12 +141,24 @@
         };
 
         const resetPanels = () => {
+            if (healthRunButton.length) {
+                healthRunButton.attr('aria-expanded', 'false');
+            }
+
+            if (healthPanel.length) {
+                healthPanel.attr('aria-busy', 'false');
+            }
+
             if (errorNotice.length) {
                 errorNotice.hide().text('');
             }
 
             if (summaryMeta.length) {
                 summaryMeta.text('').hide();
+            }
+
+            if (summaryGenerated.length) {
+                summaryGenerated.text('').hide();
             }
 
             if (summaryList.length) {
@@ -100,6 +186,8 @@
                 return;
             }
 
+            healthPanel.attr('aria-busy', 'true');
+
             if (errorNotice.length) {
                 errorNotice.hide().text('');
             }
@@ -110,6 +198,10 @@
 
             if (summaryMeta.length) {
                 summaryMeta.text('').hide();
+            }
+
+            if (summaryGenerated.length) {
+                summaryGenerated.text('').hide();
             }
 
             if (summaryList.length) {
@@ -317,7 +409,19 @@
                 return;
             }
 
-            const items = flattenResponse(response);
+            const safeResponse = (response && typeof response === 'object' && !Array.isArray(response))
+                ? { ...response }
+                : {};
+
+            const meta = (safeResponse.meta && typeof safeResponse.meta === 'object')
+                ? { ...safeResponse.meta }
+                : null;
+
+            if (Object.prototype.hasOwnProperty.call(safeResponse, 'meta')) {
+                delete safeResponse.meta;
+            }
+
+            const items = flattenResponse(safeResponse);
 
             summaryList.empty();
 
@@ -430,11 +534,91 @@
 
                 summaryMeta.text(parts.join(' • ')).show();
             }
+
+            if (summaryGenerated.length) {
+                if (meta) {
+                    const messages = [];
+                    const generatedLabel = formatDateTime(meta.generated_at, meta.generated_at_gmt);
+
+                    if (generatedLabel) {
+                        messages.push(sprintf(translate('healthSummaryGeneratedAt', 'Diagnostic généré le %s'), generatedLabel));
+                    }
+
+                    const ttlValue = Number(meta.cache_ttl);
+                    const ttl = Number.isFinite(ttlValue) && ttlValue > 0 ? ttlValue : 0;
+                    const secondsValue = Number(meta.seconds_until_expiration);
+                    const secondsRemaining = Number.isFinite(secondsValue) && secondsValue > 0
+                        ? secondsValue
+                        : null;
+                    const cacheHit = meta.cache_hit === true
+                        || meta.cache_hit === 1
+                        || meta.cache_hit === '1'
+                        || meta.cache_hit === 'true';
+
+                    if (ttl === 0) {
+                        if (cacheHit) {
+                            messages.push(translate('healthSummaryCacheHitNoExpiry', 'Réponse servie depuis le cache.'));
+                        }
+
+                        messages.push(translate('healthSummaryCacheDisabled', 'Cache désactivé pour ce diagnostic.'));
+
+                        if (!cacheHit) {
+                            messages.push(translate('healthSummaryCacheMiss', 'Réponse recalculée à la demande.'));
+                        }
+                    } else if (cacheHit) {
+                        if (secondsRemaining !== null) {
+                            messages.push(sprintf(
+                                translate('healthSummaryCacheHit', 'Réponse servie depuis le cache (expire dans %s).'),
+                                formatDuration(secondsRemaining)
+                            ));
+                        } else {
+                            const expiresLabel = formatDateTime(meta.cache_expires_at, meta.cache_expires_at_gmt);
+
+                            if (expiresLabel) {
+                                messages.push(sprintf(
+                                    translate('healthSummaryCacheHitExpiresAt', 'Réponse servie depuis le cache (expiration le %s).'),
+                                    expiresLabel
+                                ));
+                            } else {
+                                messages.push(translate('healthSummaryCacheHitNoExpiry', 'Réponse servie depuis le cache.'));
+                            }
+                        }
+                    } else {
+                        messages.push(translate('healthSummaryCacheMiss', 'Réponse recalculée à la demande.'));
+                    }
+
+                    const uniqueMessages = messages.filter((message, index, array) => (
+                        typeof message === 'string'
+                        && message.length
+                        && array.indexOf(message) === index
+                    ));
+
+                    if (uniqueMessages.length) {
+                        summaryGenerated.text(uniqueMessages.join(' • ')).show();
+                    } else {
+                        summaryGenerated.text('').hide();
+                    }
+                } else {
+                    summaryGenerated.text('').hide();
+                }
+            }
+
+            if (healthRunButton.length) {
+                healthRunButton.attr('aria-expanded', items.length ? 'true' : 'false');
+            }
         };
 
         const handleSuccess = (response) => {
             if (errorNotice.length) {
                 errorNotice.hide().text('');
+            }
+
+            if (healthPanel.length) {
+                healthPanel.attr('aria-busy', 'false');
+            }
+
+            if (healthRunButton.length) {
+                healthRunButton.attr('aria-busy', 'false');
             }
 
             renderSummary(response);
@@ -458,8 +642,20 @@
                 errorNotice.text(message).show();
             }
 
+            if (healthPanel.length) {
+                healthPanel.attr('aria-busy', 'false');
+            }
+
+            if (healthRunButton.length) {
+                healthRunButton.attr('aria-busy', 'false');
+            }
+
             if (summaryMeta.length) {
                 summaryMeta.text('').hide();
+            }
+
+            if (summaryGenerated.length) {
+                summaryGenerated.text('').hide();
             }
 
             if (summaryList.length) {
@@ -480,6 +676,10 @@
 
             updateCopyButton('');
             lastHealthPayload = '';
+
+            if (healthRunButton.length) {
+                healthRunButton.attr('aria-expanded', 'false');
+            }
         };
 
         if (copyButton.length) {
@@ -513,7 +713,7 @@
 
             healthRunButton.on('click', function() {
                 const btn = $(this);
-                btn.text(translate('healthCheckCheckingLabel', 'Vérification en cours…')).prop('disabled', true);
+                btn.text(translate('healthCheckCheckingLabel', 'Vérification en cours…')).prop('disabled', true).attr('aria-busy', 'true');
 
                 setLoadingState();
 
@@ -528,7 +728,7 @@
                     console.error('Health Check Error:', err);
                     handleError(translate('healthCheckErrorMessage', 'Une erreur est survenue.'));
                 }).always(() => {
-                    btn.text(translate('healthCheckRunLabel', 'Lancer Health Check')).prop('disabled', false);
+                    btn.text(translate('healthCheckRunLabel', 'Lancer Health Check')).prop('disabled', false).attr('aria-busy', 'false');
                 });
             });
         }
