@@ -13,6 +13,41 @@ Cette note compare Supersede CSS JLG (Enhanced) à trois solutions professionnel
 | Prévisualisation | Iframe responsive, blocs Gutenberg dédiés | Éditeur visuel complet | Canvas pixel-perfect avec breakpoints | Preview en direct dans le canvas design |
 | Automatisation | Export CSS/JSON, pas de workflow CI natif | Modèles, kit marketing | Publication/hosting, CMS dynamique | Plugins pour exporter vers code/variables |
 | Tarification | Gratuit (GPL) | Abonnement annuel | Abonnement mensuel | Abonnement + plugins payants |
+| Extensibilité | Hooks & filtres WordPress, code source accessible | Addons tiers dans l'écosystème Elementor | API REST + intégrations Zapier/Integromat | API, plugins communautaires |
+| Gouvernance & QA | Révisions WordPress, contrôle manuel | Historique des pages, pas de logs design tokens | Historique des versions, backups automatiques | Versioning robuste, tests plugins |
+
+## Points de différenciation détaillés
+
+### Supersede CSS JLG (Enhanced)
+- **Ancrage WordPress natif** : capitalise sur l'écosystème WP (capabilities, REST, Gutenberg) pour un déploiement rapide dans des workflows éditoriaux existants.
+- **Focus sur les tokens** : propose des studios spécialisés (Shadow, Gradient, Tron Grid…) qui dépassent les simples palettes globales offertes par la plupart des builders.
+- **Contrôle développeur** : production d'un CSS propre et versionnable, idéal pour les équipes techniques qui souhaitent garder la main sur le code final.
+
+### Elementor Pro
+- **Richesse UI immédiate** : bibliothèque étendue de widgets et templates prêts à l'emploi permettant de livrer vite des interfaces marketing.
+- **Collaboration basic mais familière** : s'appuie sur les rôles WordPress et les révisions, ce qui rassure les équipes habituées à WP.
+- **Limites tokens** : peu de granularité sur les styles globaux, ce qui complexifie la maintenance d'un design system à grande échelle.
+
+### Webflow
+- **Expérience visuelle premium** : éditeur canvas pixel-perfect, interactions riches et publication automatisée.
+- **Workflow intégré** : CMS dynamique, hosting, publication et sauvegardes versions incluses.
+- **Design system rudimentaire** : pas de gestion native des tokens, dépendance aux classes et combos pour maintenir la cohérence.
+
+### Figma + plugins Design Tokens
+- **Collaboration temps réel** : commentaires, curseurs multiples, historique détaillé adapté aux grandes équipes.
+- **Écosystème plugins** : modules pour synchroniser vers Style Dictionary, GitHub, VSCode, etc.
+- **Déploiement web non natif** : nécessite des bridges pour connecter les tokens à WordPress ou aux front-end frameworks.
+
+## Manques identifiés face aux applications pro
+
+| Thématique | Manque actuel dans Supersede CSS | Attendu par les apps pro |
+| --- | --- | --- |
+| Collaboration | Pas de commentaires contextuels ni d'historique fin des modifications | Figma et Webflow offrent historique détaillé et revue collaborative |
+| Visualisation | Iframe responsive limitée | Webflow/Elementor proposent previews multi-device avec interactions |
+| Gouvernance | Pas de workflow d'approbation ni d'environnements | Webflow dispose de staging, Figma de permissions sur les fichiers |
+| Distribution tokens | Export CSS/JSON uniquement | Figma + plugins et Webflow s'interfacent avec Style Dictionary, variables multiplateformes |
+| Automatisation | Absence de triggers CI natifs | Webflow expose webhooks/CLI, Figma des API |
+| Qualité | Pas d'outils d'audit intégrés | Webflow Audit et plugins Figma offrent vérifications accessibilité/performance |
 
 ## Forces actuelles face aux apps pro
 
@@ -24,29 +59,39 @@ Cette note compare Supersede CSS JLG (Enhanced) à trois solutions professionnel
 ## Axes d'amélioration prioritaires
 
 1. **Expérience collaborative et workflows**
-   - Ajout d'une _Activity Log_ listant les modifications (création/édition de tokens, presets, CSS importé) avec auteurs et timestamps pour se rapprocher de l'historique détaillé offert par Figma ou Webflow. Voir la note dédiée : [_Gouvernance des tokens et workflow d'approbation_](./TOKEN-GOVERNANCE-AND-DEBUG.md).
-   - Intégration d'un système de commentaires/contextualisation sur chaque token ou preset, afin de favoriser la revue entre designers et développeurs.
-   - Support natif de _drafts_ ou d'environnements (staging vs production) pour éviter de pousser directement les changements sur un site live.
+   - Ajouter un _Activity Log_ structuré (filtrable par ressource) listant les modifications avec auteurs et timestamps afin de rivaliser avec l'historique détaillé de Figma/Webflow. Voir la note dédiée : [_Gouvernance des tokens et workflow d'approbation_](./TOKEN-GOVERNANCE-AND-DEBUG.md).
+   - Intégrer des commentaires inline sur chaque token/preset et permettre la mention d'utilisateurs WordPress pour favoriser la revue croisée.
+   - Introduire un mode _draft_ et une gestion multi-environnements (staging, production) avec promotion contrôlée des changements.
 
-2. **Prévisualisation avancée**  
-   - Introduire un _Device Lab_ inspiré d'Elementor/Webflow : pré-réglages d'écrans (iPhone, iPad, desktop, ultra-wide) et simulation des interactions (hover/tap) sans quitter l'éditeur.  
-   - Permettre l'import d'URL externes dans l'iframe pour appliquer les tokens/presets sur des pages existantes, à la manière des _live previews_ de Webflow.
+2. **Prévisualisation avancée**
+   - Déployer un _Device Lab_ inspiré d'Elementor/Webflow : presets d'écrans (mobile, tablette, desktop, ultra-wide), simulation d'interactions (hover, tap) et bascule rapide entre breakpoints.
+   - Autoriser l'import d'URL externes dans l'iframe pour appliquer dynamiquement les tokens sur des pages existantes (_live preview_).
+   - Proposer un mode _before/after_ pour visualiser l'impact des tokens sur un thème WordPress réel.
 
-3. **Design tokens multi-plateforme**  
-   - Export/bridge vers des formats standards (Style Dictionary, Tokens Studio) pour faciliter la synchro avec Figma et les pipelines front-end.  
-   - Génération automatique de variables CSS personnalisées (`--ssc-color-primary`) et de thèmes JSON (Android, iOS) pour aligner le plugin sur les pratiques de design system des apps pro.
+3. **Design tokens multi-plateforme**
+   - Exporter vers des formats standards (Style Dictionary, Tokens Studio) et générer des _packages_ de variables CSS (`--ssc-color-primary`), JSON (Android/iOS) ou TS (Design Tokens W3C).
+   - Fournir un connecteur Figma (REST + plugin) pour synchroniser les tokens depuis/vers Supersede.
+   - Mettre en place un validateur de cohérence (noms, typage, contraintes) avant export pour limiter les régressions.
 
-4. **Automatisation & CI/CD**  
-   - Fournir un package CLI ou des scripts npm pour déclencher l'export des tokens/CSS en CI, similaire aux hooks de publication Webflow.  
-   - Ajouter des webhooks WordPress (REST) pour déclencher des builds front-end lorsque les tokens changent.
+4. **Automatisation & CI/CD**
+   - Publier un package CLI ou scripts npm déclenchant les exports et permettant l'intégration dans GitHub Actions/GitLab CI.
+   - Exposer des webhooks WordPress (REST) pour notifier les pipelines front-end lors de la modification des tokens/presets.
+   - Ajouter une API de _diff_ JSON pour faciliter la revue de modifications dans les PR (similarité avec _design token diff_ de Style Dictionary).
 
-5. **Onboarding & accompagnement**  
-   - Créer un _guided tour_ interactif façon Figma/Elementor avec étapes contextualisées pour chaque module.  
-   - Ajouter une bibliothèque de _templates_ (landing, blog, dashboard) utilisant les presets générés par défaut pour prouver la valeur immédiatement.
+5. **Onboarding & accompagnement**
+   - Créer un _guided tour_ interactif avec étapes conditionnelles (première configuration, import, création de preset).
+   - Fournir une bibliothèque de _starter kits_ (landing marketing, blog, dashboard SaaS) utilisant les presets par défaut.
+   - Ajouter une base de connaissances intégrée (tooltips contextuels, micro copies inspirées de Figma Education).
 
-6. **Qualité et accessibilité**  
-   - Intégrer un validateur d'accessibilité (contraste WCAG, focus states) dans les éditeurs de couleurs/effets, comme Webflow Audit.  
-   - Proposer des _lint rules_ ou recommandations (ex. limiter les animations pour préférences de mouvement réduites).
+6. **Qualité, accessibilité et performance**
+   - Intégrer un audit WCAG (contraste, focus visible, ratios de taille de texte) directement dans les éditeurs de couleurs et composants.
+   - Ajouter des recommandations _motion-safe_ (désactivation des animations pour `prefers-reduced-motion`) et des garde-fous sur les blur/intensités.
+   - Mesurer l'impact performance (poids CSS généré, duplication) et proposer des alertes comme le fait Webflow Audit.
+
+7. **Monétisation et offre produit**
+   - Préparer une édition « Team » payante (support prioritaire, rôles avancés, quotas d'environnements) pour aligner l'offre sur les standards pro.
+   - Documenter les compatibilités avec des plugins populaires (ACF, WooCommerce) afin de rassurer les agences.
+   - Ouvrir un programme partenaires/agences avec benefits (listing annuaire, support dédié) pour rivaliser avec Elementor Experts.
 
 ## Roadmap suggérée
 
