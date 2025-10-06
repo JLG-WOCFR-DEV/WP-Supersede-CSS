@@ -23,9 +23,9 @@ Cette note compare Supersede CSS JLG (Enhanced) à trois solutions professionnel
 
 ## Axes d'amélioration prioritaires
 
-1. **Expérience collaborative et workflows**  
-   - Ajout d'une _Activity Log_ listant les modifications (création/édition de tokens, presets, CSS importé) avec auteurs et timestamps pour se rapprocher de l'historique détaillé offert par Figma ou Webflow.  
-   - Intégration d'un système de commentaires/contextualisation sur chaque token ou preset, afin de favoriser la revue entre designers et développeurs.  
+1. **Expérience collaborative et workflows**
+   - Ajout d'une _Activity Log_ listant les modifications (création/édition de tokens, presets, CSS importé) avec auteurs et timestamps pour se rapprocher de l'historique détaillé offert par Figma ou Webflow. Voir la note dédiée : [_Gouvernance des tokens et workflow d'approbation_](./TOKEN-GOVERNANCE-AND-DEBUG.md).
+   - Intégration d'un système de commentaires/contextualisation sur chaque token ou preset, afin de favoriser la revue entre designers et développeurs.
    - Support natif de _drafts_ ou d'environnements (staging vs production) pour éviter de pousser directement les changements sur un site live.
 
 2. **Prévisualisation avancée**  
