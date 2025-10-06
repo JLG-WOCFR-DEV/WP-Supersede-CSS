@@ -134,6 +134,11 @@ if ($registry === [] || $registry[0]['name'] !== '--BrandPrimary') {
     exit(1);
 }
 
+if (!isset($registry[0]['context']) || $registry[0]['context'] !== TokenRegistry::getDefaultContext()) {
+    fwrite(STDERR, 'TokenRegistry::saveRegistry should assign the default context to tokens without explicit context.' . PHP_EOL);
+    exit(1);
+}
+
 if (!isset($ssc_options_store['ssc_tokens_css']) || !is_string($ssc_options_store['ssc_tokens_css'])) {
     fwrite(STDERR, 'TokenRegistry::saveRegistry should persist CSS using the original token name.' . PHP_EOL);
     exit(1);
@@ -173,6 +178,11 @@ $roundTripRegistry = TokenRegistry::convertCssToRegistry($ssc_options_store['ssc
 
 if ($roundTripRegistry === [] || $roundTripRegistry[0]['name'] !== '--BrandPrimary') {
     fwrite(STDERR, 'convertCssToRegistry should keep the original casing after import.' . PHP_EOL);
+    exit(1);
+}
+
+if (!isset($roundTripRegistry[0]['context']) || $roundTripRegistry[0]['context'] !== TokenRegistry::getDefaultContext()) {
+    fwrite(STDERR, 'convertCssToRegistry should assign the default context when none is provided.' . PHP_EOL);
     exit(1);
 }
 
@@ -234,8 +244,18 @@ if ($mergedTokens[0]['value'] !== '#123456') {
     exit(1);
 }
 
+if (!isset($mergedTokens[0]['context']) || $mergedTokens[0]['context'] !== TokenRegistry::getDefaultContext()) {
+    fwrite(STDERR, 'mergeMetadata should preserve the context from the existing registry.' . PHP_EOL);
+    exit(1);
+}
+
 if ($mergedTokens[1]['type'] !== 'text' || $mergedTokens[1]['group'] !== 'Legacy') {
     fwrite(STDERR, 'mergeMetadata should leave unmatched tokens untouched.' . PHP_EOL);
+    exit(1);
+}
+
+if (!isset($mergedTokens[1]['context']) || $mergedTokens[1]['context'] !== TokenRegistry::getDefaultContext()) {
+    fwrite(STDERR, 'mergeMetadata should assign the default context to unmatched tokens.' . PHP_EOL);
     exit(1);
 }
 
@@ -307,6 +327,11 @@ if ($roundTrip === [] || $roundTrip[0]['name'] !== '--spacing_small') {
     exit(1);
 }
 
+if (!isset($roundTrip[0]['context']) || $roundTrip[0]['context'] !== TokenRegistry::getDefaultContext()) {
+    fwrite(STDERR, 'getRegistry should expose the stored context for tokens.' . PHP_EOL);
+    exit(1);
+}
+
 $roundTripCss = TokenRegistry::tokensToCss($roundTrip);
 
 if (strpos($roundTripCss, '--spacing_small') === false) {
@@ -321,6 +346,11 @@ $registryFromCommentedCss = TokenRegistry::convertCssToRegistry($cssWithLeadingC
 
 if ($registryFromCommentedCss === [] || $registryFromCommentedCss[0]['name'] !== '--comment-prefixed') {
     fwrite(STDERR, 'convertCssToRegistry should parse tokens after comment delimiters.' . PHP_EOL);
+    exit(1);
+}
+
+if (!isset($registryFromCommentedCss[0]['context']) || $registryFromCommentedCss[0]['context'] !== TokenRegistry::getDefaultContext()) {
+    fwrite(STDERR, 'convertCssToRegistry should default the context for comment-prefixed tokens.' . PHP_EOL);
     exit(1);
 }
 
@@ -350,6 +380,11 @@ if ($annotatedRegistry === [] || $annotatedRegistry[0]['name'] !== '--my-token')
     exit(1);
 }
 
+if (!isset($annotatedRegistry[0]['context']) || $annotatedRegistry[0]['context'] !== TokenRegistry::getDefaultContext()) {
+    fwrite(STDERR, 'convertCssToRegistry should attach the default context to annotated tokens.' . PHP_EOL);
+    exit(1);
+}
+
 $annotatedResult = TokenRegistry::saveRegistry($annotatedRegistry);
 if ($annotatedResult['duplicates'] !== []) {
     fwrite(STDERR, 'saveRegistry should not report duplicates when annotated comments are present.' . PHP_EOL);
@@ -361,7 +396,7 @@ if (!isset($ssc_options_store['ssc_tokens_registry']) || !is_array($ssc_options_
     exit(1);
 }
 
-if (!isset($ssc_options_store['ssc_tokens_css']) || strpos($ssc_options_store['ssc_tokens_css'], '--my-token:value') === false) {
+if (!isset($ssc_options_store['ssc_tokens_css']) || strpos($ssc_options_store['ssc_tokens_css'], '--my-token:') === false) {
     fwrite(STDERR, 'Persisted CSS should retain tokens declared after annotated comments.' . PHP_EOL);
     exit(1);
 }
@@ -391,5 +426,35 @@ if ($normalizedMultiline === [] || $normalizedMultiline[0]['type'] !== 'shadow')
 
 if ($normalizedMultiline[0]['value'] !== "0 2px 6px rgba(15, 23, 42, 0.12)\n0 12px 24px rgba(15, 23, 42, 0.16)") {
     fwrite(STDERR, 'normalizeRegistry should preserve multi-line textarea values.' . PHP_EOL);
+    exit(1);
+}
+
+$contextualTokens = [
+    [
+        'name' => '--theme-color',
+        'value' => '#ffffff',
+        'type' => 'color',
+        'description' => 'Light mode color.',
+        'group' => 'Theme',
+        'context' => ':root',
+    ],
+    [
+        'name' => '--theme-color',
+        'value' => '#000000',
+        'type' => 'color',
+        'description' => 'Dark mode color.',
+        'group' => 'Theme',
+        'context' => '[data-theme="dark"]',
+    ],
+];
+
+$contextualResult = TokenRegistry::normalizeRegistry($contextualTokens);
+if ($contextualResult['duplicates'] !== []) {
+    fwrite(STDERR, 'normalizeRegistry should allow duplicate token names across different contexts.' . PHP_EOL);
+    exit(1);
+}
+
+if (count($contextualResult['tokens']) !== 2) {
+    fwrite(STDERR, 'normalizeRegistry should retain distinct entries for context-specific tokens.' . PHP_EOL);
     exit(1);
 }

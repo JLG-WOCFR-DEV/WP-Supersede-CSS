@@ -19,6 +19,8 @@ class Tokens extends AbstractPage
             'tokens_registry' => $registry,
             'tokens_css' => TokenRegistry::tokensToCss($registry),
             'token_types' => TokenRegistry::getSupportedTypes(),
+            'token_contexts' => TokenRegistry::getSupportedContexts(),
+            'default_context' => TokenRegistry::getDefaultContext(),
         ]);
     }
 }

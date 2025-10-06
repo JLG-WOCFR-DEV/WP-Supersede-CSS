@@ -22,7 +22,7 @@
         });
 
         for (let i = 1; i <= Math.min(12, cols * 2); i++) {
-            preview.append(`<div style="background:var(--ssc-bg); padding:12px; border-radius:8px; text-align:center;">${i}</div>`);
+            preview.append(`<div class="ssc-grid-preview-cell">${i}</div>`);
         }
     }
 

@@ -79,6 +79,17 @@ class CssSanitizerTest extends WP_UnitTestCase
         $this->assertStringNotContainsString('behavior', $sanitizedKeyframes);
     }
 
+    public function test_container_rule_preserves_container_properties(): void
+    {
+        $css = '@container layout (min-width: 500px) { .card { container-type: inline-size; container-name: layout; } }';
+        $sanitized = CssSanitizer::sanitize($css);
+
+        $this->assertSame(
+            '@container layout (min-width: 500px) {.card {container-type:inline-size; container-name:layout}}',
+            $sanitized
+        );
+    }
+
     public function test_text_wrap_and_text_size_adjust_are_preserved(): void
     {
         $css = '.hero { text-wrap: balance; text-size-adjust: 100%; }';
