@@ -89,7 +89,7 @@ final class SystemController extends BaseController
     private function buildResponseData(): array
     {
         $assets_to_check = [
-            'css/admin.css', 'css/ux.css', 'js/ux.js', 'js/utilities.js',
+            'css/foundation.css', 'css/admin.css', 'css/ux.css', 'js/ux.js', 'js/utilities.js',
             'codemirror/lib/codemirror.js', 'codemirror/lib/codemirror.css'
         ];
 
