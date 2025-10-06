@@ -134,3 +134,11 @@ Supersede CSS JLG (Enhanced) est distribué sous licence [GPLv2 ou ultérieure](
 ## Contribuer
 
 Les contributions sont les bienvenues ! Forkez le projet, créez une branche avec votre fonctionnalité ou correction, puis ouvrez une pull request. Pour les changements majeurs, créez d’abord une issue afin d’en discuter.
+
+## Pistes d'amélioration
+
+- **Mode « starter site »** : proposer des scénarios guidés pour générer la structure CSS complète d’un nouveau site (tokens, presets, grilles) en quelques étapes.
+- **Assistant IA contextuel** : intégrer un panel facultatif exploitant l’API OpenAI pour suggérer des classes ou corriger automatiquement le CSS généré.
+- **Analyse de performance CSS** : ajouter un module qui mesure la taille et la couverture du CSS produit, avec suggestions de réduction et alertes sur les sélecteurs orphelins.
+- **Marketplace de presets** : permettre l’import direct de presets partagés par la communauté via une galerie en ligne avec notes et prévisualisations.
+- **Export Figma** : fournir un connecteur pour synchroniser tokens et styles Supersede avec une bibliothèque de composants Figma, afin de garder design et développement alignés.
