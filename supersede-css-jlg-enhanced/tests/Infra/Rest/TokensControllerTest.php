@@ -37,6 +37,8 @@ final class TokensControllerTest extends WP_UnitTestCase
         $this->assertArrayHasKey('tokens', $data);
         $this->assertArrayHasKey('css', $data);
         $this->assertArrayHasKey('types', $data);
+        $this->assertNotEmpty($data['tokens']);
+        $this->assertArrayHasKey('context', $data['tokens'][0]);
     }
 
     public function test_save_tokens_rejects_duplicates(): void
