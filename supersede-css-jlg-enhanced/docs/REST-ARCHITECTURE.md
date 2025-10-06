@@ -7,7 +7,7 @@ Ce plugin expose ses endpoints via une série de contrôleurs spécialisés situ
 - `PresetsController` : gestion des presets et des presets Avatar Glow.
 - `ImportExportController` : flux d'import/export de configuration et d'assets CSS.
 - `LogsController` : nettoyage du journal interne.
-- `SystemController` : route de diagnostic/health-check.
+- `SystemController` : route de diagnostic/health-check qui vérifie l'état des assets, les versions et l'intégrité des composants critiques (autoload des classes principales, fonctions de cache CSS, statut du registre de tokens).
 
 Les contrôleurs implémentent l'interface `ControllerInterface` et héritent de `BaseController`, qui centralise la logique d'autorisation REST (nonce, authentification alternative et contrôle de capacité).
 

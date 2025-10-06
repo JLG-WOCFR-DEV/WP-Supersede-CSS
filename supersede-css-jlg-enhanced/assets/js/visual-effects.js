@@ -1,10 +1,22 @@
 (function($) {
     const fallbackI18n = {
         __: (text) => text,
+        sprintf: (format, ...args) => {
+            let index = 0;
+            return format.replace(/%([0-9]+\$)?[sd]/g, (match, position) => {
+                if (position) {
+                    const explicitIndex = parseInt(position, 10) - 1;
+                    return typeof args[explicitIndex] !== 'undefined' ? args[explicitIndex] : '';
+                }
+                const value = typeof args[index] !== 'undefined' ? args[index] : '';
+                index += 1;
+                return value;
+            });
+        },
     };
 
     const hasI18n = typeof window !== 'undefined' && window.wp && window.wp.i18n;
-    const { __ } = hasI18n ? window.wp.i18n : fallbackI18n;
+    const { __, sprintf } = hasI18n ? window.wp.i18n : fallbackI18n;
 
     const motionPreference = (() => {
         const listeners = new Set();
@@ -286,10 +298,27 @@
         const $applyButton = $('#ssc-bg-apply');
         const applyingLabel = __('Application…', 'supersede-css-jlg');
 
+        const $presetNameInput = $('#ssc-bg-preset-name');
+        const $savePresetButton = $('#ssc-bg-save-preset');
+        const $presetsList = $('#ssc-bg-presets-list');
+        const $presetsEmpty = $('#ssc-bg-presets-empty');
+        const $copyCssButton = $('#ssc-bg-copy-css');
+        const defaultEmptyMessage = $presetsEmpty.length ? $presetsEmpty.text() : '';
+
+        const restInfo = typeof window !== 'undefined' && window.SSC && window.SSC.rest ? window.SSC.rest : null;
+        const presetsEndpoint = restInfo ? `${restInfo.root}visual-effects-presets` : null;
+        const restNonce = restInfo ? restInfo.nonce : null;
+
+        const presetsState = {
+            items: [],
+            loading: false,
+            activePresetId: null,
+            activePresetName: '',
+        };
+
         let applyLockedByValidation = false;
         let applyBusy = false;
 
-        // S'assurer que les keyframes des étoiles sont prêtes
         if (!$('style#ssc-stars-anim-style').length) {
             $('<style id="ssc-stars-anim-style">@keyframes ssc-stars-anim { from { transform: translateY(0px); } to { transform: translateY(-2000px); } }</style>').appendTo('head');
         }
@@ -305,6 +334,15 @@
 
         function clampAngle(value) {
             return Math.round(clamp(value, 0, 360));
+        }
+
+        function showToast(message, options = {}) {
+            if (!message) {
+                return;
+            }
+            if (typeof window.sscToast === 'function') {
+                window.sscToast(message, options);
+            }
         }
 
         function updateApplyButtonState() {
@@ -405,6 +443,7 @@
             gradientState.stops = gradientState.stops.filter((stop) => stop.id !== stopId);
             renderGradientStops();
             generateBackgroundCSS();
+            markPresetAsDirty();
         }
 
         function updateGradientStop(stopId, updates) {
@@ -444,7 +483,17 @@
             const speed = Number.isNaN(speedValue) ? gradientDefaults.speed : speedValue;
             const gradientString = `linear-gradient(${angle}deg, ${stopList})`;
             const keyframes = `@keyframes ssc-gradient-anim { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }`;
-            const css = `${keyframes}\n.ssc-bg-gradient {\n  background: ${gradientString};\n  background-size: 400% 400%;\n  animation: ssc-gradient-anim ${speed}s ease infinite;\n}\n@media (prefers-reduced-motion: reduce) {\n  .ssc-bg-gradient {\n    animation: none;\n  }\n}`;
+            const css = `${keyframes}
+.ssc-bg-gradient {
+  background: ${gradientString};
+  background-size: 400% 400%;
+  animation: ssc-gradient-anim ${speed}s ease infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ssc-bg-gradient {
+    animation: none;
+  }
+}`;
 
             return {
                 errors,
@@ -461,8 +510,10 @@
             gradientStopIdCounter = 0;
             gradientState.angle = gradientDefaults.angle;
             $('#gradientAngle').val(gradientDefaults.angle);
+            $('#gradientSpeed').val(gradientDefaults.speed);
             gradientState.stops = [];
             gradientDefaults.stops.forEach((stop) => addGradientStop(stop, { triggerUpdate: false }));
+            renderGradientStops();
         }
 
         function generateBackgroundCSS() {
@@ -554,16 +605,509 @@ ${reduceMotionBlock}`;
             $('#ssc-bg-css').text(css.trim());
         }
 
+        function markPresetAsDirty() {
+            if (presetsState.activePresetId !== null) {
+                presetsState.activePresetId = null;
+                presetsState.activePresetName = '';
+                renderPresetsList();
+            }
+        }
+
+        function normalizePreset(item) {
+            if (!item || typeof item !== 'object') {
+                return null;
+            }
+            const id = typeof item.id === 'string' ? item.id : '';
+            if (!id) {
+                return null;
+            }
+            const name = typeof item.name === 'string' ? item.name : '';
+            const type = typeof item.type === 'string' ? item.type : 'stars';
+            const settings = item.settings && typeof item.settings === 'object' ? item.settings : {};
+            return { id, name, type, settings };
+        }
+
+        function getTypeLabel(type) {
+            const $option = $('#ssc-bg-type option[value="' + type + '"]');
+            return $option.length ? $option.text() : type;
+        }
+
+        function renderPresetsList() {
+            if (!$presetsList.length) {
+                return;
+            }
+
+            $presetsList.empty();
+
+            if (presetsState.loading) {
+                if ($presetsEmpty.length) {
+                    $presetsEmpty.hide();
+                }
+                const $row = $('<tr>').append($('<td>', {
+                    colspan: 3,
+                    text: __('Chargement des presets…', 'supersede-css-jlg'),
+                }));
+                $presetsList.append($row);
+                return;
+            }
+
+            if (!presetsState.items.length) {
+                if ($presetsEmpty.length) {
+                    $presetsEmpty.text(defaultEmptyMessage).show();
+                }
+                return;
+            }
+
+            if ($presetsEmpty.length) {
+                $presetsEmpty.text(defaultEmptyMessage).hide();
+            }
+
+            presetsState.items.forEach((preset) => {
+                const classes = ['ssc-ve-preset-row'];
+                if (preset.id === presetsState.activePresetId) {
+                    classes.push('is-active');
+                }
+                const $row = $('<tr>', {
+                    'data-preset-id': preset.id,
+                    class: classes.join(' '),
+                });
+
+                if (preset.id === presetsState.activePresetId) {
+                    $row.css('background-color', '#f0f6ff');
+                }
+
+                const name = preset.name && preset.name.trim() ? preset.name : __('Preset sans nom', 'supersede-css-jlg');
+                const $nameCell = $('<td>').text(name);
+                const $typeCell = $('<td>').text(getTypeLabel(preset.type));
+
+                const $actions = $('<div>', {
+                    class: 'ssc-ve-preset-actions',
+                    style: 'display:flex; gap:6px; flex-wrap:wrap;',
+                });
+
+                const $applyBtn = $('<button>', {
+                    type: 'button',
+                    class: 'button button-small button-primary',
+                    text: __('Appliquer', 'supersede-css-jlg'),
+                    'data-action': 'apply',
+                });
+                const $copyBtn = $('<button>', {
+                    type: 'button',
+                    class: 'button button-small',
+                    text: __('Copier', 'supersede-css-jlg'),
+                    'data-action': 'copy',
+                });
+                const $deleteBtn = $('<button>', {
+                    type: 'button',
+                    class: 'button button-small button-link-delete',
+                    text: __('Supprimer', 'supersede-css-jlg'),
+                    'data-action': 'delete',
+                });
+
+                $actions.append($applyBtn, $copyBtn, $deleteBtn);
+
+                const $actionsCell = $('<td>').append($actions);
+
+                $row.append($nameCell, $typeCell, $actionsCell);
+                $presetsList.append($row);
+            });
+        }
+
+        function setPresetsLoading(isLoading) {
+            presetsState.loading = !!isLoading;
+            if (isLoading && $presetsEmpty.length) {
+                $presetsEmpty.text(__('Chargement des presets…', 'supersede-css-jlg')).show();
+            }
+            renderPresetsList();
+        }
+
+        function setPresets(items) {
+            const normalized = [];
+            if (Array.isArray(items)) {
+                items.forEach((item) => {
+                    const preset = normalizePreset(item);
+                    if (preset) {
+                        normalized.push(preset);
+                    }
+                });
+            }
+
+            presetsState.items = normalized;
+            renderPresetsList();
+        }
+
+        function setActivePresetMetadata(preset) {
+            presetsState.activePresetId = preset && preset.id ? preset.id : null;
+            presetsState.activePresetName = preset && preset.name ? preset.name.trim() : '';
+            if ($presetNameInput.length) {
+                $presetNameInput.val(presetsState.activePresetName);
+            }
+            renderPresetsList();
+        }
+
+        function findPresetById(id) {
+            return presetsState.items.find((preset) => preset.id === id);
+        }
+
+        function generateUniquePresetName(baseName) {
+            const sanitizedBase = baseName && baseName.trim() ? baseName.trim() : __('Preset', 'supersede-css-jlg');
+            const existingNames = new Set(presetsState.items.map((preset) => (preset.name || '').toLowerCase()));
+            if (!existingNames.has(sanitizedBase.toLowerCase())) {
+                return sanitizedBase;
+            }
+
+            let index = 2;
+            let candidate = `${sanitizedBase} (${index})`;
+            while (existingNames.has(candidate.toLowerCase())) {
+                index += 1;
+                candidate = `${sanitizedBase} (${index})`;
+            }
+            return candidate;
+        }
+
+        function serializeCurrentBackgroundPreset() {
+            const type = $('#ssc-bg-type').val();
+
+            if (type === 'stars') {
+                const color = $('#starColor').val();
+                const rawCount = parseInt($('#starCount').val(), 10);
+                const min = parseInt($('#starCount').attr('min'), 10) || 10;
+                const max = parseInt($('#starCount').attr('max'), 10) || 500;
+                const count = clamp(Number.isNaN(rawCount) ? 200 : rawCount, min, max);
+
+                return {
+                    type,
+                    settings: {
+                        color: typeof color === 'string' ? color : '#ffffff',
+                        count,
+                    },
+                };
+            }
+
+            if (type === 'gradient') {
+                const gradientResult = computeGradientCss();
+                if (gradientResult.errors.length) {
+                    showToast(__('Corrigez les erreurs du dégradé avant d\'enregistrer un preset.', 'supersede-css-jlg'), { politeness: 'assertive' });
+                    return null;
+                }
+
+                return {
+                    type,
+                    settings: {
+                        angle: gradientResult.angle,
+                        speed: gradientResult.speed,
+                        stops: gradientResult.stops.map((stop) => ({
+                            color: stop.color,
+                            position: stop.position,
+                        })),
+                    },
+                };
+            }
+
+            showToast(__('Sélectionnez un type de fond pris en charge.', 'supersede-css-jlg'), { politeness: 'assertive' });
+            return null;
+        }
+
+        function requestSavePreset(payload) {
+            if (!presetsEndpoint) {
+                return $.Deferred().reject().promise();
+            }
+            return $.ajax({
+                url: presetsEndpoint,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(payload),
+                beforeSend: (xhr) => {
+                    if (restNonce) {
+                        xhr.setRequestHeader('X-WP-Nonce', restNonce);
+                    }
+                },
+            });
+        }
+
+        function requestDeletePreset(id) {
+            if (!presetsEndpoint) {
+                return $.Deferred().reject().promise();
+            }
+            return $.ajax({
+                url: `${presetsEndpoint}/${encodeURIComponent(id)}`,
+                method: 'DELETE',
+                beforeSend: (xhr) => {
+                    if (restNonce) {
+                        xhr.setRequestHeader('X-WP-Nonce', restNonce);
+                    }
+                },
+            });
+        }
+
+        function applyPreset(preset) {
+            if (!preset) {
+                return;
+            }
+
+            const type = preset.type === 'gradient' ? 'gradient' : 'stars';
+            $('#ssc-bg-type').val(type);
+
+            if (type === 'stars') {
+                const settings = preset.settings || {};
+                if (typeof settings.color === 'string') {
+                    $('#starColor').val(settings.color);
+                }
+                if (typeof settings.count === 'number') {
+                    $('#starCount').val(settings.count);
+                }
+            } else {
+                const settings = preset.settings || {};
+                const stops = Array.isArray(settings.stops) && settings.stops.length >= 2 ? settings.stops : gradientDefaults.stops;
+                gradientStopIdCounter = 0;
+                gradientState.stops = [];
+                $gradientStopsList.empty();
+                stops.forEach((stop) => addGradientStop(stop, { triggerUpdate: false }));
+                renderGradientStops();
+
+                const angle = typeof settings.angle === 'number' ? settings.angle : gradientDefaults.angle;
+                gradientState.angle = clampAngle(angle);
+                $('#gradientAngle').val(gradientState.angle);
+
+                const rawSpeed = typeof settings.speed === 'number' ? settings.speed : gradientDefaults.speed;
+                const minSpeed = parseInt($('#gradientSpeed').attr('min'), 10) || 2;
+                const maxSpeed = parseInt($('#gradientSpeed').attr('max'), 10) || 20;
+                const speed = clamp(rawSpeed, minSpeed, maxSpeed);
+                $('#gradientSpeed').val(speed);
+            }
+
+            setActivePresetMetadata(preset);
+            generateBackgroundCSS();
+            showToast(__('Preset appliqué !', 'supersede-css-jlg'));
+        }
+
+        function withButtonBusy($button, busyText, callback) {
+            if (!$button || !$button.length) {
+                return callback();
+            }
+            const originalText = $button.text();
+            $button.prop('disabled', true).attr('aria-disabled', 'true').text(busyText);
+            let request;
+            try {
+                request = callback();
+            } catch (error) {
+                $button.prop('disabled', false).removeAttr('aria-disabled').text(originalText);
+                throw error;
+            }
+
+            const finalize = () => {
+                $button.prop('disabled', false).removeAttr('aria-disabled').text(originalText);
+            };
+
+            if (request && typeof request.always === 'function') {
+                request.always(finalize);
+            } else {
+                finalize();
+            }
+
+            return request;
+        }
+
+        function handleSavePreset() {
+            if (!presetsEndpoint) {
+                return;
+            }
+
+            const name = ($presetNameInput.val() || '').trim();
+            if (name === '') {
+                showToast(__('Veuillez indiquer un nom de preset.', 'supersede-css-jlg'), { politeness: 'assertive' });
+                $presetNameInput.trigger('focus');
+                return;
+            }
+
+            const serialized = serializeCurrentBackgroundPreset();
+            if (!serialized) {
+                return;
+            }
+
+            const payload = {
+                name,
+                type: serialized.type,
+                settings: serialized.settings,
+            };
+
+            if (presetsState.activePresetId && name === presetsState.activePresetName) {
+                payload.id = presetsState.activePresetId;
+            }
+
+            const savingLabel = __('Enregistrement…', 'supersede-css-jlg');
+
+            withButtonBusy($savePresetButton, savingLabel, () => requestSavePreset(payload)
+                .done((response) => {
+                    const responsePresets = response && Array.isArray(response.presets) ? response.presets : null;
+                    if (responsePresets) {
+                        presetsState.loading = false;
+                        setPresets(responsePresets);
+                    } else {
+                        fetchPresets();
+                    }
+
+                    const responsePreset = response && response.preset ? normalizePreset(response.preset) : null;
+                    const savedPreset = responsePreset || (payload.id ? findPresetById(payload.id) : null);
+
+                    if (savedPreset) {
+                        setActivePresetMetadata(savedPreset);
+                    } else {
+                        presetsState.activePresetId = null;
+                        presetsState.activePresetName = name;
+                        if ($presetNameInput.length) {
+                            $presetNameInput.val(name);
+                        }
+                        renderPresetsList();
+                    }
+
+                    const successMessage = payload.id ? __('Preset mis à jour !', 'supersede-css-jlg') : __('Preset enregistré !', 'supersede-css-jlg');
+                    showToast(successMessage);
+                })
+                .fail((jqXHR) => {
+                    if (window.console && typeof window.console.error === 'function') {
+                        window.console.error('Failed to save visual effect preset', jqXHR);
+                    }
+                    showToast(__('Impossible d\'enregistrer le preset.', 'supersede-css-jlg'), { politeness: 'assertive' });
+                })
+            );
+        }
+
+        function handleCopyPreset(id, $button) {
+            const preset = findPresetById(id);
+            if (!preset) {
+                return;
+            }
+
+            const baseName = preset.name && preset.name.trim() ? preset.name.trim() : __('Preset sans nom', 'supersede-css-jlg');
+            const copyBase = sprintf(__('%s (copie)', 'supersede-css-jlg'), baseName);
+            const uniqueName = generateUniquePresetName(copyBase);
+
+            const payload = {
+                name: uniqueName,
+                type: preset.type,
+                settings: $.extend(true, {}, preset.settings || {}),
+            };
+
+            withButtonBusy($button, __('Copie…', 'supersede-css-jlg'), () => requestSavePreset(payload)
+                .done((response) => {
+                    const responsePresets = response && Array.isArray(response.presets) ? response.presets : null;
+                    if (responsePresets) {
+                        presetsState.loading = false;
+                        setPresets(responsePresets);
+                    } else {
+                        fetchPresets();
+                    }
+
+                    const responsePreset = response && response.preset ? normalizePreset(response.preset) : null;
+                    if (responsePreset) {
+                        setActivePresetMetadata(responsePreset);
+                    } else {
+                        presetsState.activePresetId = null;
+                        presetsState.activePresetName = uniqueName;
+                        if ($presetNameInput.length) {
+                            $presetNameInput.val(uniqueName);
+                        }
+                        renderPresetsList();
+                    }
+
+                    showToast(__('Preset copié !', 'supersede-css-jlg'));
+                })
+                .fail(() => {
+                    showToast(__('Impossible de copier le preset.', 'supersede-css-jlg'), { politeness: 'assertive' });
+                })
+            );
+        }
+
+        function handleDeletePreset(id, $button) {
+            const preset = findPresetById(id);
+            if (!preset) {
+                return;
+            }
+
+            const confirmationMessage = __('Voulez-vous vraiment supprimer ce preset ?', 'supersede-css-jlg');
+            if (typeof window.confirm === 'function' && !window.confirm(confirmationMessage)) {
+                return;
+            }
+
+            withButtonBusy($button, __('Suppression…', 'supersede-css-jlg'), () => requestDeletePreset(id)
+                .done((response) => {
+                    const responsePresets = response && Array.isArray(response.presets) ? response.presets : null;
+                    if (responsePresets) {
+                        presetsState.loading = false;
+                        setPresets(responsePresets);
+                    } else {
+                        fetchPresets();
+                    }
+
+                    if (presetsState.activePresetId === id) {
+                        presetsState.activePresetId = null;
+                        presetsState.activePresetName = '';
+                        if ($presetNameInput.length) {
+                            const currentValue = ($presetNameInput.val() || '').trim();
+                            if (currentValue === preset.name) {
+                                $presetNameInput.val('');
+                            }
+                        }
+                        renderPresetsList();
+                    }
+
+                    showToast(__('Preset supprimé.', 'supersede-css-jlg'));
+                })
+                .fail(() => {
+                    showToast(__('Impossible de supprimer le preset.', 'supersede-css-jlg'), { politeness: 'assertive' });
+                })
+            );
+        }
+
+        function fetchPresets() {
+            if (!presetsEndpoint) {
+                setPresets([]);
+                return;
+            }
+
+            setPresetsLoading(true);
+
+            $.ajax({
+                url: presetsEndpoint,
+                method: 'GET',
+                beforeSend: (xhr) => {
+                    if (restNonce) {
+                        xhr.setRequestHeader('X-WP-Nonce', restNonce);
+                    }
+                },
+            })
+            .done((response) => {
+                presetsState.loading = false;
+                if ($presetsEmpty.length) {
+                    $presetsEmpty.text(defaultEmptyMessage);
+                }
+                const responsePresets = response && Array.isArray(response.presets) ? response.presets : (Array.isArray(response) ? response : []);
+                setPresets(responsePresets);
+            })
+            .fail(() => {
+                presetsState.loading = false;
+                if ($presetsEmpty.length) {
+                    $presetsEmpty.text(defaultEmptyMessage);
+                }
+                showToast(__('Impossible de charger les presets.', 'supersede-css-jlg'), { politeness: 'assertive' });
+                setPresets([]);
+            });
+        }
+
         $('#ssc-bg-type, #starColor, #starCount, #gradientSpeed').on('input change', generateBackgroundCSS);
+        $('#ssc-bg-type, #starColor, #starCount, #gradientSpeed').on('input change', markPresetAsDirty);
 
         $('#ssc-add-gradient-stop').on('click', () => {
             addGradientStop({ color: '#ffffff', position: 50 });
+            markPresetAsDirty();
         });
 
         $gradientStopsList.on('input change', '.ssc-gradient-stop-color', function() {
             const stopId = parseInt($(this).closest('.ssc-gradient-stop').data('stop-id'), 10);
             updateGradientStop(stopId, { color: $(this).val() });
             generateBackgroundCSS();
+            markPresetAsDirty();
         });
 
         $gradientStopsList.on('input change', '.ssc-gradient-stop-position', function() {
@@ -573,6 +1117,7 @@ ${reduceMotionBlock}`;
             $(this).val(position);
             updateGradientStop(stopId, { position });
             generateBackgroundCSS();
+            markPresetAsDirty();
         });
 
         $gradientStopsList.on('click', '.ssc-remove-gradient-stop', function() {
@@ -586,7 +1131,75 @@ ${reduceMotionBlock}`;
             $(this).val(angle);
             gradientState.angle = angle;
             generateBackgroundCSS();
+            markPresetAsDirty();
         });
+
+        if ($presetNameInput.length) {
+            $presetNameInput.on('input', () => {
+                const currentValue = ($presetNameInput.val() || '').trim();
+                if (currentValue !== presetsState.activePresetName) {
+                    presetsState.activePresetId = null;
+                    renderPresetsList();
+                }
+            });
+        }
+
+        if ($savePresetButton.length) {
+            $savePresetButton.on('click', handleSavePreset);
+        }
+
+        if ($presetsList.length) {
+            $presetsList.on('click', 'button[data-action="apply"]', function(event) {
+                event.preventDefault();
+                const presetId = $(this).closest('tr').data('preset-id');
+                applyPreset(findPresetById(presetId));
+            });
+
+            $presetsList.on('click', 'button[data-action="copy"]', function(event) {
+                event.preventDefault();
+                const presetId = $(this).closest('tr').data('preset-id');
+                handleCopyPreset(presetId, $(this));
+            });
+
+            $presetsList.on('click', 'button[data-action="delete"]', function(event) {
+                event.preventDefault();
+                const presetId = $(this).closest('tr').data('preset-id');
+                handleDeletePreset(presetId, $(this));
+            });
+        }
+
+        if ($copyCssButton.length) {
+            $copyCssButton.on('click', () => {
+                generateBackgroundCSS();
+                const css = $('#ssc-bg-css').text().trim();
+                if (!css) {
+                    showToast(__('Aucun CSS à copier pour le moment.', 'supersede-css-jlg'), { politeness: 'assertive' });
+                    return;
+                }
+
+                if (typeof window.sscCopyToClipboard === 'function') {
+                    const promise = window.sscCopyToClipboard(css, {
+                        successMessage: __('CSS du fond copié !', 'supersede-css-jlg'),
+                        errorMessage: __('Impossible de copier le CSS du fond.', 'supersede-css-jlg'),
+                    });
+                    if (promise && typeof promise.catch === 'function') {
+                        promise.catch(() => {});
+                    }
+                } else if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(css)
+                        .then(() => {
+                            showToast(__('CSS du fond copié !', 'supersede-css-jlg'));
+                        })
+                        .catch(() => {
+                            showToast(__('Impossible de copier le CSS du fond.', 'supersede-css-jlg'), { politeness: 'assertive' });
+                        });
+                } else {
+                    showToast(__('Impossible de copier le CSS du fond.', 'supersede-css-jlg'), { politeness: 'assertive' });
+                }
+            });
+        }
+
+        $('#ssc-bg-type').on('change', markPresetAsDirty);
 
         $applyButton.on('click', () => {
              generateBackgroundCSS();
@@ -595,7 +1208,7 @@ ${reduceMotionBlock}`;
              let css = $('#ssc-bg-css').text().trim();
 
              if (type === 'gradient') {
-                 if (!latestGradientResult) {
+                if (!latestGradientResult) {
                      const errorToast = __('Corrigez les erreurs du dégradé avant d\'appliquer.', 'supersede-css-jlg');
                      window.sscToast(errorToast, { politeness: 'assertive' });
                      return;
@@ -624,8 +1237,12 @@ ${reduceMotionBlock}`;
                  });
              }
 
-             $.ajax({ url: SSC.rest.root + 'save-css', method: 'POST', data: requestData, beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
-             }).done(() => window.sscToast('Fond animé appliqué !'))
+            $.ajax({
+                url: SSC.rest.root + 'save-css',
+                method: 'POST',
+                data: requestData,
+                beforeSend: (xhr) => xhr.setRequestHeader('X-WP-Nonce', SSC.rest.nonce),
+            }).done(() => window.sscToast('Fond animé appliqué !'))
              .fail((jqXHR, textStatus, errorThrown) => {
                  console.error(errorMessage, { jqXHR, textStatus, errorThrown });
                  window.sscToast(
@@ -643,9 +1260,14 @@ ${reduceMotionBlock}`;
         setDefaultGradientPreset();
         setValidationState(true);
 
-        // Appel initial pour afficher l'aperçu par défaut
         generateBackgroundCSS();
         onMotionPreferenceChange(generateBackgroundCSS);
+
+        if (presetsEndpoint) {
+            fetchPresets();
+        } else {
+            setPresets([]);
+        }
     }
 
     // --- Module 3: ECG ---
@@ -716,8 +1338,12 @@ ${reduceMotionBlock}`;
                  .attr('aria-disabled', 'true')
                  .text(ecgApplyingLabel);
 
-             $.ajax({ url: SSC.rest.root + 'save-css', method: 'POST', data: { css, append: true, _wpnonce: SSC.rest.nonce }, beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
-             })
+            $.ajax({
+                url: SSC.rest.root + 'save-css',
+                method: 'POST',
+                data: { css, append: true, _wpnonce: SSC.rest.nonce },
+                beforeSend: (xhr) => xhr.setRequestHeader('X-WP-Nonce', SSC.rest.nonce),
+            })
              .done(() => window.sscToast('Effet ECG appliqué !'))
              .fail((jqXHR, textStatus, errorThrown) => {
                  console.error(errorMessage, { jqXHR, textStatus, errorThrown });

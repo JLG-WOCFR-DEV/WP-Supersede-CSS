@@ -23,12 +23,699 @@
             return hasI18n ? wpI18n.__(localized, domain) : localized;
         };
 
-        const resultPane = $('#ssc-health-json');
-        if (healthRunButton.length && resultPane.length) {
+        const resultPane = $('#ssc-health-json-raw');
+        const healthPanel = $('#ssc-health-panel');
+        const summaryList = $('#ssc-health-summary-list');
+        const summaryMeta = $('#ssc-health-summary-meta');
+        const summaryGenerated = $('#ssc-health-summary-generated');
+        const emptyState = $('#ssc-health-empty-state');
+        const detailsPanel = $('#ssc-health-details');
+        const errorNotice = $('#ssc-health-error');
+        const copyButton = $('#ssc-health-copy');
+
+        let lastHealthPayload = '';
+
+        const locale = (document.documentElement && document.documentElement.lang)
+            ? document.documentElement.lang
+            : ((navigator.language || navigator.userLanguage || 'en-US'));
+        const relativeTimeFormatter = (typeof Intl !== 'undefined' && typeof Intl.RelativeTimeFormat === 'function')
+            ? new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+            : null;
+        const dateTimeFormatter = (typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat === 'function')
+            ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' })
+            : null;
+
+        const severityColors = {
+            success: '#15803d',
+            warning: '#b45309',
+            error: '#dc2626',
+            info: '#2563eb'
+        };
+
+        const severityLabels = {
+            success: translate('healthSeveritySuccess', 'Succès'),
+            warning: translate('healthSeverityWarning', 'Avertissement'),
+            error: translate('healthSeverityError', 'Erreur'),
+            info: translate('healthSeverityInfo', 'Info')
+        };
+
+        const labelMap = {
+            plugin_version: translate('healthLabelPluginVersion', 'Version du plugin'),
+            wordpress_version: translate('healthLabelWpVersion', 'Version WordPress'),
+            php_version: translate('healthLabelPhpVersion', 'Version PHP'),
+            rest_api_status: translate('healthLabelRestStatus', 'Statut de l’API REST'),
+            asset_files_exist: translate('healthLabelAssets', 'Fichiers d’assets'),
+            plugin_integrity: translate('healthLabelIntegrity', 'Intégrité du plugin')
+        };
+
+        const formatDateTime = (isoString, fallbackIso) => {
+            const candidate = (typeof isoString === 'string' && isoString.length)
+                ? isoString
+                : ((typeof fallbackIso === 'string' && fallbackIso.length) ? fallbackIso : null);
+
+            if (!candidate) {
+                return null;
+            }
+
+            const parsed = new Date(candidate);
+
+            if (Number.isNaN(parsed.getTime())) {
+                return null;
+            }
+
+            if (dateTimeFormatter) {
+                try {
+                    return dateTimeFormatter.format(parsed);
+                } catch (err) {
+                    // Fallback to native formatting below.
+                }
+            }
+
+            try {
+                return parsed.toLocaleString(locale);
+            } catch (err) {
+                return parsed.toISOString();
+            }
+        };
+
+        const formatDuration = (seconds) => {
+            if (typeof seconds !== 'number' || Number.isNaN(seconds) || seconds <= 0) {
+                return translate('durationLessThanSecond', 'moins d’une seconde');
+            }
+
+            const units = [
+                { limit: 60, divisor: 1, unit: 'second', fallback: 'durationSeconds' },
+                { limit: 3600, divisor: 60, unit: 'minute', fallback: 'durationMinutes' },
+                { limit: 86400, divisor: 3600, unit: 'hour', fallback: 'durationHours' },
+                { limit: Infinity, divisor: 86400, unit: 'day', fallback: 'durationDays' },
+            ];
+
+            for (let i = 0; i < units.length; i += 1) {
+                const { limit, divisor, unit, fallback } = units[i];
+
+                if (seconds < limit) {
+                    const value = Math.max(1, Math.round(seconds / divisor));
+
+                    if (relativeTimeFormatter) {
+                        try {
+                            return relativeTimeFormatter.format(value, unit);
+                        } catch (err) {
+                            // Continue to fallback formatting.
+                        }
+                    }
+
+                    return sprintf(translate(fallback, '%d'), value);
+                }
+            }
+
+            return sprintf(translate('durationDays', '%d'), Math.round(seconds / 86400));
+        };
+
+        const updateCopyButton = (payload) => {
+            if (!copyButton.length) {
+                return;
+            }
+
+            copyButton.data('payload', payload);
+            copyButton.prop('disabled', !payload);
+        };
+
+        const resetPanels = () => {
+            if (healthRunButton.length) {
+                healthRunButton.attr('aria-expanded', 'false');
+            }
+
+            if (healthPanel.length) {
+                healthPanel.attr('aria-busy', 'false');
+            }
+
+            if (errorNotice.length) {
+                errorNotice.hide().text('');
+            }
+
+            if (summaryMeta.length) {
+                summaryMeta.text('').hide();
+            }
+
+            if (summaryGenerated.length) {
+                summaryGenerated.text('').hide();
+            }
+
+            if (summaryList.length) {
+                summaryList.empty().hide();
+            }
+
+            if (emptyState.length) {
+                emptyState.text(translate('healthCheckIdleMessage', 'Aucun diagnostic lancé pour le moment.')).show();
+            }
+
+            if (detailsPanel.length) {
+                detailsPanel.attr('hidden', true).prop('open', false);
+            }
+
+            if (resultPane.length) {
+                resultPane.text('');
+            }
+
+            updateCopyButton('');
+            lastHealthPayload = '';
+        };
+
+        const setLoadingState = () => {
+            if (!healthPanel.length) {
+                return;
+            }
+
+            healthPanel.attr('aria-busy', 'true');
+
+            if (errorNotice.length) {
+                errorNotice.hide().text('');
+            }
+
+            if (emptyState.length) {
+                emptyState.text(translate('healthCheckRunningMessage', 'Analyse du système…')).show();
+            }
+
+            if (summaryMeta.length) {
+                summaryMeta.text('').hide();
+            }
+
+            if (summaryGenerated.length) {
+                summaryGenerated.text('').hide();
+            }
+
+            if (summaryList.length) {
+                summaryList.empty().show();
+
+                for (let i = 0; i < 3; i += 1) {
+                    const skeleton = $('<li class="ssc-health-placeholder"></li>')
+                        .css({
+                            marginBottom: '8px',
+                            borderRadius: '6px',
+                            background: 'linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%)',
+                            height: '18px'
+                        });
+                    summaryList.append(skeleton);
+                }
+            }
+
+            if (detailsPanel.length) {
+                detailsPanel.attr('hidden', true).prop('open', false);
+            }
+
+            if (resultPane.length) {
+                resultPane.text('');
+            }
+
+            updateCopyButton('');
+            lastHealthPayload = '';
+        };
+
+        const detectSeverity = (value, sourcePath) => {
+            if (typeof value === 'boolean') {
+                return value ? 'success' : 'error';
+            }
+
+            if (value === null || typeof value === 'undefined') {
+                return 'warning';
+            }
+
+            const normalized = String(value).trim().toLowerCase();
+
+            if (!normalized.length) {
+                return 'warning';
+            }
+
+            const successIndicators = ['ok', 'chargé', 'charge', 'loaded', 'active', 'actif'];
+            const errorIndicators = ['manquant', 'missing', 'non trouvé', 'erreur', 'error', 'fail', 'échec', 'ko', 'absent'];
+            const warningIndicators = ['warning', 'lent', 'slow', 'n/a', 'non disponible', 'indisponible'];
+
+            if (successIndicators.includes(normalized)) {
+                return 'success';
+            }
+
+            if (errorIndicators.some(indicator => normalized.includes(indicator))) {
+                return 'error';
+            }
+
+            if (warningIndicators.some(indicator => normalized.includes(indicator))) {
+                return 'warning';
+            }
+
+            if (sourcePath.includes('version')) {
+                return normalized === 'n/a' ? 'warning' : 'info';
+            }
+
+            return 'info';
+        };
+
+        const formatLabel = (key) => {
+            if (Object.prototype.hasOwnProperty.call(labelMap, key)) {
+                return labelMap[key];
+            }
+
+            if (typeof key !== 'string') {
+                return translate('healthLabelFallback', 'Élément');
+            }
+
+            const normalized = key.replace(/[_-]+/g, ' ').trim();
+
+            if (!normalized.length) {
+                return translate('healthLabelFallback', 'Élément');
+            }
+
+            return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+        };
+
+        const messageForValue = (value, sourcePath) => {
+            if (typeof value === 'boolean') {
+                return value
+                    ? translate('healthMessageBooleanTrue', 'Statut confirmé.')
+                    : translate('healthMessageBooleanFalse', 'Statut non confirmé.');
+            }
+
+            if (value === null || typeof value === 'undefined') {
+                return translate('healthMessageUnavailable', 'Valeur indisponible.');
+            }
+
+            const asString = String(value);
+
+            if (sourcePath.includes('version')) {
+                return sprintf(translate('healthMessageVersion', 'Version détectée : %s'), asString);
+            }
+
+            if (sourcePath.includes('asset_files_exist')) {
+                return sprintf(translate('healthMessageAssetStatus', 'Statut : %s'), asString);
+            }
+
+            if (sourcePath.includes('plugin_integrity')) {
+                return sprintf(translate('healthMessageIntegrityStatus', 'Intégrité : %s'), asString);
+            }
+
+            if (sourcePath.includes('rest_api_status')) {
+                return sprintf(translate('healthMessageRestStatus', 'Statut API REST : %s'), asString);
+            }
+
+            return sprintf(translate('healthMessageValue', 'Valeur : %s'), asString);
+        };
+
+        const suggestionForItem = (sourcePath, severity) => {
+            if (severity === 'success') {
+                return '';
+            }
+
+            if (sourcePath.includes('asset_files_exist')) {
+                return translate('healthActionAsset', 'Vérifiez que les fichiers d’assets du plugin sont présents (réinstallation ou permissions).');
+            }
+
+            if (sourcePath.includes('plugin_integrity')) {
+                return translate('healthActionIntegrity', 'Vérifiez le chargement des classes et fonctions critiques du plugin.');
+            }
+
+            if (sourcePath.includes('rest_api_status')) {
+                return translate('healthActionRest', 'Contrôlez la disponibilité de l’API REST (extensions de sécurité, pare-feu, .htaccess).');
+            }
+
+            if (sourcePath.includes('plugin_version')) {
+                return translate('healthActionPluginVersion', 'Vérifiez que Supersede CSS est à jour dans le gestionnaire d’extensions.');
+            }
+
+            if (sourcePath.includes('php_version')) {
+                return translate('healthActionPhp', 'Confirmez la compatibilité PHP auprès de votre hébergeur.');
+            }
+
+            if (sourcePath.includes('wordpress_version')) {
+                return translate('healthActionWordPress', 'Assurez-vous que WordPress est à jour pour bénéficier des dernières corrections.');
+            }
+
+            if (severity === 'warning') {
+                return translate('healthActionWarningDefault', 'Inspectez ce point dans Santé du site pour confirmer la configuration.');
+            }
+
+            return translate('healthActionErrorDefault', 'Consultez l’outil Santé du site pour investiguer et corriger ce point.');
+        };
+
+        const flattenResponse = (data, parentLabel = '', parentPath = '') => {
+            if (!data || typeof data !== 'object') {
+                return [];
+            }
+
+            const items = [];
+
+            Object.entries(data).forEach(([key, value]) => {
+                const currentPath = parentPath ? `${parentPath}.${key}` : key;
+                const label = formatLabel(key);
+                const fullLabel = parentLabel ? `${parentLabel} › ${label}` : label;
+
+                if (value && typeof value === 'object' && !Array.isArray(value)) {
+                    items.push(...flattenResponse(value, fullLabel, currentPath));
+                    return;
+                }
+
+                if (Array.isArray(value)) {
+                    value.forEach((entry, index) => {
+                        const arrayLabel = `${fullLabel} #${index + 1}`;
+
+                        if (entry && typeof entry === 'object') {
+                            items.push(...flattenResponse(entry, arrayLabel, `${currentPath}[${index}]`));
+                            return;
+                        }
+
+                        const severity = detectSeverity(entry, currentPath);
+                        items.push({
+                            label: arrayLabel,
+                            severity,
+                            message: messageForValue(entry, currentPath),
+                            action: suggestionForItem(currentPath, severity)
+                        });
+                    });
+                    return;
+                }
+
+                const severity = detectSeverity(value, currentPath);
+                items.push({
+                    label: fullLabel,
+                    severity,
+                    message: messageForValue(value, currentPath),
+                    action: suggestionForItem(currentPath, severity)
+                });
+            });
+
+            return items;
+        };
+
+        const renderSummary = (response) => {
+            if (!summaryList.length) {
+                return;
+            }
+
+            const safeResponse = (response && typeof response === 'object' && !Array.isArray(response))
+                ? { ...response }
+                : {};
+
+            const meta = (safeResponse.meta && typeof safeResponse.meta === 'object')
+                ? { ...safeResponse.meta }
+                : null;
+
+            if (Object.prototype.hasOwnProperty.call(safeResponse, 'meta')) {
+                delete safeResponse.meta;
+            }
+
+            const items = flattenResponse(safeResponse);
+
+            summaryList.empty();
+
+            if (!items.length) {
+                if (emptyState.length) {
+                    emptyState.text(translate('healthCheckEmptyResult', 'Le diagnostic n’a retourné aucune donnée exploitable.')).show();
+                }
+                summaryList.hide();
+                if (summaryMeta.length) {
+                    summaryMeta.text('').hide();
+                }
+                return;
+            }
+
+            if (emptyState.length) {
+                emptyState.hide();
+            }
+
+            const totals = {
+                total: items.length,
+                success: 0,
+                warning: 0,
+                error: 0,
+                info: 0
+            };
+
+            items.forEach(item => {
+                if (Object.prototype.hasOwnProperty.call(totals, item.severity)) {
+                    totals[item.severity] += 1;
+                }
+
+                const listItem = $('<li class="ssc-health-item"></li>').css({
+                    marginBottom: '12px',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid #e2e8f0',
+                    backgroundColor: '#ffffff',
+                    boxShadow: '0 1px 1px rgba(15, 23, 42, 0.04)'
+                });
+
+                const header = $('<div class="ssc-health-item__header"></div>').css({
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    gap: '8px'
+                });
+
+                const badge = $('<span class="ssc-health-badge"></span>').text(severityLabels[item.severity] || severityLabels.info).css({
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    padding: '2px 10px',
+                    borderRadius: '999px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em',
+                    backgroundColor: severityColors[item.severity] || severityColors.info,
+                    color: '#ffffff'
+                });
+
+                const label = $('<span class="ssc-health-item__label"></span>').text(item.label).css({
+                    fontWeight: 600,
+                    fontSize: '14px'
+                });
+
+                header.append(badge).append(label);
+
+                const message = $('<p class="ssc-health-item__message"></p>').text(item.message).css({
+                    margin: '8px 0 0',
+                    fontSize: '13px',
+                    color: '#1f2937'
+                });
+
+                listItem.append(header).append(message);
+
+                if (item.action) {
+                    const action = $('<p class="ssc-health-item__action"></p>').text(item.action).css({
+                        margin: '8px 0 0',
+                        fontSize: '12px',
+                        color: '#4b5563'
+                    });
+                    listItem.append(action);
+                }
+
+                summaryList.append(listItem);
+            });
+
+            summaryList.show();
+
+            if (summaryMeta.length) {
+                const parts = [
+                    sprintf(translate('healthSummaryTotal', '%d vérifications'), totals.total)
+                ];
+
+                if (totals.error) {
+                    parts.push(sprintf(translate('healthSummaryErrors', '%d erreur(s)'), totals.error));
+                }
+
+                if (totals.warning) {
+                    parts.push(sprintf(translate('healthSummaryWarnings', '%d avertissement(s)'), totals.warning));
+                }
+
+                if (totals.success) {
+                    parts.push(sprintf(translate('healthSummarySuccess', '%d réussite(s)'), totals.success));
+                }
+
+                if (totals.info) {
+                    parts.push(sprintf(translate('healthSummaryInfo', '%d info(s)'), totals.info));
+                }
+
+                summaryMeta.text(parts.join(' • ')).show();
+            }
+
+            if (summaryGenerated.length) {
+                if (meta) {
+                    const messages = [];
+                    const generatedLabel = formatDateTime(meta.generated_at, meta.generated_at_gmt);
+
+                    if (generatedLabel) {
+                        messages.push(sprintf(translate('healthSummaryGeneratedAt', 'Diagnostic généré le %s'), generatedLabel));
+                    }
+
+                    const ttlValue = Number(meta.cache_ttl);
+                    const ttl = Number.isFinite(ttlValue) && ttlValue > 0 ? ttlValue : 0;
+                    const secondsValue = Number(meta.seconds_until_expiration);
+                    const secondsRemaining = Number.isFinite(secondsValue) && secondsValue > 0
+                        ? secondsValue
+                        : null;
+                    const cacheHit = meta.cache_hit === true
+                        || meta.cache_hit === 1
+                        || meta.cache_hit === '1'
+                        || meta.cache_hit === 'true';
+
+                    if (ttl === 0) {
+                        if (cacheHit) {
+                            messages.push(translate('healthSummaryCacheHitNoExpiry', 'Réponse servie depuis le cache.'));
+                        }
+
+                        messages.push(translate('healthSummaryCacheDisabled', 'Cache désactivé pour ce diagnostic.'));
+
+                        if (!cacheHit) {
+                            messages.push(translate('healthSummaryCacheMiss', 'Réponse recalculée à la demande.'));
+                        }
+                    } else if (cacheHit) {
+                        if (secondsRemaining !== null) {
+                            messages.push(sprintf(
+                                translate('healthSummaryCacheHit', 'Réponse servie depuis le cache (expire dans %s).'),
+                                formatDuration(secondsRemaining)
+                            ));
+                        } else {
+                            const expiresLabel = formatDateTime(meta.cache_expires_at, meta.cache_expires_at_gmt);
+
+                            if (expiresLabel) {
+                                messages.push(sprintf(
+                                    translate('healthSummaryCacheHitExpiresAt', 'Réponse servie depuis le cache (expiration le %s).'),
+                                    expiresLabel
+                                ));
+                            } else {
+                                messages.push(translate('healthSummaryCacheHitNoExpiry', 'Réponse servie depuis le cache.'));
+                            }
+                        }
+                    } else {
+                        messages.push(translate('healthSummaryCacheMiss', 'Réponse recalculée à la demande.'));
+                    }
+
+                    const uniqueMessages = messages.filter((message, index, array) => (
+                        typeof message === 'string'
+                        && message.length
+                        && array.indexOf(message) === index
+                    ));
+
+                    if (uniqueMessages.length) {
+                        summaryGenerated.text(uniqueMessages.join(' • ')).show();
+                    } else {
+                        summaryGenerated.text('').hide();
+                    }
+                } else {
+                    summaryGenerated.text('').hide();
+                }
+            }
+
+            if (healthRunButton.length) {
+                healthRunButton.attr('aria-expanded', items.length ? 'true' : 'false');
+            }
+        };
+
+        const handleSuccess = (response) => {
+            if (errorNotice.length) {
+                errorNotice.hide().text('');
+            }
+
+            if (healthPanel.length) {
+                healthPanel.attr('aria-busy', 'false');
+            }
+
+            if (healthRunButton.length) {
+                healthRunButton.attr('aria-busy', 'false');
+            }
+
+            renderSummary(response);
+
+            if (resultPane.length) {
+                lastHealthPayload = JSON.stringify(response, null, 2);
+                resultPane.text(lastHealthPayload);
+            }
+
+            if (detailsPanel.length && lastHealthPayload) {
+                detailsPanel.removeAttr('hidden');
+            }
+
+            updateCopyButton(lastHealthPayload);
+
+            window.sscToast && window.sscToast(translate('healthCheckSuccessMessage', 'Health check terminé.'));
+        };
+
+        const handleError = (message) => {
+            if (errorNotice.length) {
+                errorNotice.text(message).show();
+            }
+
+            if (healthPanel.length) {
+                healthPanel.attr('aria-busy', 'false');
+            }
+
+            if (healthRunButton.length) {
+                healthRunButton.attr('aria-busy', 'false');
+            }
+
+            if (summaryMeta.length) {
+                summaryMeta.text('').hide();
+            }
+
+            if (summaryGenerated.length) {
+                summaryGenerated.text('').hide();
+            }
+
+            if (summaryList.length) {
+                summaryList.empty().hide();
+            }
+
+            if (emptyState.length) {
+                emptyState.text(translate('healthCheckErrorPersistent', 'Impossible de récupérer les données du diagnostic. Réessayez ou consultez Santé du site.')).show();
+            }
+
+            if (detailsPanel.length) {
+                detailsPanel.attr('hidden', true).prop('open', false);
+            }
+
+            if (resultPane.length) {
+                resultPane.text('');
+            }
+
+            updateCopyButton('');
+            lastHealthPayload = '';
+
+            if (healthRunButton.length) {
+                healthRunButton.attr('aria-expanded', 'false');
+            }
+        };
+
+        if (copyButton.length) {
+            copyButton.on('click', function() {
+                const payload = $(this).data('payload');
+
+                if (!payload) {
+                    return;
+                }
+
+                if (typeof window.sscCopyToClipboard === 'function') {
+                    window.sscCopyToClipboard(payload, {
+                        successMessage: translate('healthCopySuccessMessage', 'JSON copié dans le presse-papiers.'),
+                        errorMessage: translate('healthCopyErrorMessage', 'La copie du JSON a échoué.')
+                    });
+                    return;
+                }
+
+                try {
+                    navigator.clipboard.writeText(payload).then(() => {
+                        window.sscToast && window.sscToast(translate('healthCopySuccessMessage', 'JSON copié dans le presse-papiers.'));
+                    });
+                } catch (err) {
+                    console.error('Clipboard API non disponible', err);
+                }
+            });
+        }
+
+        if (healthRunButton.length && healthPanel.length) {
+            resetPanels();
+
             healthRunButton.on('click', function() {
                 const btn = $(this);
-                btn.text(translate('healthCheckCheckingLabel', 'Vérification en cours…')).prop('disabled', true);
-                resultPane.text(translate('healthCheckRunningMessage', 'Analyse du système…'));
+                btn.text(translate('healthCheckCheckingLabel', 'Vérification en cours…')).prop('disabled', true).attr('aria-busy', 'true');
+
+                setLoadingState();
 
                 $.ajax({
                     url: SSC.rest.root + 'health',
@@ -36,13 +723,12 @@
                     data: { _wpnonce: SSC.rest.nonce },
                     beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
                 }).done(response => {
-                    resultPane.text(JSON.stringify(response, null, 2));
-                    window.sscToast && window.sscToast(translate('healthCheckSuccessMessage', 'Health check terminé.'));
+                    handleSuccess(response);
                 }).fail(err => {
-                    resultPane.text(translate('healthCheckErrorMessage', 'Une erreur est survenue.'));
                     console.error('Health Check Error:', err);
+                    handleError(translate('healthCheckErrorMessage', 'Une erreur est survenue.'));
                 }).always(() => {
-                    btn.text(translate('healthCheckRunLabel', 'Lancer Health Check')).prop('disabled', false);
+                    btn.text(translate('healthCheckRunLabel', 'Lancer Health Check')).prop('disabled', false).attr('aria-busy', 'false');
                 });
             });
         }

@@ -136,6 +136,21 @@ final class Sanitizer
 
     /**
      * @param mixed $value
+     * @return array<int, array<string, mixed>>|null
+     */
+    public function sanitizeImportVisualEffectsPresets($value): ?array
+    {
+        if (!is_array($value)) {
+            return null;
+        }
+
+        $sanitized = CssSanitizer::sanitizeVisualEffectsPresets($value);
+
+        return $sanitized === [] ? null : $sanitized;
+    }
+
+    /**
+     * @param mixed $value
      */
     public function sanitizeImportArray(
         $value,
@@ -178,6 +193,15 @@ final class Sanitizer
                 continue;
             }
 
+            if (array_key_exists($sanitizedKey, $sanitized)) {
+                $duplicatePath = $this->formatDuplicateKeyPath($parentPath, $sanitizedKey);
+                $this->recordDuplicateWarning($duplicatePath);
+
+                continue;
+            }
+
+            $duplicatePath = $this->formatDuplicateKeyPath($parentPath, $sanitizedKey);
+
             $itemBudget--;
 
             if (is_array($item)) {
@@ -190,7 +214,7 @@ final class Sanitizer
 
                 if ($referenceId !== null) {
                     if (isset($arrayReferenceStack[$referenceId])) {
-                        $this->recordDuplicateWarning($this->formatDuplicateKeyPath($parentPath, $sanitizedKey));
+                        $this->recordDuplicateWarning($duplicatePath);
                         continue;
                     }
 
@@ -202,7 +226,7 @@ final class Sanitizer
                     $depth + 1,
                     $objectStack,
                     $itemBudget,
-                    $this->formatDuplicateKeyPath($parentPath, $sanitizedKey),
+                    $duplicatePath,
                     $arrayReferenceStack
                 );
 
@@ -220,7 +244,7 @@ final class Sanitizer
 
             if ($item instanceof \JsonSerializable) {
                 if ($objectStack->contains($item)) {
-                    $this->recordDuplicateWarning($this->formatDuplicateKeyPath($parentPath, $sanitizedKey));
+                    $this->recordDuplicateWarning($duplicatePath);
                     continue;
                 }
 
@@ -243,7 +267,7 @@ final class Sanitizer
 
             if (is_object($item)) {
                 if ($objectStack->contains($item)) {
-                    $this->recordDuplicateWarning($this->formatDuplicateKeyPath($parentPath, $sanitizedKey));
+                    $this->recordDuplicateWarning($duplicatePath);
                     continue;
                 }
 
