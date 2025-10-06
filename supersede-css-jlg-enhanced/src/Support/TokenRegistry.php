@@ -9,6 +9,44 @@ final class TokenRegistry
     private const OPTION_REGISTRY = 'ssc_tokens_registry';
     private const OPTION_CSS = 'ssc_tokens_css';
     private const REGISTRY_NOT_FOUND = '__ssc_tokens_registry_missing__';
+    private const DEFAULT_CONTEXT = ':root';
+
+    /**
+     * @var array<int, array{value: string, label: string, preview?: array<string, string>}>
+     */
+    private const SUPPORTED_CONTEXTS = [
+        [
+            'value' => ':root',
+            'label' => 'Global (:root)',
+            'preview' => ['type' => 'root'],
+        ],
+        [
+            'value' => '[data-theme="dark"]',
+            'label' => 'Mode sombre ([data-theme="dark"])',
+            'preview' => [
+                'type' => 'attribute',
+                'name' => 'data-theme',
+                'value' => 'dark',
+            ],
+        ],
+        [
+            'value' => '[data-theme="light"]',
+            'label' => 'Mode clair ([data-theme="light"])',
+            'preview' => [
+                'type' => 'attribute',
+                'name' => 'data-theme',
+                'value' => 'light',
+            ],
+        ],
+        [
+            'value' => '.is-admin',
+            'label' => 'Interface administrateur (.is-admin)',
+            'preview' => [
+                'type' => 'class',
+                'value' => 'is-admin',
+            ],
+        ],
+    ];
 
     /**
      * Supported token types exposed to the UI.
@@ -93,7 +131,85 @@ final class TokenRegistry
     ];
 
     /**
-     * @return array<int, array{name: string, value: string, type: string, description: string, group: string}>
+     * @return array<int, array{value: string, label: string, preview?: array<string, string>}>
+     */
+    public static function getSupportedContexts(): array
+    {
+        $contexts = [];
+
+        foreach (self::SUPPORTED_CONTEXTS as $context) {
+            $normalized = [
+                'value' => $context['value'],
+                'label' => __($context['label'], 'supersede-css-jlg'),
+            ];
+
+            if (isset($context['preview']) && is_array($context['preview'])) {
+                $normalized['preview'] = $context['preview'];
+            }
+
+            $contexts[] = $normalized;
+        }
+
+        return $contexts;
+    }
+
+    public static function getDefaultContext(): string
+    {
+        return self::DEFAULT_CONTEXT;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private static function getSupportedContextValues(): array
+    {
+        static $values = null;
+
+        if ($values !== null) {
+            return $values;
+        }
+
+        $values = array_map(
+            static fn(array $context): string => $context['value'],
+            self::SUPPORTED_CONTEXTS
+        );
+
+        return $values;
+    }
+
+    /**
+     * @param mixed $raw
+     */
+    private static function sanitizeContext($raw): string
+    {
+        if (!is_string($raw)) {
+            return self::DEFAULT_CONTEXT;
+        }
+
+        $value = trim($raw);
+        if ($value === '') {
+            return self::DEFAULT_CONTEXT;
+        }
+
+        $value = preg_replace('/\s+/', ' ', $value) ?? $value;
+        $value = preg_replace('/[^A-Za-z0-9_\-\s:#\.\[\]=\"\'\\]/', '', $value) ?? $value;
+        $value = trim($value);
+
+        if ($value === '') {
+            return self::DEFAULT_CONTEXT;
+        }
+
+        foreach (self::getSupportedContextValues() as $supported) {
+            if ($supported === $value) {
+                return $supported;
+            }
+        }
+
+        return $value;
+    }
+
+    /**
+     * @return array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}>
      */
     public static function getRegistry(): array
     {
@@ -142,7 +258,7 @@ final class TokenRegistry
     }
 
     /**
-     * @return array<int, array{name: string, value: string, type: string, description: string, group: string}>
+     * @return array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}>
      */
     public static function getDefaultRegistry(): array
     {
@@ -153,6 +269,7 @@ final class TokenRegistry
                 'type' => 'color',
                 'description' => 'Couleur principale utilisée pour les éléments interactifs.',
                 'group' => 'Couleurs',
+                'context' => self::DEFAULT_CONTEXT,
             ],
             [
                 'name' => '--radius-moyen',
@@ -160,13 +277,14 @@ final class TokenRegistry
                 'type' => 'text',
                 'description' => 'Rayon par défaut appliqué aux composants principaux.',
                 'group' => 'Général',
+                'context' => self::DEFAULT_CONTEXT,
             ],
         ];
     }
 
     /**
-     * @param array<int, array{name?: mixed, value?: mixed, type?: mixed, description?: mixed, group?: mixed}> $tokens
-     * @return array{tokens: array<int, array{name: string, value: string, type: string, description: string, group: string}>, duplicates: array<int, array{canonical: string, variants: array<int, string>, conflicts: array<int, array{name: string, value: string}>}>}
+     * @param array<int, array{name?: mixed, value?: mixed, type?: mixed, description?: mixed, group?: mixed, context?: mixed}> $tokens
+     * @return array{tokens: array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}>, duplicates: array<int, array{canonical: string, context: string, variants: array<int, string>, conflicts: array<int, array{name: string, value: string, context?: string}>}>}
      */
     public static function saveRegistry(array $tokens): array
     {
@@ -235,8 +353,8 @@ final class TokenRegistry
     }
 
     /**
-     * @param array{name?: mixed, value?: mixed, type?: mixed, description?: mixed, group?: mixed} $token
-     * @return array{name: string, value: string, type: string, description: string, group: string}|null
+     * @param array{name?: mixed, value?: mixed, type?: mixed, description?: mixed, group?: mixed, context?: mixed} $token
+     * @return array{name: string, value: string, type: string, description: string, group: string, context: string}|null
      */
     public static function normalizeToken(array $token): ?array
     {
@@ -273,18 +391,21 @@ final class TokenRegistry
             $group = 'Général';
         }
 
+        $context = self::sanitizeContext($token['context'] ?? self::DEFAULT_CONTEXT);
+
         return [
             'name' => $normalizedName,
             'value' => $value,
             'type' => $type,
             'description' => $description,
             'group' => $group,
+            'context' => $context,
         ];
     }
 
     /**
-     * @param array<int, array{name?: mixed, value?: mixed, type?: mixed, description?: mixed, group?: mixed}> $tokens
-     * @return array{tokens: array<int, array{name: string, value: string, type: string, description: string, group: string}>, duplicates: array<int, array{canonical: string, variants: array<int, string>, conflicts: array<int, array{name: string, value: string}>}>}
+     * @param array<int, array{name?: mixed, value?: mixed, type?: mixed, description?: mixed, group?: mixed, context?: mixed}> $tokens
+     * @return array{tokens: array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}>, duplicates: array<int, array{canonical: string, context: string, variants: array<int, string>, conflicts: array<int, array{name: string, value: string, context?: string}>}>}
      */
     public static function normalizeRegistry(array $tokens): array
     {
@@ -304,7 +425,9 @@ final class TokenRegistry
             }
 
             $normalizedName = $normalizedToken['name'];
-            $normalizedKey = strtolower($normalizedName);
+            $normalizedContext = $normalizedToken['context'];
+            $contextKey = strtolower($normalizedContext);
+            $normalizedKey = $contextKey . '|' . strtolower($normalizedName);
 
             if (!isset($variantsByKey[$normalizedKey])) {
                 $variantsByKey[$normalizedKey] = [];
@@ -329,7 +452,9 @@ final class TokenRegistry
         foreach (array_keys($duplicateKeys) as $duplicateKey) {
             $variants = $variantsByKey[$duplicateKey] ?? [];
             $variants = array_values(array_unique($variants));
-            $canonical = $normalizedByName[$duplicateKey]['name'] ?? ($variants[0] ?? $duplicateKey);
+            $canonicalToken = $normalizedByName[$duplicateKey] ?? null;
+            $canonical = $canonicalToken['name'] ?? ($variants[0] ?? $duplicateKey);
+            $duplicateContext = $canonicalToken['context'] ?? self::DEFAULT_CONTEXT;
 
             $conflictDetails = array_values(array_filter(array_map(
                 static function (array $original): ?array {
@@ -340,6 +465,7 @@ final class TokenRegistry
                     return [
                         'name' => isset($original['name']) ? (string) $original['name'] : '',
                         'value' => isset($original['value']) ? (string) $original['value'] : '',
+                        'context' => isset($original['context']) ? (string) $original['context'] : '',
                     ];
                 },
                 $conflictTokensByKey[$duplicateKey] ?? []
@@ -356,17 +482,20 @@ final class TokenRegistry
                 }
                 $nameKey = strtolower($nameValue);
                 $valueKey = isset($conflict['value']) ? trim((string) $conflict['value']) : '';
-                $hash = $nameKey . '|' . $valueKey;
+                $contextValue = isset($conflict['context']) ? trim((string) $conflict['context']) : '';
+                $hash = $nameKey . '|' . $valueKey . '|' . strtolower($contextValue);
                 if (!isset($uniqueConflicts[$hash])) {
                     $uniqueConflicts[$hash] = [
                         'name' => $nameValue,
                         'value' => $valueKey,
+                        'context' => $contextValue,
                     ];
                 }
             }
 
             $duplicates[] = [
                 'canonical' => $canonical,
+                'context' => $duplicateContext,
                 'variants' => $variants,
                 'conflicts' => array_values($uniqueConflicts),
             ];
@@ -380,7 +509,7 @@ final class TokenRegistry
 
     /**
      * @param string $css
-     * @return array{tokens: array<int, array{name: string, value: string, type: string, description: string, group: string}>, duplicates: array<int, array{canonical: string, variants: array<int, string>, conflicts: array<int, array{name: string, value: string}>}>}
+     * @return array{tokens: array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}>, duplicates: array<int, array{canonical: string, context: string, variants: array<int, string>, conflicts: array<int, array{name: string, value: string, context?: string}>}>}
      */
     public static function convertCssToRegistryDetailed(string $css): array
     {
@@ -477,6 +606,8 @@ final class TokenRegistry
                 $index++;
             }
 
+            $context = self::detectContextForDeclaration($css, $declarationStart);
+
             $value = '';
             $inSingleQuote = false;
             $inDoubleQuote = false;
@@ -549,6 +680,7 @@ final class TokenRegistry
                     'type' => self::guessTypeFromValue($rawValue),
                     'description' => '',
                     'group' => 'Legacy',
+                    'context' => $context,
                 ];
 
                 $tokensByName[] = $token;
@@ -568,7 +700,7 @@ final class TokenRegistry
 
     /**
      * @param string $css
-     * @return array<int, array{name: string, value: string, type: string, description: string, group: string}>
+     * @return array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}>
      */
     public static function convertCssToRegistry(string $css): array
     {
@@ -578,9 +710,9 @@ final class TokenRegistry
     }
 
     /**
-     * @param array<int, array{name: string, value: string, type: string, description: string, group: string}> $tokens
-     * @param array<int, array{name: string, value: string, type: string, description: string, group: string}> $existing
-     * @return array<int, array{name: string, value: string, type: string, description: string, group: string}>
+     * @param array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}> $tokens
+     * @param array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}> $existing
+     * @return array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}>
      */
     public static function mergeMetadata(array $tokens, array $existing): array
     {
@@ -598,6 +730,7 @@ final class TokenRegistry
                 'type' => $existingToken['type'],
                 'group' => $existingToken['group'],
                 'description' => $existingToken['description'],
+                'context' => $existingToken['context'],
             ];
         }
 
@@ -620,6 +753,9 @@ final class TokenRegistry
                 $token['type'] = $metadata['type'];
                 $token['group'] = $metadata['group'];
                 $token['description'] = $metadata['description'];
+                if (!isset($token['context']) || trim((string) $token['context']) === '') {
+                    $token['context'] = $metadata['context'];
+                }
             }
 
             $merged[] = $token;
@@ -629,41 +765,62 @@ final class TokenRegistry
     }
 
     /**
-     * @param array<int, array{name: string, value: string, type: string, description: string, group: string}> $tokens
+     * @param array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}> $tokens
      */
     public static function tokensToCss(array $tokens): string
     {
         if ($tokens === []) {
-            return ':root {\n}\n';
+            return self::DEFAULT_CONTEXT . " {\n}\n";
         }
 
-        $lines = [];
+        $grouped = [];
+        $order = [];
 
         foreach ($tokens as $token) {
-            $value = (string) $token['value'];
-            $valueLines = preg_split("/\r\n|\n/", $value) ?: [$value];
+            $context = self::sanitizeContext($token['context'] ?? self::DEFAULT_CONTEXT);
 
-            $firstLine = array_shift($valueLines);
-            $line = sprintf('    %s: %s', $token['name'], $firstLine);
-
-            if ($valueLines !== []) {
-                $indented = array_map(
-                    static fn(string $lineValue): string => '        ' . $lineValue,
-                    $valueLines
-                );
-                $line .= "\n" . implode("\n", $indented);
+            if (!isset($grouped[$context])) {
+                $grouped[$context] = [];
+                $order[] = $context;
             }
 
-            $lines[] = $line . ';';
+            $grouped[$context][] = $token;
         }
 
-        $css = ":root {\n" . implode("\n", $lines) . "\n}";
+        $blocks = [];
+
+        foreach ($order as $context) {
+            $contextTokens = $grouped[$context];
+            $lines = [];
+
+            foreach ($contextTokens as $token) {
+                $value = (string) $token['value'];
+                $valueLines = preg_split("/\r\n|\n/", $value) ?: [$value];
+
+                $firstLine = array_shift($valueLines);
+                $line = sprintf('    %s: %s', $token['name'], $firstLine);
+
+                if ($valueLines !== []) {
+                    $indented = array_map(
+                        static fn(string $lineValue): string => '        ' . $lineValue,
+                        $valueLines
+                    );
+                    $line .= "\n" . implode("\n", $indented);
+                }
+
+                $lines[] = $line . ';';
+            }
+
+            $blocks[] = $context . " {\n" . implode("\n", $lines) . "\n}";
+        }
+
+        $css = implode("\n\n", $blocks);
 
         return CssSanitizer::sanitize($css);
     }
 
     /**
-     * @param array<int, array{name: string, value: string, type: string, description: string, group: string}> $tokens
+     * @param array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}> $tokens
      */
     private static function persistCss(array $tokens): void
     {
@@ -673,6 +830,61 @@ final class TokenRegistry
         if (function_exists('\ssc_invalidate_css_cache')) {
             \ssc_invalidate_css_cache();
         }
+    }
+
+    private static function detectContextForDeclaration(string $css, int $offset): string
+    {
+        $depth = 0;
+
+        for ($index = $offset; $index >= 0; $index--) {
+            $character = $css[$index];
+
+            if ($character === '}') {
+                $depth++;
+                continue;
+            }
+
+            if ($character === '{') {
+                if ($depth === 0) {
+                    $selectorEnd = $index - 1;
+
+                    while ($selectorEnd >= 0 && ctype_space($css[$selectorEnd])) {
+                        $selectorEnd--;
+                    }
+
+                    if ($selectorEnd < 0) {
+                        return self::DEFAULT_CONTEXT;
+                    }
+
+                    $selectorStart = $selectorEnd;
+                    while ($selectorStart >= 0 && $css[$selectorStart] !== '}') {
+                        $selectorStart--;
+                    }
+
+                    $selectorStart++;
+                    if ($selectorStart < 0) {
+                        $selectorStart = 0;
+                    }
+
+                    $selector = substr($css, $selectorStart, $selectorEnd - $selectorStart + 1);
+                    if (!is_string($selector)) {
+                        return self::DEFAULT_CONTEXT;
+                    }
+
+                    $selector = trim($selector);
+
+                    if ($selector === '') {
+                        return self::DEFAULT_CONTEXT;
+                    }
+
+                    return self::sanitizeContext($selector);
+                }
+
+                $depth--;
+            }
+        }
+
+        return self::DEFAULT_CONTEXT;
     }
 
     private static function guessTypeFromValue(string $value): string
