@@ -194,8 +194,9 @@ final class Admin
             wp_enqueue_media();
         }
 
-        wp_enqueue_style('ssc-ux', SSC_PLUGIN_URL . 'assets/css/ux.css', [], SSC_VERSION);
-        wp_enqueue_style('ssc-admin', SSC_PLUGIN_URL . 'assets/css/admin.css', [], SSC_VERSION);
+        wp_enqueue_style('ssc-foundation', SSC_PLUGIN_URL . 'assets/css/foundation.css', [], SSC_VERSION);
+        wp_enqueue_style('ssc-ux', SSC_PLUGIN_URL . 'assets/css/ux.css', ['ssc-foundation'], SSC_VERSION);
+        wp_enqueue_style('ssc-admin', SSC_PLUGIN_URL . 'assets/css/admin.css', ['ssc-foundation'], SSC_VERSION);
         wp_enqueue_script('ssc-ux', SSC_PLUGIN_URL . 'assets/js/ux.js', ['jquery'], SSC_VERSION, true);
 
         // CodeMirror

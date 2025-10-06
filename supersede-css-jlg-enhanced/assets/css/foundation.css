@@ -1,0 +1,200 @@
+:root {
+    /* Color palette */
+    --ssc-bg: #f8fafc;
+    --ssc-card: #ffffff;
+    --ssc-border: #e5e7eb;
+    --ssc-text: #0f172a;
+    --ssc-muted: #64748b;
+    --ssc-accent: #4f46e5;
+    --ssc-accent-soft: color-mix(in srgb, var(--ssc-accent) 18%, #ffffff 82%);
+    --ssc-success: #15803d;
+    --ssc-danger: #b91c1c;
+    --ssc-warning: #92400e;
+    --ssc-info: #2563eb;
+    --ssc-surface-muted: color-mix(in srgb, var(--ssc-card) 92%, var(--ssc-border) 8%);
+    --ssc-focus-ring: rgba(79, 70, 229, 0.18);
+
+    /* Typography scale */
+    --ssc-font-family-base: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    --ssc-font-size-xs: 0.75rem;   /* 12px */
+    --ssc-font-size-sm: 0.875rem;  /* 14px */
+    --ssc-font-size-md: 1rem;      /* 16px */
+    --ssc-font-size-lg: 1.125rem;  /* 18px */
+    --ssc-font-size-xl: 1.375rem;  /* 22px */
+    --ssc-font-size-2xl: 1.75rem;  /* 28px */
+    --ssc-line-height-tight: 1.2;
+    --ssc-line-height-snug: 1.35;
+    --ssc-line-height-relaxed: 1.6;
+    --ssc-line-height-default: 1.5;
+    --ssc-font-weight-regular: 400;
+    --ssc-font-weight-medium: 500;
+    --ssc-font-weight-semibold: 600;
+    --ssc-font-weight-bold: 700;
+
+    /* Spacing scale */
+    --ssc-space-050: 0.25rem;  /* 4px */
+    --ssc-space-075: 0.375rem; /* 6px */
+    --ssc-space-100: 0.5rem;   /* 8px */
+    --ssc-space-150: 0.75rem;  /* 12px */
+    --ssc-space-200: 1rem;     /* 16px */
+    --ssc-space-250: 1.25rem;  /* 20px */
+    --ssc-space-300: 1.5rem;   /* 24px */
+    --ssc-space-400: 2rem;     /* 32px */
+    --ssc-space-500: 2.5rem;   /* 40px */
+
+    /* Radii & elevation */
+    --ssc-radius-sm: 6px;
+    --ssc-radius-md: 10px;
+    --ssc-radius-lg: 12px;
+    --ssc-radius-pill: 999px;
+    --ssc-shadow-soft: 0 16px 32px rgba(15, 23, 42, 0.08);
+    --ssc-shadow-elevated: 0 20px 40px rgba(15, 23, 42, 0.12);
+}
+
+.ssc-dark:root,
+.ssc-dark {
+    --ssc-bg: #030712;
+    --ssc-card: #111827;
+    --ssc-border: #374151;
+    --ssc-text: #e5e7eb;
+    --ssc-muted: #d1d5db;
+    --ssc-accent: #a5b4fc;
+    --ssc-accent-soft: color-mix(in srgb, var(--ssc-accent) 22%, #020617 78%);
+    --ssc-success: #34d399;
+    --ssc-danger: #f87171;
+    --ssc-warning: #f59e0b;
+    --ssc-info: #60a5fa;
+    --ssc-surface-muted: color-mix(in srgb, var(--ssc-card) 86%, var(--ssc-border) 14%);
+    --ssc-focus-ring: rgba(165, 180, 252, 0.22);
+}
+
+/* Spacing utilities */
+.ssc-mt-050 { margin-top: var(--ssc-space-050); }
+.ssc-mt-075 { margin-top: var(--ssc-space-075); }
+.ssc-mt-100 { margin-top: var(--ssc-space-100); }
+.ssc-mt-150 { margin-top: var(--ssc-space-150); }
+.ssc-mt-200 { margin-top: var(--ssc-space-200); }
+.ssc-mt-250 { margin-top: var(--ssc-space-250); }
+.ssc-mt-300 { margin-top: var(--ssc-space-300); }
+.ssc-mt-400 { margin-top: var(--ssc-space-400); }
+.ssc-mb-200 { margin-bottom: var(--ssc-space-200); }
+.ssc-pt-200 { padding-top: var(--ssc-space-200); }
+
+/* Layout helpers */
+.ssc-align-start { align-items: flex-start; }
+.ssc-stack { display: flex; flex-direction: column; gap: var(--ssc-space-150); }
+.ssc-stack-lg { gap: var(--ssc-space-200); }
+.ssc-divider-top {
+    margin-top: var(--ssc-space-300);
+    padding-top: var(--ssc-space-200);
+    border-top: 1px solid var(--ssc-border);
+}
+.ssc-hidden { display: none; }
+.ssc-flex-1 { flex: 1 1 auto; }
+
+/* Preview helpers */
+.ssc-preview-surface {
+    border: 1px solid var(--ssc-border);
+    border-radius: var(--ssc-radius-lg);
+    padding: var(--ssc-space-150);
+    background: var(--ssc-card);
+}
+.ssc-preview-surface--dashed { border-style: dashed; }
+.ssc-preview-surface--grid { display: grid; gap: var(--ssc-space-100); }
+.ssc-preview-area {
+    display: grid;
+    place-items: center;
+    min-height: 200px;
+    border: 1px solid var(--ssc-border);
+    border-radius: var(--ssc-radius-lg);
+    padding: var(--ssc-space-150);
+    background: var(--ssc-card);
+    transition: background 0.3s ease;
+}
+.ssc-preview-area--tall { min-height: 250px; }
+.ssc-preview-area--dark { background: #0b1020; }
+.ssc-preview-box {
+    width: 100px;
+    height: 100px;
+    border-radius: var(--ssc-radius-lg);
+    background: var(--ssc-accent);
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-weight: var(--ssc-font-weight-semibold);
+}
+.ssc-preview-box--avatar {
+    width: 128px;
+    height: 128px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: block;
+}
+.ssc-preview-box--wide {
+    width: 200px;
+    height: 120px;
+    margin: var(--ssc-space-300) auto;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--ssc-border);
+    border-radius: var(--ssc-radius-lg);
+    background: #fff;
+    transition: all 0.2s ease;
+}
+
+/* Form helpers */
+.ssc-field-label {
+    display: block;
+    font-weight: var(--ssc-font-weight-semibold);
+    margin-bottom: var(--ssc-space-050);
+    color: var(--ssc-muted);
+}
+.ssc-field-group { display: flex; flex-wrap: wrap; gap: var(--ssc-space-100); }
+.ssc-avatar-preview-frame {
+    width: 128px;
+    height: 128px;
+    border-radius: 50%;
+    overflow: hidden;
+}
+.ssc-avatar-preview-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Typography helpers */
+.ssc-title-lg {
+    font-size: var(--ssc-font-size-xl);
+    line-height: var(--ssc-line-height-snug);
+    font-weight: var(--ssc-font-weight-semibold);
+    color: var(--ssc-text);
+}
+.ssc-title-md {
+    font-size: var(--ssc-font-size-lg);
+    line-height: var(--ssc-line-height-snug);
+    font-weight: var(--ssc-font-weight-semibold);
+}
+.ssc-subtext { font-size: var(--ssc-font-size-sm); color: var(--ssc-muted); }
+
+/* Badge helper */
+.ssc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ssc-space-050);
+    padding: 2px var(--ssc-space-075);
+    border-radius: var(--ssc-radius-pill);
+    border: 1px solid var(--ssc-border);
+    font-size: var(--ssc-font-size-xs);
+    font-weight: var(--ssc-font-weight-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ssc-muted);
+}
+
+/* Focus ring */
+.ssc-focus-ring:focus {
+    outline: 2px solid var(--ssc-focus-ring);
+    outline-offset: 2px;
+}
