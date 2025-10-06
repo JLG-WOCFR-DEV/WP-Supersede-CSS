@@ -135,6 +135,18 @@ final class CssController extends BaseController
         }
 
         $responsePayload = ['ok' => true];
+        $isUnchanged = ($css_to_store === $existing_css);
+
+        if ($isUnchanged) {
+            $responsePayload['unchanged'] = true;
+
+            if ($option_name === 'ssc_tokens_css') {
+                $responsePayload['tokens'] = TokenRegistry::getRegistry();
+                $responsePayload['css'] = $existing_css;
+            }
+
+            return new WP_REST_Response($responsePayload, 200);
+        }
 
         if ($option_name === 'ssc_tokens_css') {
             $tokens = TokenRegistry::convertCssToRegistry($css_to_store);

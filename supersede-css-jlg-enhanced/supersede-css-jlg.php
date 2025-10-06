@@ -99,6 +99,43 @@ if (!function_exists('ssc_invalidate_css_cache')) {
     }
 }
 
+if (!function_exists('ssc_maybe_invalidate_css_cache_on_option_change')) {
+    /**
+     * Ensure inline CSS cache is purged whenever one of the managed CSS options changes.
+     *
+     * Professional WordPress products typically hook into option updates to avoid serving stale caches
+     * when administrators modify data outside of the provided UI (CLI, WP-CLI, direct database writes…).
+     * This mirrors that behaviour by reacting to core option lifecycle events.
+     *
+     * @param string $option    Option name that triggered the hook.
+     * @param mixed  $old_value Previous value (unused).
+     * @param mixed  $value     New value (unused).
+     */
+    function ssc_maybe_invalidate_css_cache_on_option_change(string $option, $old_value = null, $value = null): void
+    {
+        static $watched = [
+            'ssc_active_css',
+            'ssc_tokens_css',
+            'ssc_tokens_registry',
+            'ssc_css_desktop',
+            'ssc_css_tablet',
+            'ssc_css_mobile',
+        ];
+
+        if (!in_array($option, $watched, true)) {
+            return;
+        }
+
+        if (function_exists('ssc_invalidate_css_cache')) {
+            ssc_invalidate_css_cache();
+        }
+    }
+
+    add_action('updated_option', 'ssc_maybe_invalidate_css_cache_on_option_change', 10, 3);
+    add_action('added_option', 'ssc_maybe_invalidate_css_cache_on_option_change', 10, 2);
+    add_action('deleted_option', 'ssc_maybe_invalidate_css_cache_on_option_change', 10, 1);
+}
+
 add_action('plugins_loaded', function(){
     $cache_meta = get_option('ssc_css_cache_meta', []);
     $cached_version = is_array($cache_meta) && isset($cache_meta['version'])
