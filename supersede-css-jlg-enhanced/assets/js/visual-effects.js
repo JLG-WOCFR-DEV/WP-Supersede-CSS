@@ -1202,40 +1202,41 @@ ${reduceMotionBlock}`;
         $('#ssc-bg-type').on('change', markPresetAsDirty);
 
         $applyButton.on('click', () => {
-             generateBackgroundCSS();
+            generateBackgroundCSS();
 
-             const type = $('#ssc-bg-type').val();
-             let css = $('#ssc-bg-css').text().trim();
+            const type = $('#ssc-bg-type').val();
+            const storedCss = $('#ssc-bg-css').text().trim();
+            let cssToApply = storedCss;
 
-             if (type === 'gradient') {
-                 if (!latestGradientResult) {
-                     const errorToast = __('Corrigez les erreurs du dégradé avant d'appliquer.', 'supersede-css-jlg');
-                     window.sscToast(errorToast, { politeness: 'assertive' });
-                     return;
-                 }
+            if (type === 'gradient') {
+                if (!latestGradientResult) {
+                    const errorToast = __('Corrigez les erreurs du dégradé avant d'appliquer.', 'supersede-css-jlg');
+                    window.sscToast(errorToast, { politeness: 'assertive' });
+                    return;
+                }
 
-                 css = latestGradientResult.css.trim();
-             }
+                cssToApply = latestGradientResult.css.trim();
+            }
 
-             if (!css) {
-                 return;
-             }
+            if (!cssToApply) {
+                return;
+            }
 
-             const errorMessage = __('Échec de l'enregistrement du fond animé.', 'supersede-css-jlg');
-             const originalText = $applyButton.text();
+            const errorMessage = __('Échec de l'enregistrement du fond animé.', 'supersede-css-jlg');
+            const originalText = $applyButton.text();
 
-             applyBusy = true;
-             updateApplyButtonState();
+            applyBusy = true;
+            updateApplyButtonState();
 
-             $applyButton.text(applyingLabel);
+            $applyButton.text(applyingLabel);
 
-             const requestData = { css, append: true, _wpnonce: SSC.rest.nonce };
-             if (type === 'gradient' && latestGradientResult) {
-                 requestData.gradient_settings = JSON.stringify({
-                     angle: latestGradientResult.angle,
-                     stops: latestGradientResult.stops.map((stop) => ({ color: stop.color, position: stop.position })),
-                 });
-             }
+            const requestData = { css: cssToApply, append: true, _wpnonce: SSC.rest.nonce };
+            if (type === 'gradient' && latestGradientResult) {
+                requestData.gradient_settings = JSON.stringify({
+                    angle: latestGradientResult.angle,
+                    stops: latestGradientResult.stops.map((stop) => ({ color: stop.color, position: stop.position })),
+                });
+            }
 
             $.ajax({
                 url: SSC.rest.root + 'save-css',
