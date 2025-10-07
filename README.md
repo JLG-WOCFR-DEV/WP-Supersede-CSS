@@ -5,6 +5,19 @@
 
 Supersede CSS JLG (Enhanced) est une boîte à outils visuelle pour accélérer la création de styles WordPress. Elle combine des éditeurs temps réel, des générateurs de presets et un moteur de tokens pour produire un CSS cohérent sans écrire de code à la main.
 
+## Sommaire
+
+- [Installation](#installation)
+- [Fonctionnalités clés](#fonctionnalités-clés)
+- [Catalogue des modules](#catalogue-des-modules)
+- [Architecture du plugin](#architecture-du-plugin)
+- [Commandes npm utiles](#commandes-npm-utiles)
+- [Tests](#tests)
+- [Hooks](#hooks)
+- [Licence](#licence)
+- [Contribuer](#contribuer)
+- [Pistes d'amélioration](#pistes-damélioration)
+
 ## Installation
 
 1. Assurez-vous que votre site exécute **WordPress 5.8 ou supérieur** et **PHP 8.0+**. Aucune dépendance serveur additionnelle n'est requise.
@@ -84,6 +97,36 @@ les doublons ou l’usage excessif de `!important`, ainsi que des recommandation
 ### Debug Center
 Centre de diagnostic : infos système, health check JSON, zone de danger pour réinitialiser le CSS, export de révisions et filtres par date/utilisateur.
 
+## Architecture du plugin
+
+```
+supersede-css-jlg-enhanced/
+├── assets/                # JS/SCSS compilés et médias partagés
+├── blocks/                # Blocs Gutenberg personnalisés
+├── docs/                  # Guides, diagrammes et notes techniques
+├── src/                   # Classes PHP du noyau du plugin
+├── views/                 # Templates Twig utilisés dans l’admin
+├── tests/                 # Tests automatisés (PHPUnit & Playwright)
+└── manual-tests/          # Scénarios de QA manuelle documentés
+```
+
+Cette cartographie permet de naviguer rapidement dans le projet :
+
+- Les classes de service et d’intégration WordPress résident dans `src/` et suivent une organisation PSR-4.
+- Les scripts front-end sont gérés via Vite ; les sources vivent dans `assets/` et sont packagées vers `build/` lors du `npm run build`.
+- Les gabarits Twig du back-office sont stockés dans `views/` afin de séparer structure HTML et logique PHP.
+- La documentation technique et les RFC expérimentales sont regroupées dans `docs/` pour guider les contributions futures.
+
+## Commandes npm utiles
+
+| Commande | Description |
+| --- | --- |
+| `npm run dev` | Compile les assets avec Vite en mode développement (HMR et sourcemaps). |
+| `npm run build` | Génère les bundles optimisés utilisés en production dans WordPress. |
+| `npm run env:start` / `npm run env:stop` / `npm run env:destroy` | Démarre, arrête ou supprime l’instance WordPress de test orchestrée par `@wordpress/env`. |
+| `npm run lint` | Analyse le code JavaScript/TypeScript avec ESLint selon la configuration du projet. |
+| `npm run format` | Applique Prettier pour harmoniser le style des fichiers front-end. |
+
 ## Tests
 
 Exécuter la suite de tests automatisés depuis le dossier du plugin :
@@ -146,3 +189,5 @@ Les contributions sont les bienvenues ! Forkez le projet, créez une branche av
 - ✅ **Analyse de performance CSS** : le module « CSS Performance Analyzer » identifie la taille livrée, les doublons et propose des recommandations concrètes pour alléger le CSS.
 - **Marketplace de presets** : permettre l’import direct de presets partagés par la communauté via une galerie en ligne avec notes et prévisualisations.
 - **Export Figma** : fournir un connecteur pour synchroniser tokens et styles Supersede avec une bibliothèque de composants Figma, afin de garder design et développement alignés.
+- **Mode hors ligne** : empaqueter les dépendances critiques et proposer une synchronisation différée pour travailler en mobilité sans connexion stable.
+- **Widgets de monitoring** : ajouter des graphiques (taille CSS, temps de génération) pour suivre l’évolution de la dette front-end directement depuis le tableau de bord WordPress.
