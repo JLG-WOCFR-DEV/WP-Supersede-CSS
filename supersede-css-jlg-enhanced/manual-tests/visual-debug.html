@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <title>Supersede CSS – Assistant de débogage visuel (aperçu)</title>
+    <link rel="stylesheet" href="../assets/css/foundation.css" />
+    <link rel="stylesheet" href="../assets/css/admin.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 32px;
+            background: var(--ssc-bg, #f5f5f5);
+        }
+        .demo-container {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body class="ssc-visual-debug-active">
+    <div class="demo-container">
+        <div class="ssc-wrap ssc-debug-center">
+            <h1>Supersede CSS — Debug Center</h1>
+            <p>Extrait statique utilisé pour prévisualiser le nouveau panneau de débogage visuel.</p>
+
+            <div class="ssc-panel" id="ssc-visual-debug-panel" data-ssc-debug-label="Assistant visuel" style="margin-top: 16px;">
+                <h2>Assistant de débogage visuel</h2>
+                <p class="description" id="ssc-visual-debug-description">
+                    Activez les contours d’interface, les grilles et les repères d’espacement pour inspecter rapidement la mise en page.
+                </p>
+                <div class="ssc-visual-debug-actions">
+                    <button type="button" class="button button-secondary" aria-pressed="true">
+                        Désactiver le débogage visuel
+                    </button>
+                    <p class="description" role="status">Débogage visuel actif. Les surfaces sont annotées dans toute l’interface.</p>
+                </div>
+                <p class="description ssc-visual-debug-note">Préférence sauvegardée pour toutes les pages Supersede CSS.</p>
+                <div class="ssc-visual-debug-legend" aria-hidden="true">
+                    <span class="ssc-visual-debug-legend__item">
+                        <span class="ssc-visual-debug-legend__swatch ssc-visual-debug-legend__swatch--surface"></span>
+                        Contours des panneaux
+                    </span>
+                    <span class="ssc-visual-debug-legend__item">
+                        <span class="ssc-visual-debug-legend__swatch ssc-visual-debug-legend__swatch--grid"></span>
+                        Grilles & espacements
+                    </span>
+                    <span class="ssc-visual-debug-legend__item">
+                        <span class="ssc-visual-debug-legend__swatch ssc-visual-debug-legend__swatch--focus"></span>
+                        Points d’interaction
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
