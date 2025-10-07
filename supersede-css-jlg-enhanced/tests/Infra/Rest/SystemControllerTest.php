@@ -2,7 +2,6 @@
 
 use SSC\Infra\Rest\SystemController;
 use SSC\Support\TokenRegistry;
-use WP_REST_Response;
 
 final class SystemControllerTest extends WP_UnitTestCase
 {

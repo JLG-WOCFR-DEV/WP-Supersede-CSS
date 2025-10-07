@@ -2,8 +2,6 @@
 
 use SSC\Infra\Rest\PresetsController;
 use SSC\Support\CssSanitizer;
-use WP_REST_Request;
-use WP_REST_Response;
 
 final class PresetsControllerTest extends WP_UnitTestCase
 {
