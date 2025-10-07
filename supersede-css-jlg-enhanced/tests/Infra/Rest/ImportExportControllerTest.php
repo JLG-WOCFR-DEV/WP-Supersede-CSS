@@ -3,8 +3,6 @@
 use SSC\Infra\Import\Sanitizer;
 use SSC\Infra\Rest\ImportExportController;
 use SSC\Support\CssSanitizer;
-use WP_REST_Request;
-use WP_REST_Response;
 
 final class ImportExportControllerTest extends WP_UnitTestCase
 {

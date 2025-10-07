@@ -2,8 +2,6 @@
 
 use SSC\Infra\Rest\TokensController;
 use SSC\Support\TokenRegistry;
-use WP_REST_Request;
-use WP_REST_Response;
 
 final class TokensControllerTest extends WP_UnitTestCase
 {

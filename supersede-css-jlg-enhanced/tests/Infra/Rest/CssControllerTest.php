@@ -4,8 +4,6 @@ use SSC\Infra\Import\Sanitizer;
 use SSC\Infra\Rest\CssController;
 use SSC\Support\CssSanitizer;
 use SSC\Support\TokenRegistry;
-use WP_REST_Request;
-use WP_REST_Response;
 
 final class CssControllerTest extends WP_UnitTestCase
 {

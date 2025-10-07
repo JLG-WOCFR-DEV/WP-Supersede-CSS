@@ -28,6 +28,10 @@ $ssc_options_to_delete = [
 // Supprime les options du site courant
 foreach ($ssc_options_to_delete as $option_name) {
     delete_option($option_name);
+
+    if (isset($GLOBALS['ssc_deleted_options']) && is_array($GLOBALS['ssc_deleted_options'])) {
+        $GLOBALS['ssc_deleted_options'][] = $option_name;
+    }
 }
 
 if (!is_multisite()) {
@@ -50,6 +54,10 @@ foreach ($site_ids as $site_id) {
 
     foreach ($ssc_options_to_delete as $option_name) {
         delete_option($option_name);
+
+        if (isset($GLOBALS['ssc_deleted_options']) && is_array($GLOBALS['ssc_deleted_options'])) {
+            $GLOBALS['ssc_deleted_options'][] = $option_name;
+        }
     }
 
     restore_current_blog();

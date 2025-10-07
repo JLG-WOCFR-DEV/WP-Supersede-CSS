@@ -1,7 +1,6 @@
 <?php declare(strict_types=1);
 
 use SSC\Infra\Rest\TokensController;
-use WP_REST_Request;
 
 final class AuthorizationTest extends WP_UnitTestCase
 {
