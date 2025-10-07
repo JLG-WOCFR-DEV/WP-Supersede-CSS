@@ -40,24 +40,34 @@ Ces pistes prolongent l’ambition « studio » en s’inspirant des workflows d
 1. **Animation timeline & calques dédiés**
    - L’Animation Studio se limite aujourd’hui à un preset unique et à un slider de durée sans visualisation temporelle ou gestion de multiples propriétés (délai, easing, iterations). 【F:supersede-css-jlg-enhanced/views/animation-studio.php†L11-L28】
    - Introduire une timeline avec scrubbing, calques imbriqués et gestion des keyframes (position, opacité, transforms), afin de se rapprocher d’un éditeur façon After Effects et de réduire les allers-retours vers des outils externes.
-   - Ajouter un mode « preview loop » avec controls (lecture, pause, vitesse) et une option de comparaison avant/après sur hover pour mimer les interactions raffinées qu’on retrouve dans Webflow.
+   - Prévoir une architecture en deux panneaux : à gauche la liste des calques et propriétés animables (transform, filters, custom CSS) ; au centre la timeline avec zoom horizontal, curseur de lecture et aimantation des keyframes ; à droite un inspecteur contextuel pour ajuster easing, delays et déclencheurs.
+   - Ajouter un mode « preview loop » avec controls (lecture, pause, vitesse), une comparaison avant/après sur hover et la possibilité d’exporter une capture vidéo/GIF rapide pour partage Slack.
+   - Intégrer une gestion d’états (hover, focus, scroll into view) afin d’aligner la timeline sur les interactions multi-triggers utilisées par Webflow ou Framer.
 
 2. **Bibliothèque de presets intelligents**
    - Le dropdown statique des presets empêche de sauvegarder ou partager des combinaisons personnalisées, contrairement aux bibliothèques cloud de LottieFiles. 【F:supersede-css-jlg-enhanced/views/animation-studio.php†L12-L24】
    - Mettre en place un système de presets taggés (marketing, micro-interactions, accessibilité) avec recherche, favoris et suggestions basées sur l’historique du site.
-   - Synchroniser ces presets avec un espace d’équipe (export/import JSON ou hub SaaS) pour accélérer l’adoption côté agences et designers.
+   - Ajouter une grille visuelle de presets avec preview animée au survol, informations de performance (poids CSS, compatibilité navigateurs) et possibilité de dupliquer un preset pour le personnaliser.
+   - Synchroniser ces presets avec un espace d’équipe (export/import JSON ou hub SaaS) pour accélérer l’adoption côté agences et designers, et exposer une API REST pour l’intégration continue.
+   - Installer un mécanisme de recommandation : scoring automatique en fonction des composants déjà utilisés sur le site, suggestions de presets complémentaires et alertes sur les combinaisons à risque (trop de propriétés animées simultanément, par exemple).
 
 3. **Canvas d’animation contextualisé**
    - L’aperçu actuel reste un simple carré neutre, sans aucun décor ou variation de surface. 【F:supersede-css-jlg-enhanced/views/animation-studio.php†L31-L34】
    - Offrir des scènes préremplies (card produit, avatar, CTA) et la possibilité de switcher entre breakpoints (mobile/tablette/desktop) comme dans Framer augmente la projection et aide à détecter les artefacts visuels.
-   - Intégrer des overlays (grilles 8pt, safe areas) et des contrôles de background (gradient, média) pour tester la lisibilité réelle.
+   - Ajouter une librairie de devices (iPhone, tablette, desktop, mailer) et des overlays (grilles 8pt, safe areas, lignes de pliage pour email) activables via toggles pour tester la lisibilité réelle.
+   - Préciser un mode « inspecteur de rendu » qui affiche les valeurs CSS résultantes, l’ordre des animations et un heatmap des performances (durées d’exécution, warnings Core Web Vitals) pour orienter les décisions.
+   - Prévoir des réglages de fond avancés : gradients multi-stops, import d’images, vidéos, ou captures de page WordPress existante pour prévisualiser l’animation dans son contexte final.
 
 4. **Manipulation directe de la grille**
    - L’éditeur de grid repose sur deux sliders (colonnes, gap) et un bouton d’application ; les manipulations se font donc via des formulaires plutôt qu’en drag & drop. 【F:supersede-css-jlg-enhanced/views/grid-editor.php†L13-L36】
    - Ajouter un canvas interactif où l’on peut tracer/dupliquer/supprimer des tracks, fusionner des cellules ou appliquer des areas nommées directement à la souris, à la manière du designer de Webflow ou Builder.io.
+   - Compléter le canvas par une mini-carte des breakpoints : vue synchrone des layouts Desktop/Tablet/Mobile, possibilité de verrouiller des zones et d’hériter/surcharger les paramètres par breakpoint.
    - Prévoir des templates professionnels (hero, pricing, blog layout) avec aperçu responsive instantané et annotations sur les breakpoints.
+   - Ajouter des aides contextuelles : alignement magnétique, mesure en pixels/rem/%, estimation automatique des ratios d’image et suggestions d’espacement optimisées pour la typographie choisie.
 
 5. **Panneaux modulaires et modes de focus**
    - L’interface utilise une grille à deux colonnes rigide (`.ssc-two`) sans dock modulable, ce qui limite la personnalisation de l’espace de travail par rôle (designer vs. intégrateur). 【F:supersede-css-jlg-enhanced/assets/css/admin.css†L81-L101】
    - Introduire un système de panneaux dockables/collapsables, un mode focus plein écran pour les étapes complexes et des raccourcis clavier (⌘B pour basculer la bibliothèque, ⇧+E pour exporter) sur le modèle des outils professionnels.
+   - Offrir une gestion de layouts mémorisés : l’utilisateur choisit un preset « Designer », « Intégrateur », « QA » avec panneaux prédéfinis, ou sauvegarde son arrangement personnalisé synchronisé via user meta.
    - Ajouter une barre de statut en bas de l’écran avec logs en temps réel (dernière sauvegarde, erreurs de lint, recommandations d’accessibilité) pour sécuriser les workflows intensifs.
+   - Implémenter un centre de notifications contextualisé (succès, erreurs, suggestions) avec historique et possibilité d’assigner des actions (ex. « Ajouter une version responsive ») pour rapprocher l’outil d’une suite collaborative moderne.
