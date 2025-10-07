@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Supersede CSS JLG (Enhanced)
  * Description: Boîte à outils visuelle pour CSS avec presets, éditeurs live, tokens, et un centre de débogage amélioré.
- * Version: 10.0.6
+ * Version: 10.0.7
  * Requires PHP: 8.0
  * Author: JLG (Enhanced by AI)
  * Text Domain: supersede-css-jlg
@@ -11,9 +11,10 @@
 if (!defined('ABSPATH')) { exit; }
 
 use SSC\Blocks\TokenPreview;
+use SSC\Infra\Cli\CssCacheCommand;
 use SSC\Support\CssSanitizer;
 
-define('SSC_VERSION','10.0.6');
+define('SSC_VERSION','10.0.7');
 define('SSC_PLUGIN_FILE', __FILE__);
 define('SSC_PLUGIN_DIR', plugin_dir_path(__FILE__));
 // CORRECTION : Déclaration de l'URL plus robuste pour éviter les erreurs 404.
@@ -196,6 +197,16 @@ add_action('enqueue_block_editor_assets', 'ssc_enqueue_block_editor_inline_css')
 add_action('plugins_loaded', function() {
     load_plugin_textdomain('supersede-css-jlg', false, dirname(plugin_basename(__FILE__)) . '/languages');
 });
+
+if (defined('WP_CLI') && WP_CLI) {
+    add_action('cli_init', static function (): void {
+        if (!class_exists('\\WP_CLI')) {
+            return;
+        }
+
+        \WP_CLI::add_command('ssc css flush', new CssCacheCommand());
+    });
+}
 
 if (!function_exists('ssc_register_blocks')) {
     function ssc_register_blocks(): void
