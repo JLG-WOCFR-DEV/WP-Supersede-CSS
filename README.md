@@ -1,6 +1,6 @@
 # Supersede CSS JLG (Enhanced)
 
-**Version:** 10.0.5  
+**Version:** 10.0.6
 **Author:** JLG (Enhanced by AI)
 
 Supersede CSS JLG (Enhanced) est une boîte à outils visuelle pour accélérer la création de styles WordPress. Elle combine des éditeurs temps réel, des générateurs de presets et un moteur de tokens pour produire un CSS cohérent sans écrire de code à la main.
@@ -77,6 +77,10 @@ Transferts JSON ou CSS avec sélection des modules inclus, import assisté et me
 ### CSS Viewer
 Affiche les options `ssc_active_css` et `ssc_tokens_css` telles qu’enregistrées en base pour inspection ou debug rapide.
 
+### CSS Performance Analyzer
+Mesure la taille brute/gzip, le nombre de règles et les sélecteurs complexes du CSS généré. Fournit des alertes sur les `@import`,
+les doublons ou l’usage excessif de `!important`, ainsi que des recommandations d’optimisation pour garder le front rapide.
+
 ### Debug Center
 Centre de diagnostic : infos système, health check JSON, zone de danger pour réinitialiser le CSS, export de révisions et filtres par date/utilisateur.
 
@@ -139,6 +143,6 @@ Les contributions sont les bienvenues ! Forkez le projet, créez une branche av
 
 - **Mode « starter site »** : proposer des scénarios guidés pour générer la structure CSS complète d’un nouveau site (tokens, presets, grilles) en quelques étapes.
 - **Assistant IA contextuel** : intégrer un panel facultatif exploitant l’API OpenAI pour suggérer des classes ou corriger automatiquement le CSS généré.
-- **Analyse de performance CSS** : ajouter un module qui mesure la taille et la couverture du CSS produit, avec suggestions de réduction et alertes sur les sélecteurs orphelins.
+- ✅ **Analyse de performance CSS** : le module « CSS Performance Analyzer » identifie la taille livrée, les doublons et propose des recommandations concrètes pour alléger le CSS.
 - **Marketplace de presets** : permettre l’import direct de presets partagés par la communauté via une galerie en ligne avec notes et prévisualisations.
 - **Export Figma** : fournir un connecteur pour synchroniser tokens et styles Supersede avec une bibliothèque de composants Figma, afin de garder design et développement alignés.
