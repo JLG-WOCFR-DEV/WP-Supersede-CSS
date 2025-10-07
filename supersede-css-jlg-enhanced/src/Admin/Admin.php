@@ -288,6 +288,11 @@ final class Admin
                 'commandPaletteTitle' => esc_attr__('Supersede CSS command palette', 'supersede-css-jlg'),
                 'commandPaletteSearchPlaceholder' => esc_attr__('Navigate or run an action…', 'supersede-css-jlg'),
                 'commandPaletteSearchLabel' => esc_html__('Command palette search', 'supersede-css-jlg'),
+                'commandPaletteResultsAnnouncement' => esc_html__('%d résultat(s) disponibles.', 'supersede-css-jlg'),
+                'commandPaletteEmptyState' => esc_html__('Aucun résultat ne correspond à votre recherche.', 'supersede-css-jlg'),
+                'mobileMenuShowLabel' => esc_attr__('Afficher le menu', 'supersede-css-jlg'),
+                'mobileMenuHideLabel' => esc_attr__('Masquer le menu', 'supersede-css-jlg'),
+                'mobileMenuToggleSrLabel' => esc_html__('Menu', 'supersede-css-jlg'),
             ],
         ]);
     }
