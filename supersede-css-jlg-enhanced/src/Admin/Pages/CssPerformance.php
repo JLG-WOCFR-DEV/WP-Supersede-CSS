@@ -13,6 +13,10 @@ class CssPerformance extends AbstractPage
     private const LONG_SELECTOR_THRESHOLD = 80;
     private const MAX_COMPLEX_SELECTORS = 8;
     private const MAX_DUPLICATE_SELECTORS = 8;
+    private const MAX_SPECIFICITY_ITEMS = 5;
+
+    /** @var string[] */
+    private const VENDOR_PREFIXES = ['-webkit-', '-moz-', '-ms-', '-o-'];
 
     public function render(): void
     {
@@ -57,6 +61,16 @@ class CssPerformance extends AbstractPage
                 'duplicate_selectors'=> [],
                 'max_declarations'   => 0,
                 'raw_sample'         => '',
+                'specificity_top'    => [],
+                'specificity_average'=> 0.0,
+                'specificity_max'    => 0,
+                'specificity_sum'    => 0.0,
+                'custom_property_definitions' => 0,
+                'custom_property_names'       => [],
+                'custom_property_references'  => 0,
+                'custom_property_unique_count'=> 0,
+                'vendor_prefixes'    => [],
+                'vendor_prefix_total'=> 0,
             ];
         }
 
@@ -75,6 +89,14 @@ class CssPerformance extends AbstractPage
         $maxDeclarations  = 0;
         $longSelectors    = [];
         $selectorUsage    = [];
+        $specificitySum   = 0.0;
+        $specificityMax   = 0;
+        $specificityEntries = [];
+        $customPropertyDefinitions = 0;
+        $customPropertyNames       = [];
+        $customPropertyReferences  = 0;
+        $vendorPrefixUsage         = array_fill_keys(self::VENDOR_PREFIXES, 0);
+        $vendorPrefixTotal         = 0;
 
         $pattern = '/([^\{]+)\{([^\{\}]*)\}/m';
         if (preg_match_all($pattern, $withoutComments, $matches, PREG_SET_ORDER) > 0) {
@@ -109,6 +131,26 @@ class CssPerformance extends AbstractPage
                     if (stripos($declaration, '!important') !== false) {
                         $importantCount++;
                     }
+
+                    [$property, $value] = array_pad(explode(':', $declaration, 2), 2, '');
+                    $property = trim($property);
+                    $value    = trim($value);
+
+                    if ($property !== '' && str_starts_with($property, '--')) {
+                        $customPropertyDefinitions++;
+                        $customPropertyNames[$property] = true;
+                    }
+
+                    if ($value !== '' && stripos($value, 'var(') !== false) {
+                        $customPropertyReferences++;
+                    }
+
+                    foreach (self::VENDOR_PREFIXES as $prefix) {
+                        if (($property !== '' && str_starts_with($property, $prefix)) || ($value !== '' && str_contains($value, $prefix))) {
+                            $vendorPrefixUsage[$prefix]++;
+                            $vendorPrefixTotal++;
+                        }
+                    }
                 }
 
                 if ($ruleDeclarations > $maxDeclarations) {
@@ -133,6 +175,11 @@ class CssPerformance extends AbstractPage
                         ];
                     }
                     $selectorUsage[$key]['count']++;
+
+                    $specificityData   = $this->computeSpecificity($selector);
+                    $specificitySum   += $specificityData['score'];
+                    $specificityMax    = max($specificityMax, $specificityData['score']);
+                    $specificityEntries[] = array_merge(['selector' => $selector], $specificityData);
                 }
             }
         }
@@ -156,6 +203,24 @@ class CssPerformance extends AbstractPage
         $importCount = preg_match_all('/@import\b/i', $withoutComments, $importMatches) ?: 0;
         $atruleCount = preg_match_all('/@(media|supports|container|layer|keyframes|font-face)\b/i', $withoutComments, $atruleMatches) ?: 0;
 
+        $specificityTop = $this->limitSpecificityEntries($specificityEntries);
+
+        $vendorPrefixes = [];
+        foreach ($vendorPrefixUsage as $prefix => $count) {
+            if ($count <= 0) {
+                continue;
+            }
+
+            $vendorPrefixes[] = [
+                'prefix' => $prefix,
+                'count'  => $count,
+            ];
+        }
+
+        usort($vendorPrefixes, static fn(array $a, array $b): int => $b['count'] <=> $a['count']);
+
+        $customNames = array_keys($customPropertyNames);
+
         return [
             'empty'               => false,
             'size_bytes'          => $sizeBytes,
@@ -173,6 +238,16 @@ class CssPerformance extends AbstractPage
             'duplicate_selectors' => $duplicateSelectors,
             'max_declarations'    => $maxDeclarations,
             'raw_sample'          => $this->buildSample($raw),
+            'specificity_top'     => $specificityTop,
+            'specificity_average' => $selectorCount > 0 ? $specificitySum / $selectorCount : 0.0,
+            'specificity_max'     => $specificityMax,
+            'specificity_sum'     => $specificitySum,
+            'custom_property_definitions' => $customPropertyDefinitions,
+            'custom_property_names'       => $customNames,
+            'custom_property_references'  => $customPropertyReferences,
+            'custom_property_unique_count'=> count($customNames),
+            'vendor_prefixes'     => $vendorPrefixes,
+            'vendor_prefix_total' => $vendorPrefixTotal,
         ];
     }
 
@@ -202,6 +277,8 @@ class CssPerformance extends AbstractPage
             $gzipBytes = (int) ($active['gzip_bytes'] ?? 0) + (int) ($tokens['gzip_bytes'] ?? 0);
         }
 
+        $customPropertyNames = array_values(array_unique(array_merge($active['custom_property_names'], $tokens['custom_property_names'])));
+
         return [
             'size_bytes'        => $sizeBytes,
             'size_readable'     => $this->formatBytes($sizeBytes),
@@ -213,6 +290,18 @@ class CssPerformance extends AbstractPage
             'important_count'   => $active['important_count'] + $tokens['important_count'],
             'import_count'      => $active['import_count'] + $tokens['import_count'],
             'atrule_count'      => $active['atrule_count'] + $tokens['atrule_count'],
+            'specificity_sum'   => $active['specificity_sum'] + $tokens['specificity_sum'],
+            'specificity_average'=> ($active['selector_count'] + $tokens['selector_count']) > 0
+                ? ($active['specificity_sum'] + $tokens['specificity_sum']) / ($active['selector_count'] + $tokens['selector_count'])
+                : 0.0,
+            'specificity_max'   => max($active['specificity_max'], $tokens['specificity_max']),
+            'specificity_top'   => $this->mergeSpecificityLists($active['specificity_top'], $tokens['specificity_top']),
+            'custom_property_definitions' => $active['custom_property_definitions'] + $tokens['custom_property_definitions'],
+            'custom_property_references'  => $active['custom_property_references'] + $tokens['custom_property_references'],
+            'custom_property_names'       => $customPropertyNames,
+            'custom_property_unique_count'=> count($customPropertyNames),
+            'vendor_prefix_total'=> $active['vendor_prefix_total'] + $tokens['vendor_prefix_total'],
+            'vendor_prefixes'   => $this->mergeVendorPrefixes($active['vendor_prefixes'], $tokens['vendor_prefixes']),
         ];
     }
 
@@ -238,6 +327,22 @@ class CssPerformance extends AbstractPage
 
         if (!empty($active['duplicate_selectors']) || !empty($tokens['duplicate_selectors'])) {
             $warnings[] = __('Des sélecteurs apparaissent plusieurs fois. Vérifiez s’il est possible de factoriser ces règles pour réduire le poids du CSS.', 'supersede-css-jlg');
+        }
+
+        if (($combined['specificity_max'] ?? 0) >= 400) {
+            $warnings[] = __('Certains sélecteurs dépassent un score de spécificité de 400. Les overrides seront difficiles à maintenir sans réorganisation de la cascade.', 'supersede-css-jlg');
+        }
+
+        if (($combined['specificity_average'] ?? 0) > 120) {
+            $warnings[] = __('La spécificité moyenne est élevée. Envisagez de simplifier vos sélecteurs ou d’introduire une architecture BEM/ITCSS.', 'supersede-css-jlg');
+        }
+
+        if (($combined['vendor_prefix_total'] ?? 0) > 12) {
+            $warnings[] = __('De nombreux préfixes propriétaires sont présents. Vérifiez votre pipeline PostCSS/Autoprefixer pour éviter la régression de compatibilité.', 'supersede-css-jlg');
+        }
+
+        if (($combined['custom_property_references'] ?? 0) > 0 && ($combined['custom_property_definitions'] ?? 0) === 0) {
+            $warnings[] = __('Des appels à var() existent sans définition de tokens locaux. Confirmez que les variables globales sont chargées avant ce CSS.', 'supersede-css-jlg');
         }
 
         return $warnings;
@@ -268,6 +373,18 @@ class CssPerformance extends AbstractPage
 
         if (!$tokens['empty'] && $tokens['rule_count'] === 0 && $tokens['selector_count'] === 0) {
             $recommendations[] = __('Vos tokens ne génèrent pas de règles directes. Pensez à vérifier leur injection dans vos presets ou modules Utilities.', 'supersede-css-jlg');
+        }
+
+        if (($combined['specificity_average'] ?? 0) > 100) {
+            $recommendations[] = __('Cartographiez les composants critiques et introduisez des couches (ITCSS, Cascade Layers) pour contenir la spécificité.', 'supersede-css-jlg');
+        }
+
+        if (($combined['custom_property_definitions'] ?? 0) > 0) {
+            $recommendations[] = __('Documentez vos tokens CSS (noms, portée, fallback) et alimentez le Design System afin que les équipes puissent les réutiliser.', 'supersede-css-jlg');
+        }
+
+        if (($combined['vendor_prefix_total'] ?? 0) > 0) {
+            $recommendations[] = __('Configurez Autoprefixer/Browserslist sur vos builds Supersede pour n’émettre que les préfixes nécessaires aux navigateurs ciblés.', 'supersede-css-jlg');
         }
 
         return $recommendations;
@@ -319,5 +436,128 @@ class CssPerformance extends AbstractPage
         }
 
         return number_format($value, $decimals, '.', ' ');
+    }
+
+    private function computeSpecificity(string $selector): array
+    {
+        $selector = trim($selector);
+        if ($selector === '') {
+            return [
+                'ids'     => 0,
+                'classes' => 0,
+                'types'   => 0,
+                'score'   => 0,
+                'vector'  => '0,0,0',
+            ];
+        }
+
+        $working = preg_replace('/::[\w-]+/', ' ', $selector);
+        if (!is_string($working)) {
+            $working = $selector;
+        }
+
+        $idCount = preg_match_all('/#[A-Za-z0-9_-]+/', $working, $idMatches) ?: 0;
+        $classLikeCount = preg_match_all('/(\.[A-Za-z0-9_-]+|\[[^\]]+\]|:[A-Za-z0-9_-]+(?:\([^\)]*\))?)/', $working, $classMatches) ?: 0;
+
+        $withoutClassLike = preg_replace('/(\.[A-Za-z0-9_-]+|\[[^\]]+\]|:[A-Za-z0-9_-]+(?:\([^\)]*\))?)/', ' ', $working);
+        if (!is_string($withoutClassLike)) {
+            $withoutClassLike = $working;
+        }
+
+        $withoutIds = preg_replace('/#[A-Za-z0-9_-]+/', ' ', $withoutClassLike);
+        if (!is_string($withoutIds)) {
+            $withoutIds = $withoutClassLike;
+        }
+
+        $withoutUniversal = preg_replace('/\*/', ' ', $withoutIds);
+        if (!is_string($withoutUniversal)) {
+            $withoutUniversal = $withoutIds;
+        }
+
+        $tokens = preg_split('/[\s>+~]+/', trim((string) $withoutUniversal)) ?: [];
+        $typeCount = 0;
+
+        foreach ($tokens as $token) {
+            $token = trim($token);
+            if ($token === '' || $token === '&') {
+                continue;
+            }
+
+            $token = (string) preg_replace('/^[A-Za-z0-9_-]+\|/', '', $token);
+            if ($token === '') {
+                continue;
+            }
+
+            if (!preg_match('/^[A-Za-z][A-Za-z0-9_-]*$/', $token)) {
+                continue;
+            }
+
+            $typeCount++;
+        }
+
+        $score = ($idCount * 100) + ($classLikeCount * 10) + $typeCount;
+
+        return [
+            'ids'     => $idCount,
+            'classes' => $classLikeCount,
+            'types'   => $typeCount,
+            'score'   => $score,
+            'vector'  => sprintf('%d,%d,%d', $idCount, $classLikeCount, $typeCount),
+        ];
+    }
+
+    private function limitSpecificityEntries(array $entries): array
+    {
+        if (empty($entries)) {
+            return [];
+        }
+
+        usort($entries, static fn(array $a, array $b): int => $b['score'] <=> $a['score']);
+
+        return array_slice($entries, 0, self::MAX_SPECIFICITY_ITEMS);
+    }
+
+    private function mergeSpecificityLists(array $active, array $tokens): array
+    {
+        $merged = [];
+
+        foreach ([$active, $tokens] as $list) {
+            foreach ($list as $entry) {
+                $key = $entry['selector'];
+                if (!isset($merged[$key]) || $merged[$key]['score'] < $entry['score']) {
+                    $merged[$key] = $entry;
+                }
+            }
+        }
+
+        return $this->limitSpecificityEntries(array_values($merged));
+    }
+
+    private function mergeVendorPrefixes(array $active, array $tokens): array
+    {
+        $counts = [];
+
+        foreach ([$active, $tokens] as $list) {
+            foreach ($list as $item) {
+                $prefix = $item['prefix'];
+                $counts[$prefix] = ($counts[$prefix] ?? 0) + (int) $item['count'];
+            }
+        }
+
+        $results = [];
+        foreach ($counts as $prefix => $count) {
+            if ($count <= 0) {
+                continue;
+            }
+
+            $results[] = [
+                'prefix' => $prefix,
+                'count'  => $count,
+            ];
+        }
+
+        usort($results, static fn(array $a, array $b): int => $b['count'] <=> $a['count']);
+
+        return $results;
     }
 }
