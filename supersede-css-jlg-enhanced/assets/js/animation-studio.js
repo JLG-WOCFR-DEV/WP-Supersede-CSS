@@ -67,7 +67,7 @@
         $target.replaceWith($clone);
 
         const $newTarget = $(selector);
-        $newTarget.addClass(['ssc-animated', preset.name]);
+        $newTarget.addClass('ssc-animated ' + preset.name);
     }
 
     function generateAnimationCSS() {
