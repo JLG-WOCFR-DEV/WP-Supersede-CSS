@@ -28,10 +28,55 @@
         }
     };
 
+    const previewTargets = {
+        card: '#ssc-anim-preview-card',
+        badge: '#ssc-anim-preview-badge',
+        avatar: '#ssc-anim-preview-avatar',
+        cta: '#ssc-anim-preview-cta'
+    };
+    const animationClasses = Object.values(presets).map(preset => preset.name);
+    let currentTargetKey = 'card';
+
+    function resetAnimationTargets() {
+        $('.ssc-anim-target').each(function() {
+            const $el = $(this);
+            const preserved = ($el.attr('class') || '')
+                .split(/\s+/)
+                .filter(cls => cls && cls !== 'ssc-animated' && !animationClasses.includes(cls));
+            $el.attr('class', preserved.join(' '));
+        });
+    }
+
+    function applyPresetToTarget(selector, preset) {
+        const $target = $(selector);
+        if (!$target.length) {
+            return;
+        }
+
+        resetAnimationTargets();
+
+        const originalId = $target.attr('id') || '';
+        const preservedClasses = ($target.attr('class') || '')
+            .split(/\s+/)
+            .filter(cls => cls && cls !== 'ssc-animated' && !animationClasses.includes(cls));
+
+        const $clone = $target.clone(false);
+        $clone.attr('id', originalId);
+        $clone.attr('class', preservedClasses.join(' '));
+
+        $target.replaceWith($clone);
+
+        const $newTarget = $(selector);
+        $newTarget.addClass(['ssc-animated', preset.name]);
+    }
+
     function generateAnimationCSS() {
         const presetKey = $('#ssc-anim-preset').val();
         const duration = $('#ssc-anim-duration').val();
         const preset = presets[presetKey];
+        if (!preset) {
+            return;
+        }
 
         $('#ssc-anim-duration-val').text(duration + 's');
 
@@ -53,25 +98,42 @@
         }
         styleTag.text(css);
         
-        let previewBox = $('#ssc-anim-preview-box');
-        const animationClasses = Object.values(presets).map(preset => preset.name);
-        const preservedClasses = (previewBox.attr('class') || '')
-            .split(/\s+/)
-            .filter(cls => cls && cls !== 'ssc-animated' && !animationClasses.includes(cls));
-
-        const newBox = previewBox.clone(false);
-        newBox.attr('id', 'ssc-anim-preview-box');
-        newBox.attr('class', preservedClasses.join(' '));
-
-        previewBox.replaceWith(newBox);
-        previewBox = $('#ssc-anim-preview-box');
-        previewBox.addClass('ssc-animated ' + preset.name);
+        const selector = previewTargets[currentTargetKey] || previewTargets.card;
+        applyPresetToTarget(selector, preset);
     }
 
     $(document).ready(function() {
         if (!$('#ssc-anim-preset').length) return; // Ne rien faire si on n'est pas sur la bonne page
 
         $('#ssc-anim-preset, #ssc-anim-duration').on('input', generateAnimationCSS);
+
+        $('input[name="ssc-anim-target"]').on('change', function() {
+            const selected = $(this).val();
+            if (typeof selected === 'string' && previewTargets[selected]) {
+                currentTargetKey = selected;
+                generateAnimationCSS();
+            }
+        });
+
+        const $stage = $('#ssc-anim-preview-stage');
+        const $surfaceButtons = $('.ssc-preview-device-toggle');
+        $surfaceButtons.on('click', function() {
+            const $button = $(this);
+            const surface = $button.data('surface');
+            if (!surface) {
+                return;
+            }
+
+            $surfaceButtons.attr('aria-pressed', 'false').removeClass('is-active');
+            $button.attr('aria-pressed', 'true').addClass('is-active');
+            $stage.attr('data-surface', surface);
+        });
+
+        $('.ssc-preview-bg-toggle').on('click', function() {
+            const $button = $(this);
+            const isDark = $stage.toggleClass('is-dark').hasClass('is-dark');
+            $button.attr('aria-pressed', isDark ? 'true' : 'false');
+        });
 
         $('#ssc-anim-copy').on('click', () => {
             window.sscCopyToClipboard($('#ssc-anim-css').text(), {
