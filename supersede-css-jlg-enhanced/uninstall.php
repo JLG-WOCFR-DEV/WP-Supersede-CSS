@@ -7,18 +7,19 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 if (!function_exists('ssc_record_deleted_option')) {
     function ssc_record_deleted_option(string $option_name): void
     {
-        $recorded = false;
-
-        if (isset($GLOBALS['ssc_deleted_options']) && is_array($GLOBALS['ssc_deleted_options'])) {
-            $GLOBALS['ssc_deleted_options'][] = $option_name;
-            $recorded = true;
+        if (!isset($GLOBALS['ssc_deleted_options']) || !is_array($GLOBALS['ssc_deleted_options'])) {
+            $GLOBALS['ssc_deleted_options'] = [];
         }
+
+        $GLOBALS['ssc_deleted_options'][] = $option_name;
 
         global $ssc_deleted_options;
 
-        if (!$recorded && isset($ssc_deleted_options) && is_array($ssc_deleted_options)) {
-            $ssc_deleted_options[] = $option_name;
+        if (!is_array($ssc_deleted_options ?? null)) {
+            $ssc_deleted_options = [];
         }
+
+        $ssc_deleted_options[] = $option_name;
     }
 }
 
