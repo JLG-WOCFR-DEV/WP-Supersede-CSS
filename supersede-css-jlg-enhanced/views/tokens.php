@@ -69,6 +69,14 @@ if (function_exists('wp_localize_script')) {
             'matchesLabel' => __('Correspondances', 'supersede-css-jlg'),
             'previewContextLabel' => __('Contexte d’aperçu', 'supersede-css-jlg'),
             'previewContextDefault' => __('Contexte par défaut', 'supersede-css-jlg'),
+            'devicePresetAnnouncement' => __('Appareil sélectionné : %s', 'supersede-css-jlg'),
+            'deviceOrientationLandscape' => __('Orientation paysage', 'supersede-css-jlg'),
+            'deviceOrientationPortrait' => __('Orientation portrait', 'supersede-css-jlg'),
+            'deviceOrientationLocked' => __('Rotation non disponible pour cet appareil.', 'supersede-css-jlg'),
+            'deviceZoomAnnouncement' => __('Zoom défini sur %s %%', 'supersede-css-jlg'),
+            'deviceStateAnnouncement' => __('Simulation de l’état : %s', 'supersede-css-jlg'),
+            'deviceReducedMotionOn' => __('Préférence « réduction des animations » activée', 'supersede-css-jlg'),
+            'deviceReducedMotionOff' => __('Préférence « réduction des animations » désactivée', 'supersede-css-jlg'),
         ],
     ]);
 }
@@ -162,17 +170,137 @@ if (function_exists('wp_localize_script')) {
         </div>
     </div>
 
-    <div class="ssc-panel" style="margin-top:16px;">
-        <h3><?php esc_html_e('👁️ Aperçu en Direct', 'supersede-css-jlg'); ?></h3>
-        <p><?php esc_html_e('Voyez comment vos tokens affectent les éléments. Le style de cet aperçu est directement contrôlé par le code CSS ci-dessus.', 'supersede-css-jlg'); ?></p>
-        <style id="ssc-tokens-preview-style"></style>
-        <div class="ssc-preview-toolbar" style="margin-bottom:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-            <label for="ssc-preview-context"><?php esc_html_e('Contexte d’aperçu', 'supersede-css-jlg'); ?></label>
-            <select id="ssc-preview-context" aria-label="<?php esc_attr_e('Contexte d’aperçu', 'supersede-css-jlg'); ?>"></select>
+    <div class="ssc-panel ssc-device-lab-panel" style="margin-top:16px;">
+        <div class="ssc-panel-header">
+            <div>
+                <h3><?php esc_html_e('🧪 Device Lab Responsive', 'supersede-css-jlg'); ?></h3>
+                <p class="description">
+                    <?php esc_html_e('Inspirez-vous des suites professionnelles : simulez plusieurs appareils, états d’interaction et préférences utilisateurs pour valider vos tokens avant livraison.', 'supersede-css-jlg'); ?>
+                </p>
+            </div>
         </div>
-        <div id="ssc-tokens-preview" style="padding: 24px; border: 2px dashed var(--couleur-principale, #ccc); border-radius: var(--radius-moyen, 8px); background: #fff;">
-            <button class="button button-primary" style="background-color: var(--couleur-principale); border-radius: var(--radius-moyen);"><?php esc_html_e('Bouton Principal', 'supersede-css-jlg'); ?></button>
-            <a href="#" style="color: var(--couleur-principale); margin-left: 16px;"><?php esc_html_e('Lien Principal', 'supersede-css-jlg'); ?></a>
+        <style id="ssc-tokens-preview-style"></style>
+        <div class="ssc-device-toolbar">
+            <div class="ssc-device-toolbar__group" id="ssc-device-presets" role="group" aria-label="<?php esc_attr_e('Choisir un appareil', 'supersede-css-jlg'); ?>">
+                <button type="button" class="button button-secondary is-active" data-device="mobile" aria-pressed="true">
+                    <?php esc_html_e('Mobile', 'supersede-css-jlg'); ?>
+                </button>
+                <button type="button" class="button button-secondary" data-device="tablet" aria-pressed="false">
+                    <?php esc_html_e('Tablette', 'supersede-css-jlg'); ?>
+                </button>
+                <button type="button" class="button button-secondary" data-device="laptop" aria-pressed="false">
+                    <?php esc_html_e('Laptop', 'supersede-css-jlg'); ?>
+                </button>
+                <button type="button" class="button button-secondary" data-device="desktop" aria-pressed="false">
+                    <?php esc_html_e('Desktop', 'supersede-css-jlg'); ?>
+                </button>
+                <button type="button" class="button button-secondary" data-device="ultrawide" aria-pressed="false">
+                    <?php esc_html_e('Ultra-wide', 'supersede-css-jlg'); ?>
+                </button>
+            </div>
+            <div class="ssc-device-toolbar__group">
+                <label for="ssc-preview-context" class="ssc-device-toolbar__label"><?php esc_html_e('Contexte d’aperçu', 'supersede-css-jlg'); ?></label>
+                <select id="ssc-preview-context" aria-label="<?php esc_attr_e('Contexte d’aperçu', 'supersede-css-jlg'); ?>"></select>
+            </div>
+        </div>
+
+        <div class="ssc-device-controls">
+            <div class="ssc-device-controls__group">
+                <span class="ssc-device-controls__label"><?php esc_html_e('Dimensions', 'supersede-css-jlg'); ?> :</span>
+                <span id="ssc-device-dimensions" class="ssc-device-controls__value" aria-live="polite">375 × 812 px</span>
+            </div>
+            <div class="ssc-device-controls__group">
+                <label for="ssc-device-zoom" class="ssc-device-controls__label"><?php esc_html_e('Zoom', 'supersede-css-jlg'); ?></label>
+                <input type="range" id="ssc-device-zoom" min="60" max="140" step="5" value="85" aria-valuemin="60" aria-valuemax="140" aria-valuenow="85" aria-label="<?php esc_attr_e('Zoom du Device Lab', 'supersede-css-jlg'); ?>">
+                <span id="ssc-device-zoom-value" class="ssc-device-controls__value">85%</span>
+            </div>
+            <div class="ssc-device-controls__group">
+                <button
+                    type="button"
+                    id="ssc-device-orientation"
+                    class="button button-secondary"
+                    aria-pressed="false"
+                    aria-label="<?php esc_attr_e('Basculer l’orientation de l’appareil', 'supersede-css-jlg'); ?>"
+                    data-label-landscape="<?php esc_attr_e('Orientation : paysage', 'supersede-css-jlg'); ?>"
+                    data-label-portrait="<?php esc_attr_e('Orientation : portrait', 'supersede-css-jlg'); ?>"
+                    data-label-disabled="<?php esc_attr_e('Rotation verrouillée pour cet appareil', 'supersede-css-jlg'); ?>"
+                >
+                    <span class="dashicons dashicons-image-flip-vertical" aria-hidden="true"></span>
+                    <span class="ssc-device-orientation__text"><?php esc_html_e('Orientation : portrait', 'supersede-css-jlg'); ?></span>
+                </button>
+            </div>
+            <div class="ssc-device-controls__group">
+                <label class="ssc-device-toggle">
+                    <input type="checkbox" id="ssc-device-motion">
+                    <span><?php esc_html_e('Simuler prefers-reduced-motion', 'supersede-css-jlg'); ?></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="ssc-device-statebar">
+            <span class="ssc-device-controls__label"><?php esc_html_e('États interactifs', 'supersede-css-jlg'); ?> :</span>
+            <div id="ssc-device-states" class="ssc-device-statebar__group" role="group" aria-label="<?php esc_attr_e('Simuler un état utilisateur', 'supersede-css-jlg'); ?>">
+                <button type="button" class="button button-secondary is-active" data-state="default" aria-pressed="true"><?php esc_html_e('Standard', 'supersede-css-jlg'); ?></button>
+                <button type="button" class="button button-secondary" data-state="hover" aria-pressed="false"><?php esc_html_e(':hover', 'supersede-css-jlg'); ?></button>
+                <button type="button" class="button button-secondary" data-state="focus" aria-pressed="false"><?php esc_html_e(':focus', 'supersede-css-jlg'); ?></button>
+                <button type="button" class="button button-secondary" data-state="active" aria-pressed="false"><?php esc_html_e(':active', 'supersede-css-jlg'); ?></button>
+            </div>
+        </div>
+
+        <div class="ssc-device-stage" id="ssc-device-stage" data-device="mobile" data-orientation="portrait">
+            <div class="ssc-device-viewport-shell">
+                <div class="ssc-device-viewport" id="ssc-device-viewport">
+                    <div id="ssc-tokens-preview" class="ssc-device-preview" data-simulated-state="default">
+                        <div class="ssc-device-preview__topbar">
+                            <div class="ssc-device-preview__badge" data-preview-focus>
+                                <?php esc_html_e('Sprint 24', 'supersede-css-jlg'); ?>
+                            </div>
+                            <span class="ssc-device-preview__timestamp">
+                                <?php esc_html_e('Mis à jour il y a 3 min', 'supersede-css-jlg'); ?>
+                            </span>
+                        </div>
+                        <header class="ssc-device-preview__header">
+                            <h4><?php esc_html_e('Design Tokens Review', 'supersede-css-jlg'); ?></h4>
+                            <p><?php esc_html_e('Contrôlez rapidement la cohérence des couleurs, typographies et rayons avant de publier le thème.', 'supersede-css-jlg'); ?></p>
+                        </header>
+                        <div class="ssc-device-preview__actions">
+                            <button type="button" class="ssc-device-preview__button ssc-device-preview__button--primary" data-preview-focus>
+                                <?php esc_html_e('Valider la release', 'supersede-css-jlg'); ?>
+                            </button>
+                            <button type="button" class="ssc-device-preview__button" data-preview-focus>
+                                <?php esc_html_e('Partager le rapport', 'supersede-css-jlg'); ?>
+                            </button>
+                        </div>
+                        <div class="ssc-device-preview__grid">
+                            <article class="ssc-device-preview__card">
+                                <h5><?php esc_html_e('Tokens alignés', 'supersede-css-jlg'); ?></h5>
+                                <p class="ssc-device-preview__metric">72%</p>
+                                <p class="ssc-device-preview__meta"><?php esc_html_e('8 sur 11 valides', 'supersede-css-jlg'); ?></p>
+                            </article>
+                            <article class="ssc-device-preview__card">
+                                <h5><?php esc_html_e('Contraste AA', 'supersede-css-jlg'); ?></h5>
+                                <p class="ssc-device-preview__metric">4.8</p>
+                                <p class="ssc-device-preview__meta"><?php esc_html_e('Boutons et liens conformes', 'supersede-css-jlg'); ?></p>
+                            </article>
+                            <article class="ssc-device-preview__card">
+                                <h5><?php esc_html_e('Poids CSS généré', 'supersede-css-jlg'); ?></h5>
+                                <p class="ssc-device-preview__metric">34 KB</p>
+                                <p class="ssc-device-preview__meta"><?php esc_html_e('Aucun doublon détecté', 'supersede-css-jlg'); ?></p>
+                            </article>
+                        </div>
+                        <footer class="ssc-device-preview__footer">
+                            <div class="ssc-device-preview__avatars" aria-hidden="true">
+                                <span class="ssc-device-preview__avatar"></span>
+                                <span class="ssc-device-preview__avatar"></span>
+                                <span class="ssc-device-preview__avatar"></span>
+                            </div>
+                            <a href="#" class="ssc-device-preview__link" data-preview-focus>
+                                <?php esc_html_e('Ouvrir l’activité détaillée', 'supersede-css-jlg'); ?>
+                            </a>
+                        </footer>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

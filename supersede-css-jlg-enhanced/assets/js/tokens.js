@@ -78,6 +78,38 @@
     let beforeUnloadHandler = null;
     const tokenTypes = $.extend(true, {}, defaultTokenTypes, localized.types || {});
     const i18n = localized.i18n || {};
+    const wpI18n = window.wp && window.wp.i18n ? window.wp.i18n : null;
+    const hasI18n = !!(wpI18n && typeof wpI18n.__ === 'function');
+    const sprintf = hasI18n && typeof wpI18n.sprintf === 'function'
+        ? wpI18n.sprintf
+        : function(message) {
+            const args = Array.prototype.slice.call(arguments, 1);
+            let index = 0;
+            return String(message).replace(/%s/g, function() {
+                const replacement = typeof args[index] === 'undefined' ? '' : args[index];
+                index += 1;
+                return String(replacement);
+            });
+        };
+
+    function translate(key, fallback) {
+        if (Object.prototype.hasOwnProperty.call(i18n, key) && typeof i18n[key] === 'string') {
+            return i18n[key];
+        }
+        if (typeof fallback === 'string') {
+            return fallback;
+        }
+        return key;
+    }
+
+    function speak(message, politeness) {
+        if (!message) {
+            return;
+        }
+        if (window.wp && window.wp.a11y && typeof window.wp.a11y.speak === 'function') {
+            window.wp.a11y.speak(message, politeness || 'polite');
+        }
+    }
     const defaultGroupName = 'Général';
     const diacriticRegex = /[\u0300-\u036f]/g;
     const hasStringNormalize = typeof ''.normalize === 'function';
@@ -155,6 +187,68 @@
     const searchInput = $('#ssc-token-search');
     const typeFilterSelect = $('#ssc-token-type-filter');
     const resultsCounter = $('#ssc-token-results-count');
+    const devicePanel = $('.ssc-device-lab-panel');
+    const deviceStage = $('#ssc-device-stage');
+    const deviceViewport = $('#ssc-device-viewport');
+    const devicePresetButtons = $('#ssc-device-presets button[data-device]');
+    const deviceDimensionsLabel = $('#ssc-device-dimensions');
+    const deviceZoomSlider = $('#ssc-device-zoom');
+    const deviceZoomValue = $('#ssc-device-zoom-value');
+    const deviceOrientationToggle = $('#ssc-device-orientation');
+    const deviceStateButtons = $('#ssc-device-states button[data-state]');
+    const reducedMotionToggle = $('#ssc-device-motion');
+    const deviceOrientationLabels = {
+        landscape: deviceOrientationToggle.data('label-landscape') || translate('deviceOrientationLandscape', 'Orientation paysage'),
+        portrait: deviceOrientationToggle.data('label-portrait') || translate('deviceOrientationPortrait', 'Orientation portrait'),
+        disabled: deviceOrientationToggle.data('label-disabled') || translate('deviceOrientationLocked', 'Rotation non disponible pour cet appareil.'),
+    };
+    const devicePresets = {
+        mobile: {
+            label: $.trim(devicePresetButtons.filter('[data-device="mobile"]').text()) || 'Mobile',
+            allowRotate: true,
+            defaultOrientation: 'portrait',
+            viewport: {
+                portrait: { width: 375, height: 812 },
+                landscape: { width: 812, height: 375 },
+            },
+        },
+        tablet: {
+            label: $.trim(devicePresetButtons.filter('[data-device="tablet"]').text()) || 'Tablet',
+            allowRotate: true,
+            defaultOrientation: 'portrait',
+            viewport: {
+                portrait: { width: 834, height: 1112 },
+                landscape: { width: 1112, height: 834 },
+            },
+        },
+        laptop: {
+            label: $.trim(devicePresetButtons.filter('[data-device="laptop"]').text()) || 'Laptop',
+            allowRotate: false,
+            defaultOrientation: 'landscape',
+            viewport: {
+                landscape: { width: 1280, height: 800 },
+            },
+        },
+        desktop: {
+            label: $.trim(devicePresetButtons.filter('[data-device="desktop"]').text()) || 'Desktop',
+            allowRotate: false,
+            defaultOrientation: 'landscape',
+            viewport: {
+                landscape: { width: 1440, height: 900 },
+            },
+        },
+        ultrawide: {
+            label: $.trim(devicePresetButtons.filter('[data-device="ultrawide"]').text()) || 'Ultra-wide',
+            allowRotate: false,
+            defaultOrientation: 'landscape',
+            viewport: {
+                landscape: { width: 1920, height: 1080 },
+            },
+        },
+    };
+    let activeDeviceKey = 'mobile';
+    let deviceOrientation = 'portrait';
+    let deviceZoomLevel = 85;
 
     function getDefaultTypeKey() {
         if (tokenTypes.text) {
@@ -578,6 +672,280 @@
         }
         if (previewStyle.length) {
             previewStyle.text(css);
+        }
+    }
+
+    function getDevicePreset(key) {
+        if (key && Object.prototype.hasOwnProperty.call(devicePresets, key)) {
+            return devicePresets[key];
+        }
+        return devicePresets.desktop;
+    }
+
+    function getDeviceViewport(preset, orientation) {
+        const safePreset = preset || getDevicePreset(activeDeviceKey);
+        const safeOrientation = orientation === 'portrait' || orientation === 'landscape'
+            ? orientation
+            : 'landscape';
+        if (safeOrientation === 'portrait' && safePreset.viewport && safePreset.viewport.portrait) {
+            return safePreset.viewport.portrait;
+        }
+        if (safePreset.viewport && safePreset.viewport.landscape) {
+            return safePreset.viewport.landscape;
+        }
+        if (safePreset.viewport && safePreset.viewport.portrait) {
+            return safePreset.viewport.portrait;
+        }
+        return { width: 1280, height: 800 };
+    }
+
+    function updateOrientationButtonState(allowRotate) {
+        if (!deviceOrientationToggle.length) {
+            return;
+        }
+        const labelNode = deviceOrientationToggle.find('.ssc-device-orientation__text');
+        if (!allowRotate) {
+            deviceOrientationToggle.prop('disabled', true).attr('aria-disabled', 'true');
+            deviceOrientationToggle.attr('aria-pressed', 'false');
+            if (labelNode.length) {
+                labelNode.text(deviceOrientationLabels.disabled);
+            } else {
+                deviceOrientationToggle.text(deviceOrientationLabels.disabled);
+            }
+            return;
+        }
+
+        deviceOrientationToggle.prop('disabled', false).attr('aria-disabled', 'false');
+        const isPortrait = deviceOrientation === 'portrait';
+        deviceOrientationToggle.attr('aria-pressed', isPortrait ? 'true' : 'false');
+        const labelText = isPortrait ? deviceOrientationLabels.portrait : deviceOrientationLabels.landscape;
+        if (labelNode.length) {
+            labelNode.text(labelText);
+        } else {
+            deviceOrientationToggle.text(labelText);
+        }
+    }
+
+    function applyDevicePreset(key, options) {
+        const preset = getDevicePreset(key);
+        const previousDevice = activeDeviceKey;
+        const previousOrientation = deviceOrientation;
+        activeDeviceKey = key && Object.prototype.hasOwnProperty.call(devicePresets, key)
+            ? key
+            : activeDeviceKey;
+
+        let nextOrientation = deviceOrientation;
+        if (options && options.resetOrientation) {
+            nextOrientation = preset.defaultOrientation || 'landscape';
+        }
+        if (options && typeof options.orientation === 'string') {
+            nextOrientation = options.orientation;
+        }
+
+        if (!preset.allowRotate) {
+            nextOrientation = 'landscape';
+        }
+
+        if (nextOrientation !== 'portrait' && nextOrientation !== 'landscape') {
+            nextOrientation = preset.defaultOrientation || 'landscape';
+        }
+
+        if (nextOrientation === 'portrait' && !(preset.viewport && preset.viewport.portrait)) {
+            nextOrientation = 'landscape';
+        }
+
+        if (nextOrientation === 'landscape' && !(preset.viewport && preset.viewport.landscape) && preset.viewport && preset.viewport.portrait) {
+            nextOrientation = 'portrait';
+        }
+
+        deviceOrientation = nextOrientation;
+        const viewport = getDeviceViewport(preset, deviceOrientation);
+
+        if (deviceStage.length) {
+            deviceStage.attr('data-device', activeDeviceKey);
+            deviceStage.attr('data-orientation', deviceOrientation);
+            deviceStage.css('--ssc-device-width', viewport.width + 'px');
+            deviceStage.css('--ssc-device-height', viewport.height + 'px');
+        }
+
+        if (deviceViewport.length) {
+            deviceViewport.attr('data-orientation', deviceOrientation);
+        }
+
+        if (deviceDimensionsLabel.length) {
+            deviceDimensionsLabel.text(viewport.width + ' × ' + viewport.height + ' px');
+        }
+
+        if (devicePresetButtons.length) {
+            devicePresetButtons.removeClass('is-active').attr('aria-pressed', 'false');
+            const activeButton = devicePresetButtons.filter('[data-device="' + activeDeviceKey + '"]').first();
+            if (activeButton.length) {
+                activeButton.addClass('is-active').attr('aria-pressed', 'true');
+            }
+        }
+
+        updateOrientationButtonState(preset.allowRotate);
+
+        if (!options || options.announce !== false) {
+            speak(sprintf(translate('devicePresetAnnouncement', 'Appareil sélectionné : %s'), preset.label || activeDeviceKey));
+        }
+
+        const shouldAnnounceOrientation = !options || options.announceOrientation !== false;
+        if (shouldAnnounceOrientation) {
+            if (!preset.allowRotate && previousDevice !== activeDeviceKey) {
+                speak(translate('deviceOrientationLocked', 'Rotation non disponible pour cet appareil.'), 'polite');
+            } else if (deviceOrientation !== previousOrientation || previousDevice !== activeDeviceKey) {
+                const orientationKey = deviceOrientation === 'portrait'
+                    ? 'deviceOrientationPortrait'
+                    : 'deviceOrientationLandscape';
+                const fallback = deviceOrientation === 'portrait'
+                    ? 'Orientation portrait'
+                    : 'Orientation paysage';
+                speak(translate(orientationKey, fallback));
+            }
+        }
+    }
+
+    function updateZoomControl(value, announce) {
+        const rawValue = parseInt(value, 10);
+        const normalized = Number.isNaN(rawValue) ? deviceZoomLevel : rawValue;
+        const clamped = Math.min(140, Math.max(60, normalized));
+        deviceZoomLevel = clamped;
+        const scaleValue = Math.max(0.3, clamped / 100);
+
+        if (deviceZoomSlider.length && deviceZoomSlider.val() !== String(clamped)) {
+            deviceZoomSlider.val(String(clamped));
+        }
+        if (deviceZoomSlider.length) {
+            deviceZoomSlider.attr('aria-valuenow', String(clamped));
+        }
+        if (deviceZoomValue.length) {
+            deviceZoomValue.text(clamped + '%');
+        }
+        if (deviceStage.length) {
+            deviceStage.css('--ssc-device-scale', scaleValue.toFixed(2));
+            deviceStage.attr('data-scale', String(clamped));
+        }
+
+        if (announce) {
+            speak(sprintf(translate('deviceZoomAnnouncement', 'Zoom défini sur %s %%'), clamped));
+        }
+    }
+
+    function applyInteractionState(stateKey, announce) {
+        const validStates = ['default', 'hover', 'focus', 'active'];
+        const normalized = validStates.indexOf(stateKey) === -1 ? 'default' : stateKey;
+
+        if (previewContainer.length) {
+            previewContainer.attr('data-simulated-state', normalized);
+        }
+
+        if (deviceStateButtons.length) {
+            deviceStateButtons.removeClass('is-active').attr('aria-pressed', 'false');
+            const activeButton = deviceStateButtons.filter('[data-state="' + normalized + '"]').first();
+            if (activeButton.length) {
+                activeButton.addClass('is-active').attr('aria-pressed', 'true');
+            }
+        }
+
+        if (announce) {
+            const activeButton = deviceStateButtons.filter('[data-state="' + normalized + '"]').first();
+            const label = activeButton.length ? $.trim(activeButton.text()) : normalized;
+            speak(sprintf(translate('deviceStateAnnouncement', 'Simulation de l’état : %s'), label));
+        }
+    }
+
+    function applyReducedMotion(enabled, announce) {
+        const isEnabled = Boolean(enabled);
+        if (deviceStage.length) {
+            deviceStage.toggleClass('is-reduced-motion', isEnabled);
+            deviceStage.attr('data-motion', isEnabled ? 'reduced' : 'default');
+        }
+        if (announce) {
+            speak(isEnabled ? translate('deviceReducedMotionOn', 'Préférence « réduction des animations » activée') : translate('deviceReducedMotionOff', 'Préférence « réduction des animations » désactivée'));
+        }
+    }
+
+    function initializeDeviceLab() {
+        if (!devicePanel.length || !deviceStage.length) {
+            return;
+        }
+
+        const initialDevice = deviceStage.data('device');
+        if (typeof initialDevice === 'string' && Object.prototype.hasOwnProperty.call(devicePresets, initialDevice)) {
+            activeDeviceKey = initialDevice;
+        }
+
+        const initialOrientation = deviceStage.data('orientation');
+        if (initialOrientation === 'portrait' || initialOrientation === 'landscape') {
+            deviceOrientation = initialOrientation;
+        } else {
+            const preset = getDevicePreset(activeDeviceKey);
+            deviceOrientation = preset.defaultOrientation || 'landscape';
+        }
+
+        if (deviceZoomSlider.length) {
+            const sliderValue = parseInt(deviceZoomSlider.val(), 10);
+            if (!Number.isNaN(sliderValue)) {
+                deviceZoomLevel = sliderValue;
+            }
+        }
+
+        applyDevicePreset(activeDeviceKey, { orientation: deviceOrientation, announce: false, announceOrientation: false });
+        updateZoomControl(deviceZoomLevel, false);
+
+        const initialState = previewContainer.attr('data-simulated-state') || 'default';
+        applyInteractionState(initialState, false);
+        applyReducedMotion(reducedMotionToggle.length && reducedMotionToggle.is(':checked'), false);
+
+        devicePresetButtons.on('click', function(event) {
+            event.preventDefault();
+            const deviceKey = $(this).data('device');
+            if (typeof deviceKey !== 'string') {
+                return;
+            }
+            const shouldReset = deviceKey !== activeDeviceKey;
+            applyDevicePreset(deviceKey, {
+                resetOrientation: shouldReset,
+                announce: true,
+                announceOrientation: true,
+            });
+        });
+
+        if (deviceOrientationToggle.length) {
+            deviceOrientationToggle.on('click', function(event) {
+                event.preventDefault();
+                const preset = getDevicePreset(activeDeviceKey);
+                if (!preset.allowRotate) {
+                    speak(deviceOrientationLabels.disabled, 'assertive');
+                    return;
+                }
+                const nextOrientation = deviceOrientation === 'portrait' ? 'landscape' : 'portrait';
+                applyDevicePreset(activeDeviceKey, { orientation: nextOrientation, announce: false, announceOrientation: true });
+            });
+        }
+
+        if (deviceZoomSlider.length) {
+            deviceZoomSlider.on('input', function() {
+                updateZoomControl($(this).val(), false);
+            });
+            deviceZoomSlider.on('change', function() {
+                updateZoomControl($(this).val(), true);
+            });
+        }
+
+        if (deviceStateButtons.length) {
+            deviceStateButtons.on('click', function(event) {
+                event.preventDefault();
+                const state = $(this).data('state');
+                applyInteractionState(state, true);
+            });
+        }
+
+        if (reducedMotionToggle.length) {
+            reducedMotionToggle.on('change', function() {
+                applyReducedMotion($(this).is(':checked'), true);
+            });
         }
     }
 
@@ -1547,6 +1915,8 @@
 
         commitContextOptions();
         applyPreviewContext(activePreviewContext);
+
+        initializeDeviceLab();
 
         if (!builder.length || !cssTextarea.length) {
             return;
