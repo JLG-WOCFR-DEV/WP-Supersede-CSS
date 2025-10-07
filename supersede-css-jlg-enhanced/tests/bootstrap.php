@@ -6,6 +6,10 @@ if (!$_tests_dir) {
     $_tests_dir = dirname(__DIR__) . '/vendor/wp-phpunit/wp-phpunit';
 }
 
+require __DIR__ . '/Support/WordPressInstaller.php';
+
+SSC\Tests\Support\WordPressInstaller::ensure();
+
 if (!file_exists($_tests_dir . '/includes/functions.php')) {
     fwrite(STDERR, "Could not find the WordPress test suite. Set WP_TESTS_DIR or run composer install." . PHP_EOL);
     exit(1);
