@@ -47,18 +47,20 @@
 #ssc-picker-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(79, 70, 229, 0.2);
+    background: color-mix(in srgb, var(--ssc-accent) 24%, transparent);
     z-index: 9998;
     display: none;
     cursor: crosshair;
+    backdrop-filter: blur(2px);
 }
 
 #ssc-picker-tooltip {
     position: fixed;
-    background: #0f172a;
-    color: white;
+    background: color-mix(in srgb, var(--ssc-text) 80%, var(--ssc-card) 20%);
+    color: var(--ssc-text-contrast);
     padding: 4px 8px;
-    border-radius: 4px;
+    border-radius: 6px;
+    border: 1px solid var(--ssc-border-strong);
     font-size: 12px;
     z-index: 9999;
     white-space: nowrap;

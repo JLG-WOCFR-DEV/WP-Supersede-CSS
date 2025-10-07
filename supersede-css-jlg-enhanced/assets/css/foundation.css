@@ -8,20 +8,26 @@
  */
 
 :root {
-    /* Color palette */
-    --ssc-bg: #f8fafc;
+    /* Color palette inspired by Radix UI */
+    --ssc-bg: #fdfcfe;
     --ssc-card: #ffffff;
-    --ssc-border: #e5e7eb;
-    --ssc-text: #0f172a;
-    --ssc-muted: #64748b;
-    --ssc-accent: #4f46e5;
-    --ssc-accent-soft: color-mix(in srgb, var(--ssc-accent) 18%, #ffffff 82%);
-    --ssc-success: #15803d;
-    --ssc-danger: #b91c1c;
-    --ssc-warning: #92400e;
-    --ssc-info: #2563eb;
-    --ssc-surface-muted: color-mix(in srgb, var(--ssc-card) 92%, var(--ssc-border) 8%);
-    --ssc-focus-ring: rgba(79, 70, 229, 0.18);
+    --ssc-surface-muted: #f5f2ff;
+    --ssc-border: #e4e1f4;
+    --ssc-border-subtle: #edeafd;
+    --ssc-border-strong: #c9c4e8;
+    --ssc-text: #1f1d2b;
+    --ssc-text-contrast: #ffffff;
+    --ssc-muted: #6f6c8f;
+    --ssc-muted-soft: color-mix(in srgb, var(--ssc-muted) 22%, var(--ssc-card) 78%);
+    --ssc-accent: #6e56cf;
+    --ssc-accent-hover: #5b3fc4;
+    --ssc-accent-active: #4a32b6;
+    --ssc-accent-soft: #f4f0ff;
+    --ssc-success: #30a46c;
+    --ssc-danger: #e54d2e;
+    --ssc-warning: #f9a826;
+    --ssc-info: #3e63dd;
+    --ssc-focus-ring: rgba(94, 82, 175, 0.28);
 
     /* Typography scale */
     --ssc-font-family-base: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -73,36 +79,45 @@
 
     /* Radii & elevation */
     --ssc-radius-sm: 6px;
-    --ssc-radius-md: 10px;
-    --ssc-radius-lg: 12px;
+    --ssc-radius-md: 12px;
+    --ssc-radius-lg: 16px;
     --ssc-radius-pill: 999px;
-    --ssc-shadow-soft: 0 16px 32px rgba(15, 23, 42, 0.08);
-    --ssc-shadow-elevated: 0 20px 40px rgba(15, 23, 42, 0.12);
+    --ssc-shadow-soft: 0 24px 55px rgba(45, 32, 89, 0.12);
+    --ssc-shadow-elevated: 0 30px 70px rgba(45, 32, 89, 0.18);
 }
 
 .ssc-dark:root,
 .ssc-dark {
-    --ssc-bg: #030712;
-    --ssc-card: #111827;
-    --ssc-border: #374151;
-    --ssc-text: #e5e7eb;
-    --ssc-muted: #d1d5db;
-    --ssc-accent: #a5b4fc;
-    --ssc-accent-soft: color-mix(in srgb, var(--ssc-accent) 22%, #020617 78%);
-    --ssc-success: #34d399;
-    --ssc-danger: #f87171;
-    --ssc-warning: #f59e0b;
-    --ssc-info: #60a5fa;
-    --ssc-surface-muted: color-mix(in srgb, var(--ssc-card) 86%, var(--ssc-border) 14%);
-    --ssc-focus-ring: rgba(165, 180, 252, 0.22);
+    --ssc-bg: #121019;
+    --ssc-card: #1c162c;
+    --ssc-surface-muted: #1a1327;
+    --ssc-border: #312a45;
+    --ssc-border-subtle: #251d36;
+    --ssc-border-strong: #403558;
+    --ssc-text: #ede9ff;
+    --ssc-text-contrast: #150d24;
+    --ssc-muted: #b8a7e5;
+    --ssc-muted-soft: color-mix(in srgb, var(--ssc-muted) 22%, #1a1327 78%);
+    --ssc-accent: #b1a6ff;
+    --ssc-accent-hover: #c0b6ff;
+    --ssc-accent-active: #d7cbff;
+    --ssc-accent-soft: color-mix(in srgb, var(--ssc-accent) 28%, #0f0d17 72%);
+    --ssc-success: #3dd68c;
+    --ssc-danger: #f16a50;
+    --ssc-warning: #f5b74a;
+    --ssc-info: #6a8af6;
+    --ssc-focus-ring: rgba(177, 166, 255, 0.32);
+    --ssc-shadow-soft: 0 24px 55px rgba(8, 6, 16, 0.65);
+    --ssc-shadow-elevated: 0 34px 80px rgba(12, 9, 24, 0.7);
 }
 
 /* Surface primitives ----------------------------------------------------- */
 /* Use .ssc-surface on new containers to reuse these shared styles. */
 
 :where(.ssc-surface, .ssc-pane, .ssc-panel, .ssc-preview-surface) {
-    background: var(--ssc-card);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--ssc-card) 92%, var(--ssc-surface-muted) 8%), var(--ssc-card));
     border: 1px solid var(--ssc-border);
+    box-shadow: 0 1px 0 var(--ssc-border-subtle), var(--ssc-shadow-soft);
 }
 
 :where(.ssc-surface, .ssc-pane, .ssc-panel) {
@@ -153,7 +168,7 @@
     transition: background 0.3s ease;
 }
 .ssc-preview-area--tall { min-height: 250px; }
-.ssc-preview-area--dark { background: #0b1020; }
+.ssc-preview-area--dark { background: #1c172c; }
 .ssc-preview-box {
     width: 100px;
     height: 100px;
@@ -161,7 +176,7 @@
     background: var(--ssc-accent);
     display: grid;
     place-items: center;
-    color: #fff;
+    color: var(--ssc-text-contrast);
     font-weight: var(--ssc-font-weight-semibold);
 }
 .ssc-preview-box--avatar {
@@ -179,8 +194,9 @@
     place-items: center;
     border: 1px solid var(--ssc-border);
     border-radius: var(--ssc-radius-lg);
-    background: #fff;
+    background: var(--ssc-card);
     transition: all 0.2s ease;
+    box-shadow: var(--ssc-shadow-soft);
 }
 
 /* Form helpers */
