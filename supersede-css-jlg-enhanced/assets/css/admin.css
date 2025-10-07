@@ -91,11 +91,10 @@
     .ssc-two { grid-template-columns: 1fr; }
     .ssc-filter { flex:1 1 140px; }
 }
+
+/* Surface primitives for panes/panels live in foundation.css */
 .ssc-pane,
 .ssc-panel {
-    background: var(--ssc-card);
-    border: 1px solid var(--ssc-border);
-    border-radius: var(--ssc-radius-md);
     padding: var(--ssc-space-md);
 }
 

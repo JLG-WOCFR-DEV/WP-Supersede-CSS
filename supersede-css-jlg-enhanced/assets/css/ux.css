@@ -1,53 +1,8 @@
 :root {
-    --ssc-bg: #f8fafc;
-    --ssc-card: #ffffff;
-    --ssc-border: #e5e7eb;
-    --ssc-text: #0f172a;
-    --ssc-muted: #64748b;
-    --ssc-accent: #4f46e5;
-
-    /* Typographic scale */
-    --ssc-font-family-base: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-    --ssc-font-size-100: 0.75rem;  /* 12px */
-    --ssc-font-size-200: 0.875rem; /* 14px */
-    --ssc-font-size-300: 1rem;     /* 16px */
-    --ssc-font-size-400: 1.25rem;  /* 20px */
-    --ssc-font-size-500: 1.5rem;   /* 24px */
-    --ssc-font-size-600: 1.875rem; /* 30px */
-    --ssc-font-weight-regular: 400;
-    --ssc-font-weight-medium: 500;
-    --ssc-font-weight-semibold: 600;
-    --ssc-font-weight-bold: 700;
-    --ssc-line-height-tight: 1.2;
-    --ssc-line-height-snug: 1.35;
-    --ssc-line-height-base: 1.5;
-    --ssc-line-height-relaxed: 1.65;
-
-    /* Spacing scale */
-    --ssc-space-3xs: 0.25rem;  /* 4px */
-    --ssc-space-2xs: 0.375rem; /* 6px */
-    --ssc-space-xs: 0.5rem;    /* 8px */
-    --ssc-space-sm: 0.75rem;   /* 12px */
-    --ssc-space-md: 1rem;      /* 16px */
-    --ssc-space-lg: 1.5rem;    /* 24px */
-    --ssc-space-xl: 2rem;      /* 32px */
-    --ssc-space-2xl: 2.5rem;   /* 40px */
-
-    /* Radii */
+    /* Keep slightly rounder corners for the immersive UX layout */
     --ssc-radius-sm: 8px;
     --ssc-radius-md: 12px;
     --ssc-radius-lg: 16px;
-}
-
-/* Thème sombre avec contraste encore amélioré */
-.ssc-dark:root,
-.ssc-dark {
-    --ssc-bg: #030712;
-    --ssc-card: #111827;
-    --ssc-border: #374151;
-    --ssc-text: #e5e7eb;
-    --ssc-muted: #d1d5db;
-    --ssc-accent: #a5b4fc;
 }
 
 .ssc-shell {
