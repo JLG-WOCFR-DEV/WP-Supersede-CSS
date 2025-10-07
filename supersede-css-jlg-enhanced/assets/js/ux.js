@@ -389,7 +389,17 @@
             <div id="ssc-cmdp" role="dialog" aria-modal="true" aria-hidden="true" aria-label="${commandPaletteTitle}" tabindex="-1">
                 <div class="panel" role="document">
                     <label for="ssc-cmdp-search" class="screen-reader-text">${commandPaletteSearchLabel}</label>
-                    <input type="text" id="ssc-cmdp-search" placeholder="${commandPaletteSearchPlaceholder}" style="width: 100%; padding: 12px; border: none; border-bottom: 1px solid var(--ssc-border); font-size: 16px;" autocomplete="off" autocapitalize="none" spellcheck="false" aria-controls="ssc-cmdp-results" aria-autocomplete="list">
+                    <input
+                        type="search"
+                        id="ssc-cmdp-search"
+                        class="ssc-cmdp-search"
+                        placeholder="${commandPaletteSearchPlaceholder}"
+                        autocomplete="off"
+                        autocapitalize="none"
+                        spellcheck="false"
+                        aria-controls="ssc-cmdp-results"
+                        aria-autocomplete="list"
+                    >
                     <ul id="ssc-cmdp-results" role="listbox" aria-live="polite"></ul>
                 </div>
             </div>`;

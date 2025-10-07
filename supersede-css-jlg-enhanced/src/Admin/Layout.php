@@ -322,6 +322,7 @@ class Layout {
         ?>
         <div class="ssc-viewport">
             <div class="ssc-shell">
+                <a class="ssc-skip-link" href="#ssc-main-content"><?php echo esc_html__('Passer au contenu principal', 'supersede-css-jlg'); ?></a>
                 <header class="ssc-topbar">
                 <a href="<?php echo esc_url(admin_url('index.php')); ?>" class="ssc-back-to-admin button" aria-label="<?php echo $back_to_admin_aria_label; ?>">
                     <span class="dashicons dashicons-arrow-left-alt" aria-hidden="true"></span>
@@ -370,7 +371,7 @@ class Layout {
                     <?php endforeach; ?>
                     </nav>
                 </aside>
-                <main class="ssc-main-content">
+                <main class="ssc-main-content" id="ssc-main-content" tabindex="-1">
                     <?php echo wp_kses( $page_content, self::allowed_tags() ); ?>
                 </main>
             </div>
