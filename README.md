@@ -1,6 +1,6 @@
 # Supersede CSS JLG (Enhanced)
 
-**Version:** 10.0.6
+**Version:** 10.0.7
 **Author:** JLG (Enhanced by AI)
 
 Supersede CSS JLG (Enhanced) est une boîte à outils visuelle pour accélérer la création de styles WordPress. Elle combine des éditeurs temps réel, des générateurs de presets et un moteur de tokens pour produire un CSS cohérent sans écrire de code à la main.
@@ -13,6 +13,7 @@ Supersede CSS JLG (Enhanced) est une boîte à outils visuelle pour accélérer 
 - [Architecture du plugin](#architecture-du-plugin)
 - [Commandes npm utiles](#commandes-npm-utiles)
 - [Tests](#tests)
+- [Commandes WP-CLI](#commandes-wp-cli)
 - [Hooks](#hooks)
 - [Licence](#licence)
 - [Contribuer](#contribuer)
@@ -161,6 +162,17 @@ npx playwright test
 ```
 
 La commande démarre automatiquement `wp-env`, exécute les tests, puis arrête et détruit les conteneurs. Vous pouvez aussi gérer l’environnement manuellement avec `npm run env:start`, `npm run env:stop` et `npm run env:destroy`.
+
+## Commandes WP-CLI
+
+Administrez le cache CSS Supersede depuis vos scripts de déploiement ou lors d’une maintenance ponctuelle :
+
+```bash
+wp ssc css flush           # Vide le cache inline généré par le plugin
+wp ssc css flush --rebuild # Vide puis reconstruit immédiatement le cache assaini
+```
+
+L’option `--rebuild` force l’exécution de `ssc_get_cached_css()` après invalidation afin de recalculer un CSS cohérent avec les options `ssc_active_css` et `ssc_tokens_css`.
 
 ## Hooks
 

@@ -1,5 +1,5 @@
 === Supersede CSS JLG (Enhanced) ===
-Stable tag: 10.0.6
+Stable tag: 10.0.7
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -16,6 +16,10 @@ Cette version a été entièrement refactorisée pour améliorer la stabilité, 
 * Scénario manuel : ajouter un bloc CSS contenant `background-image: url("data:image/svg+xml;base64,PHN2Zy4uLg==");` puis un autre avec `background-image: url("javascript:alert(1)");`. Après sauvegarde, vérifier que la première propriété est intacte tandis que la seconde est supprimée du CSS généré dans l'interface.
 
 == Changelog ==
+= 10.0.7 =
+* NEW: Commande `wp ssc css flush` pour vider manuellement le cache CSS généré par le plugin.
+* IMPROVEMENT: Option `--rebuild` pour régénérer immédiatement un CSS assaini lors des déploiements automatisés.
+
 = 10.0.6 =
 * NEW: Module "CSS Performance Analyzer" pour visualiser le poids total, les doublons de sélecteurs et recevoir des recommandations d’optimisation.
 * IMPROVEMENT: Ajout de cartes de métriques et de callouts cohérents avec la nouvelle fondation design.
