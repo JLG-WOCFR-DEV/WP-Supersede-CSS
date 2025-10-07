@@ -324,32 +324,38 @@ class Layout {
             <div class="ssc-shell">
                 <a class="ssc-skip-link" href="#ssc-main-content"><?php echo esc_html__('Passer au contenu principal', 'supersede-css-jlg'); ?></a>
                 <header class="ssc-topbar">
-                <a href="<?php echo esc_url(admin_url('index.php')); ?>" class="ssc-back-to-admin button" aria-label="<?php echo $back_to_admin_aria_label; ?>">
-                    <span class="dashicons dashicons-arrow-left-alt" aria-hidden="true"></span>
-                    <span class="ssc-topbar-label"><?php echo $back_to_admin_label; ?></span>
-                </a>
-                <span class="ssc-title">Supersede CSS</span><span class="ssc-spacer"></span>
-                <button type="button" class="button" id="ssc-theme" aria-label="<?php echo $theme_button_aria_label; ?>" aria-pressed="false">
-                    <span aria-hidden="true">🌓</span>
-                    <span class="ssc-topbar-label"><?php echo $theme_button_label; ?></span>
-                </button>
-                <button
-                    type="button"
-                    class="button ssc-mobile-menu-toggle"
-                    id="ssc-mobile-menu"
-                    aria-expanded="false"
-                    aria-controls="ssc-sidebar"
-                    aria-haspopup="true"
-                    aria-label="<?php echo $mobile_menu_show_label; ?>"
-                >
-                    <span class="dashicons dashicons-menu" aria-hidden="true"></span>
-                    <span class="screen-reader-text"><?php echo $mobile_menu_sr_label; ?></span>
-                </button>
-                <button type="button" class="button button-primary" id="ssc-cmdk" aria-label="<?php echo $command_button_aria_label; ?>">
-                    <span aria-hidden="true">⌘K</span>
-                    <span class="ssc-topbar-label"><?php echo $command_button_label; ?></span>
-                </button>
-            </header>
+                    <div class="ssc-topbar__cluster ssc-topbar__cluster--left">
+                        <a href="<?php echo esc_url(admin_url('index.php')); ?>" class="ssc-back-to-admin button" aria-label="<?php echo $back_to_admin_aria_label; ?>">
+                            <span class="dashicons dashicons-arrow-left-alt" aria-hidden="true"></span>
+                            <span class="ssc-topbar-label"><?php echo $back_to_admin_label; ?></span>
+                        </a>
+                        <button
+                            type="button"
+                            class="button ssc-mobile-menu-toggle"
+                            id="ssc-mobile-menu"
+                            aria-expanded="false"
+                            aria-controls="ssc-sidebar"
+                            aria-haspopup="true"
+                            aria-label="<?php echo $mobile_menu_show_label; ?>"
+                        >
+                            <span class="dashicons dashicons-menu" aria-hidden="true"></span>
+                            <span class="screen-reader-text"><?php echo $mobile_menu_sr_label; ?></span>
+                        </button>
+                    </div>
+                    <div class="ssc-topbar__title">
+                        <span class="ssc-title">Supersede CSS</span>
+                    </div>
+                    <div class="ssc-topbar__cluster ssc-topbar__cluster--right">
+                        <button type="button" class="button" id="ssc-theme" aria-label="<?php echo $theme_button_aria_label; ?>" aria-pressed="false">
+                            <span aria-hidden="true">🌓</span>
+                            <span class="ssc-topbar-label"><?php echo $theme_button_label; ?></span>
+                        </button>
+                        <button type="button" class="button button-primary" id="ssc-cmdk" aria-label="<?php echo $command_button_aria_label; ?>">
+                            <span aria-hidden="true">⌘K</span>
+                            <span class="ssc-topbar-label"><?php echo $command_button_label; ?></span>
+                        </button>
+                    </div>
+                </header>
             <div class="ssc-shell-overlay" hidden></div>
             <div class="ssc-layout">
                 <aside>
