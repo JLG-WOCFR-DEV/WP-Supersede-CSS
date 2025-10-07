@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5b5d7067d30546141c5478e3403a6c97",
+    "content-hash": "c39c732c0fb8971dcac9ebaa6049c1e2",
     "packages": [],
     "packages-dev": [
         {
@@ -76,54 +76,6 @@
                 }
             ],
             "time": "2022-12-30T00:23:10+00:00"
-        },
-        {
-            "name": "johnpbloch/wordpress-core",
-            "version": "6.8.3",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/johnpbloch/wordpress-core.git",
-                "reference": "0641ab5518c94c1ab094ad4ccdc46aa9c4657fc1"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/johnpbloch/wordpress-core/zipball/0641ab5518c94c1ab094ad4ccdc46aa9c4657fc1",
-                "reference": "0641ab5518c94c1ab094ad4ccdc46aa9c4657fc1",
-                "shasum": ""
-            },
-            "require": {
-                "ext-json": "*",
-                "php": ">=7.2.24"
-            },
-            "provide": {
-                "wordpress/core-implementation": "6.8.3"
-            },
-            "type": "wordpress-core",
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "GPL-2.0-or-later"
-            ],
-            "authors": [
-                {
-                    "name": "WordPress Community",
-                    "homepage": "https://wordpress.org/about/"
-                }
-            ],
-            "description": "WordPress is open source software you can use to create a beautiful website, blog, or app.",
-            "homepage": "https://wordpress.org/",
-            "keywords": [
-                "blog",
-                "cms",
-                "wordpress"
-            ],
-            "support": {
-                "forum": "https://wordpress.org/support/",
-                "irc": "irc://irc.freenode.net/wordpress",
-                "issues": "https://core.trac.wordpress.org/",
-                "source": "https://core.trac.wordpress.org/browser",
-                "wiki": "https://codex.wordpress.org/"
-            },
-            "time": "2025-09-30T18:14:19+00:00"
         },
         {
             "name": "myclabs/deep-copy",

@@ -15,7 +15,7 @@ define('WP_TESTS_EMAIL', getenv('WP_TESTS_EMAIL') ?: 'admin@example.org');
 define('WP_TESTS_TITLE', getenv('WP_TESTS_TITLE') ?: 'WordPress PHPUnit');
 define('WP_PHP_BINARY', PHP_BINARY);
 
-define('ABSPATH', dirname(__DIR__) . '/vendor/johnpbloch/wordpress-core/');
+define('ABSPATH', dirname(__DIR__) . '/wordpress/');
 
 define('WP_TESTS_PHPUNIT_POLYFILLS_PATH', dirname(__DIR__) . '/vendor/yoast/phpunit-polyfills');
 
