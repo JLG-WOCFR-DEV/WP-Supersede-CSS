@@ -310,18 +310,27 @@ class Layout {
                 'supersede-css-jlg-debug-center'   => 'Debug Center',
             ],
         ];
+        $back_to_admin_aria_label = esc_attr__('Retourner sur le tableau de bord WordPress', 'supersede-css-jlg');
+        $back_to_admin_label = esc_html__('WP Admin', 'supersede-css-jlg');
+        $theme_button_label = esc_html__('Thème', 'supersede-css-jlg');
+        $theme_button_aria_label = esc_attr__('Basculer le thème clair ou sombre', 'supersede-css-jlg');
+        $command_button_label = esc_html__('Commande', 'supersede-css-jlg');
+        $command_button_aria_label = esc_attr__('Ouvrir la palette de commandes', 'supersede-css-jlg');
+        $mobile_menu_show_label = esc_attr__('Afficher le menu', 'supersede-css-jlg');
+        $mobile_menu_sr_label = esc_html__('Menu', 'supersede-css-jlg');
+
         ?>
         <div class="ssc-viewport">
             <div class="ssc-shell">
                 <header class="ssc-topbar">
-                <a href="<?php echo esc_url(admin_url('index.php')); ?>" class="ssc-back-to-admin button" aria-label="Retourner sur le tableau de bord WordPress">
+                <a href="<?php echo esc_url(admin_url('index.php')); ?>" class="ssc-back-to-admin button" aria-label="<?php echo $back_to_admin_aria_label; ?>">
                     <span class="dashicons dashicons-arrow-left-alt" aria-hidden="true"></span>
-                    <span class="ssc-topbar-label">WP Admin</span>
+                    <span class="ssc-topbar-label"><?php echo $back_to_admin_label; ?></span>
                 </a>
                 <span class="ssc-title">Supersede CSS</span><span class="ssc-spacer"></span>
-                <button type="button" class="button" id="ssc-theme" aria-label="Basculer le thème clair ou sombre" aria-pressed="false">
+                <button type="button" class="button" id="ssc-theme" aria-label="<?php echo $theme_button_aria_label; ?>" aria-pressed="false">
                     <span aria-hidden="true">🌓</span>
-                    <span class="ssc-topbar-label">Thème</span>
+                    <span class="ssc-topbar-label"><?php echo $theme_button_label; ?></span>
                 </button>
                 <button
                     type="button"
@@ -330,14 +339,14 @@ class Layout {
                     aria-expanded="false"
                     aria-controls="ssc-sidebar"
                     aria-haspopup="true"
-                    aria-label="Afficher le menu"
+                    aria-label="<?php echo $mobile_menu_show_label; ?>"
                 >
                     <span class="dashicons dashicons-menu" aria-hidden="true"></span>
-                    <span class="screen-reader-text">Menu</span>
+                    <span class="screen-reader-text"><?php echo $mobile_menu_sr_label; ?></span>
                 </button>
-                <button type="button" class="button button-primary" id="ssc-cmdk" aria-label="Ouvrir la palette de commandes">
+                <button type="button" class="button button-primary" id="ssc-cmdk" aria-label="<?php echo $command_button_aria_label; ?>">
                     <span aria-hidden="true">⌘K</span>
-                    <span class="ssc-topbar-label">Commande</span>
+                    <span class="ssc-topbar-label"><?php echo $command_button_label; ?></span>
                 </button>
             </header>
             <div class="ssc-shell-overlay" hidden></div>

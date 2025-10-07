@@ -277,6 +277,11 @@ body.ssc-no-scroll {
     font-size: var(--ssc-font-size-200);
 }
 
+#ssc-cmdp li a:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--ssc-accent) 65%, transparent);
+    outline-offset: 2px;
+}
+
 #ssc-cmdp li a:hover {
     background: color-mix(in srgb, var(--ssc-accent-soft) 45%, transparent);
 }
@@ -285,6 +290,18 @@ body.ssc-no-scroll {
 #ssc-cmdp li a.is-active:hover {
     background: color-mix(in srgb, var(--ssc-accent-soft) 70%, transparent);
     color: var(--ssc-accent);
+}
+
+#ssc-cmdp .ssc-cmdp-empty {
+    padding: 14px var(--ssc-space-sm);
+    text-align: center;
+    color: var(--ssc-muted);
+    border-bottom: 1px solid var(--ssc-border);
+    font-size: var(--ssc-font-size-200);
+}
+
+#ssc-cmdp .ssc-cmdp-empty:last-child {
+    border-bottom: none;
 }
 
 #ssc-toasts {

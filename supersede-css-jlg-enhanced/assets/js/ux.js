@@ -122,6 +122,18 @@
         const commandPaletteTitle = i18n.commandPaletteTitle || 'Supersede CSS command palette';
         const commandPaletteSearchPlaceholder = i18n.commandPaletteSearchPlaceholder || 'Navigate or run an action…';
         const commandPaletteSearchLabel = i18n.commandPaletteSearchLabel || 'Command palette search';
+        const commandPaletteEmptyState = (typeof i18n.commandPaletteEmptyState === 'string' && i18n.commandPaletteEmptyState.trim() !== '')
+            ? i18n.commandPaletteEmptyState
+            : 'Aucun résultat';
+        const mobileMenuShowLabel = (typeof i18n.mobileMenuShowLabel === 'string' && i18n.mobileMenuShowLabel.trim() !== '')
+            ? i18n.mobileMenuShowLabel
+            : 'Afficher le menu';
+        const mobileMenuHideLabel = (typeof i18n.mobileMenuHideLabel === 'string' && i18n.mobileMenuHideLabel.trim() !== '')
+            ? i18n.mobileMenuHideLabel
+            : 'Masquer le menu';
+        const mobileMenuToggleSrLabel = (typeof i18n.mobileMenuToggleSrLabel === 'string' && i18n.mobileMenuToggleSrLabel.trim() !== '')
+            ? i18n.mobileMenuToggleSrLabel
+            : 'Menu';
         const getCommandPaletteResultsAnnouncement = (count) => {
             const template = i18n.commandPaletteResultsAnnouncement || '%d result(s) available.';
 
@@ -189,6 +201,14 @@
             }
         };
 
+        if (mobileMenuToggle.length) {
+            mobileMenuToggle.attr('aria-label', mobileMenuShowLabel);
+            const srText = mobileMenuToggle.find('.screen-reader-text');
+            if (srText.length) {
+                srText.text(mobileMenuToggleSrLabel);
+            }
+        }
+
         const openMobileMenu = () => {
             if (!isMobileViewport() || shell.hasClass('ssc-shell--menu-open')) {
                 return;
@@ -200,7 +220,7 @@
             overlay.removeAttr('hidden');
             mobileMenuToggle.attr({
                 'aria-expanded': 'true',
-                'aria-label': 'Masquer le menu'
+                'aria-label': mobileMenuHideLabel
             });
             updateSidebarAria();
             focusSidebar();
@@ -217,7 +237,7 @@
             overlay.attr('hidden', 'hidden');
             mobileMenuToggle.attr({
                 'aria-expanded': 'false',
-                'aria-label': 'Afficher le menu'
+                'aria-label': mobileMenuShowLabel
             });
             sidebar.removeAttr('tabindex');
             updateSidebarAria();
@@ -271,7 +291,7 @@
             <div id="ssc-cmdp" role="dialog" aria-modal="true" aria-hidden="true" aria-label="${commandPaletteTitle}" tabindex="-1">
                 <div class="panel" role="document">
                     <label for="ssc-cmdp-search" class="screen-reader-text">${commandPaletteSearchLabel}</label>
-                    <input type="text" id="ssc-cmdp-search" placeholder="${commandPaletteSearchPlaceholder}" style="width: 100%; padding: 12px; border: none; border-bottom: 1px solid var(--ssc-border); font-size: 16px;">
+                    <input type="text" id="ssc-cmdp-search" placeholder="${commandPaletteSearchPlaceholder}" style="width: 100%; padding: 12px; border: none; border-bottom: 1px solid var(--ssc-border); font-size: 16px;" autocomplete="off" autocapitalize="none" spellcheck="false" aria-controls="ssc-cmdp-results" aria-autocomplete="list">
                     <ul id="ssc-cmdp-results" role="listbox" aria-live="polite"></ul>
                 </div>
             </div>`;
@@ -434,29 +454,37 @@
         function renderResults(query = '') {
             resultsList.empty();
             optionElements = [];
+            resultsList.attr('aria-busy', 'true');
             const filtered = query
                 ? commands.filter(c => c.name.toLowerCase().includes(query.toLowerCase()))
                 : commands;
 
-            filtered.forEach(c => {
-                const optionId = `ssc-cmdp-option-${++optionIdCounter}`;
-                const link = $(`<a href="#">${c.name}</a>`).attr({
-                    role: 'option',
-                    id: optionId,
-                    'aria-selected': 'false'
+            if (!filtered.length) {
+                resultsList.append(
+                    $('<li class="ssc-cmdp-empty" role="presentation"></li>').text(commandPaletteEmptyState)
+                );
+            } else {
+                filtered.forEach(c => {
+                    const optionId = `ssc-cmdp-option-${++optionIdCounter}`;
+                    const link = $(`<a href="#">${c.name}</a>`).attr({
+                        role: 'option',
+                        id: optionId,
+                        'aria-selected': 'false'
+                    });
+                    link.on('click', (e) => {
+                        e.preventDefault();
+                        closeCommandPalette();
+                        if (c.type === 'link') {
+                            window.location.href = c.handler;
+                        } else {
+                            c.handler();
+                        }
+                    });
+                    optionElements.push(link);
+                    const listItem = $('<li role="presentation"></li>').append(link);
+                    resultsList.append(listItem);
                 });
-                link.on('click', (e) => {
-                    e.preventDefault();
-                    closeCommandPalette();
-                    if (c.type === 'link') {
-                        window.location.href = c.handler;
-                    } else {
-                        c.handler();
-                    }
-                });
-                optionElements.push(link);
-                resultsList.append($('<li></li>').append(link));
-            });
+            }
             const resultCount = filtered.length;
             setActiveOption(resultCount ? 0 : -1);
             if (typeof window !== 'undefined' && window.wp && wp.a11y && typeof wp.a11y.speak === 'function') {
@@ -465,6 +493,7 @@
                     wp.a11y.speak(announcement, 'polite');
                 }
             }
+            resultsList.attr('aria-busy', 'false');
             updatePaletteFocusableElements();
         }
 
