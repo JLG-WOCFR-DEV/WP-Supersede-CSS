@@ -9,6 +9,27 @@
     position: relative;
 }
 
+.ssc-skip-link {
+    position: absolute;
+    left: var(--ssc-space-md);
+    top: var(--ssc-space-2xs);
+    z-index: 2000;
+    padding: var(--ssc-space-2xs) var(--ssc-space-sm);
+    background: var(--ssc-card);
+    color: var(--ssc-text);
+    border-radius: var(--ssc-radius-sm);
+    border: 2px solid var(--ssc-accent);
+    font-weight: var(--ssc-font-weight-semibold);
+    text-decoration: none;
+    transform: translateY(-150%);
+    transition: transform 0.2s ease;
+}
+
+.ssc-skip-link:focus-visible {
+    transform: translateY(0);
+    box-shadow: 0 0 0 3px var(--ssc-focus-ring);
+}
+
 .ssc-topbar {
     position: sticky;
     top: 0;
@@ -56,6 +77,11 @@
     display: inline-flex;
     align-items: center;
     gap: var(--ssc-space-2xs);
+}
+
+.ssc-topbar .button:focus-visible {
+    outline: 3px solid var(--ssc-focus-ring);
+    outline-offset: 2px;
 }
 
 .ssc-mobile-menu-toggle {
@@ -131,6 +157,13 @@ body.ssc-no-scroll {
     color: var(--ssc-accent);
     font-weight: var(--ssc-font-weight-semibold);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ssc-accent) 22%, transparent);
+}
+
+.ssc-sidebar a:focus-visible {
+    outline: 3px solid var(--ssc-focus-ring);
+    outline-offset: 2px;
+    background: color-mix(in srgb, var(--ssc-accent-soft) 65%, transparent);
+    border-color: color-mix(in srgb, var(--ssc-accent) 35%, var(--ssc-border));
 }
 
 .ssc-layout {
@@ -260,6 +293,25 @@ body.ssc-no-scroll {
     overflow: hidden;
 }
 
+#ssc-cmdp .ssc-cmdp-search {
+    width: 100%;
+    padding: var(--ssc-space-sm) var(--ssc-space-md);
+    border: 0;
+    border-bottom: 1px solid var(--ssc-border);
+    font-size: var(--ssc-font-size-300);
+    background: var(--ssc-card);
+    color: var(--ssc-text);
+}
+
+#ssc-cmdp .ssc-cmdp-search:focus-visible {
+    outline: 3px solid var(--ssc-focus-ring);
+    outline-offset: -2px;
+}
+
+#ssc-cmdp .ssc-cmdp-search::placeholder {
+    color: var(--ssc-muted);
+}
+
 #ssc-cmdp ul {
     max-height: 50vh;
     overflow: auto;
@@ -278,8 +330,9 @@ body.ssc-no-scroll {
 }
 
 #ssc-cmdp li a:focus-visible {
-    outline: 2px solid color-mix(in srgb, var(--ssc-accent) 65%, transparent);
-    outline-offset: 2px;
+    outline: 3px solid var(--ssc-focus-ring);
+    outline-offset: -2px;
+    background: color-mix(in srgb, var(--ssc-accent-soft) 65%, transparent);
 }
 
 #ssc-cmdp li a:hover {

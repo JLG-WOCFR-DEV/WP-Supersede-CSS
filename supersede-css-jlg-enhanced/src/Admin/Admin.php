@@ -236,6 +236,7 @@ final class Admin
         ];
 
         $styles_by_page = [
+            $this->slug                     => ['dashboard'],
             $this->slug.'-utilities'        => ['utilities'],
             $this->slug.'-layout-builder'   => ['page-layout-builder'],
             $this->slug.'-tokens'           => ['tokens'],
