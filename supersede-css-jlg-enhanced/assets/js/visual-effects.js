@@ -1210,7 +1210,7 @@ ${reduceMotionBlock}`;
 
             if (type === 'gradient') {
                 if (!latestGradientResult) {
-                    const errorToast = __('Corrigez les erreurs du dégradé avant d'appliquer.', 'supersede-css-jlg');
+                    const errorToast = __("Corrigez les erreurs du dégradé avant d'appliquer.", 'supersede-css-jlg');
                     window.sscToast(errorToast, { politeness: 'assertive' });
                     return;
                 }
@@ -1222,7 +1222,7 @@ ${reduceMotionBlock}`;
                 return;
             }
 
-            const errorMessage = __('Échec de l'enregistrement du fond animé.', 'supersede-css-jlg');
+            const errorMessage = __("Échec de l'enregistrement du fond animé.", 'supersede-css-jlg');
             const originalText = $applyButton.text();
 
             applyBusy = true;
