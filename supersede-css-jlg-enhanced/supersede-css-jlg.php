@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Supersede CSS JLG (Enhanced)
  * Description: Boîte à outils visuelle pour CSS avec presets, éditeurs live, tokens, et un centre de débogage amélioré.
- * Version: 10.0.5
+ * Version: 10.0.6
  * Requires PHP: 8.0
  * Author: JLG (Enhanced by AI)
  * Text Domain: supersede-css-jlg
@@ -13,7 +13,7 @@ if (!defined('ABSPATH')) { exit; }
 use SSC\Blocks\TokenPreview;
 use SSC\Support\CssSanitizer;
 
-define('SSC_VERSION','10.0.5');
+define('SSC_VERSION','10.0.6');
 define('SSC_PLUGIN_FILE', __FILE__);
 define('SSC_PLUGIN_DIR', plugin_dir_path(__FILE__));
 // CORRECTION : Déclaration de l'URL plus robuste pour éviter les erreurs 404.

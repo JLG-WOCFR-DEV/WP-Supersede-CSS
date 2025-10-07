@@ -115,6 +115,11 @@ final class Admin
                 'class'  => '\\SSC\\Admin\\Pages\\CssViewer',
             ],
             [
+                'slug'   => 'css-performance',
+                'label'  => __('Analyse Performance CSS', 'supersede-css-jlg'),
+                'class'  => '\\SSC\\Admin\\Pages\\CssPerformance',
+            ],
+            [
                 'slug'   => 'debug-center',
                 'label'  => __('Debug Center', 'supersede-css-jlg'),
                 'class'  => '\\SSC\\Admin\\Pages\\DebugCenter',
