@@ -243,6 +243,7 @@ final class Admin
             $this->slug.'-filters'          => ['filter-editor'],
             $this->slug.'-clip-path'        => ['clip-path-editor'],
             $this->slug.'-typography'       => ['typography-editor'],
+            $this->slug.'-anim'             => ['animation-studio'],
         ];
 
         if (isset($scripts_by_page[$page])) {
