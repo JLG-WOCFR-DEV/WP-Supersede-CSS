@@ -156,6 +156,104 @@
         const themeToggle = $('#ssc-theme');
         const body = $('body');
 
+        const visualDebug = (() => {
+            const STORAGE_KEY = 'ssc-visual-debug-enabled';
+            const subscribers = new Set();
+            let currentState = false;
+
+            const safeStorage = () => {
+                try {
+                    return window.localStorage || null;
+                } catch (error) {
+                    return null;
+                }
+            };
+
+            const persist = (enabled) => {
+                const storage = safeStorage();
+                if (!storage) {
+                    return;
+                }
+
+                try {
+                    storage.setItem(STORAGE_KEY, enabled ? '1' : '0');
+                } catch (error) {
+                    // Ignore storage quota/security errors.
+                }
+            };
+
+            const read = () => {
+                const storage = safeStorage();
+                if (!storage) {
+                    return false;
+                }
+
+                try {
+                    const value = storage.getItem(STORAGE_KEY);
+                    return value === '1' || value === 'true';
+                } catch (error) {
+                    return false;
+                }
+            };
+
+            const apply = (enabled) => {
+                currentState = !!enabled;
+                if (body && body.length) {
+                    body.toggleClass('ssc-visual-debug-active', currentState);
+                }
+            };
+
+            const notify = (meta = {}) => {
+                const payload = { ...meta };
+                subscribers.forEach((callback) => {
+                    try {
+                        callback(currentState, payload);
+                    } catch (error) {
+                        // Ignore subscriber errors to avoid breaking the UI.
+                    }
+                });
+                $(document).trigger('ssc:visual-debug:change', [currentState, payload]);
+            };
+
+            return {
+                STORAGE_KEY,
+                init() {
+                    apply(read());
+                    notify({ initial: true, silent: true });
+                },
+                set(enabled, meta = {}) {
+                    apply(enabled);
+                    persist(currentState);
+                    notify(meta);
+                },
+                isEnabled() {
+                    return currentState;
+                },
+                read,
+                onChange(callback) {
+                    if (typeof callback === 'function') {
+                        subscribers.add(callback);
+                        try {
+                            callback(currentState, { initial: true, silent: true });
+                        } catch (error) {
+                            // Ignore subscriber errors.
+                        }
+                    }
+
+                    return () => {
+                        subscribers.delete(callback);
+                    };
+                },
+            };
+        })();
+
+        visualDebug.init();
+        window.sscVisualDebug = visualDebug;
+
+        $(document).on('ssc:visual-debug:update', (event, state, meta = {}) => {
+            visualDebug.set(!!state, meta);
+        });
+
         if (localStorage.getItem('ssc-theme') === 'dark') {
             body.addClass('ssc-dark');
         }

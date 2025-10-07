@@ -15,7 +15,7 @@ $css_revisions     = isset($css_revisions) && is_array($css_revisions) ? $css_re
     <p><?php echo esc_html__('Un hub centralisé pour la santé du système, la gestion des modules et le journal d\'activité.', 'supersede-css-jlg'); ?></p>
 
     <div class="ssc-two" style="align-items: flex-start; margin-top: 16px;">
-        <div class="ssc-pane">
+        <div class="ssc-pane" data-ssc-debug-label="<?php echo esc_attr__('Système', 'supersede-css-jlg'); ?>">
             <h2><?php echo esc_html__('Informations Système', 'supersede-css-jlg'); ?></h2>
             <table class="widefat striped" style="margin: 0;"><tbody>
                 <tr>
@@ -32,7 +32,7 @@ $css_revisions     = isset($css_revisions) && is_array($css_revisions) ? $css_re
                 </tr>
             </tbody></table>
         </div>
-        <div class="ssc-pane">
+        <div class="ssc-pane" data-ssc-debug-label="<?php echo esc_attr__('Santé', 'supersede-css-jlg'); ?>">
             <h2><?php echo esc_html__('Actions Globales', 'supersede-css-jlg'); ?></h2>
             <div class="ssc-actions">
                 <button class="button button-primary" id="ssc-health-run" aria-controls="ssc-health-summary" aria-expanded="false">
@@ -74,7 +74,41 @@ $css_revisions     = isset($css_revisions) && is_array($css_revisions) ? $css_re
         </div>
     </div>
 
-    <div class="ssc-panel ssc-danger-zone" style="margin-top: 16px;">
+    <div class="ssc-panel" id="ssc-visual-debug-panel" data-ssc-debug-label="<?php echo esc_attr__('Débogage visuel', 'supersede-css-jlg'); ?>" style="margin-top: 16px;">
+        <h2><?php echo esc_html__('Assistant de débogage visuel', 'supersede-css-jlg'); ?></h2>
+        <p class="description" id="ssc-visual-debug-description">
+            <?php echo esc_html__('Activez les contours d’interface, les grilles et les repères d’espacement pour inspecter rapidement la mise en page après vos modifications CSS.', 'supersede-css-jlg'); ?>
+        </p>
+        <div class="ssc-visual-debug-actions">
+            <button
+                type="button"
+                class="button button-secondary"
+                id="ssc-visual-debug-toggle"
+                aria-pressed="false"
+                aria-describedby="ssc-visual-debug-description ssc-visual-debug-status"
+            >
+                <?php echo esc_html__('Activer le débogage visuel', 'supersede-css-jlg'); ?>
+            </button>
+            <p id="ssc-visual-debug-status" class="description" role="status" aria-live="polite"></p>
+        </div>
+        <p id="ssc-visual-debug-note" class="description ssc-visual-debug-note" hidden></p>
+        <div class="ssc-visual-debug-legend" aria-hidden="true">
+            <span class="ssc-visual-debug-legend__item">
+                <span class="ssc-visual-debug-legend__swatch ssc-visual-debug-legend__swatch--surface" aria-hidden="true"></span>
+                <?php echo esc_html__('Contours des panneaux', 'supersede-css-jlg'); ?>
+            </span>
+            <span class="ssc-visual-debug-legend__item">
+                <span class="ssc-visual-debug-legend__swatch ssc-visual-debug-legend__swatch--grid" aria-hidden="true"></span>
+                <?php echo esc_html__('Grilles & espacements', 'supersede-css-jlg'); ?>
+            </span>
+            <span class="ssc-visual-debug-legend__item">
+                <span class="ssc-visual-debug-legend__swatch ssc-visual-debug-legend__swatch--focus" aria-hidden="true"></span>
+                <?php echo esc_html__('Points d’interaction', 'supersede-css-jlg'); ?>
+            </span>
+        </div>
+    </div>
+
+    <div class="ssc-panel ssc-danger-zone" data-ssc-debug-label="<?php echo esc_attr__('Zone de danger', 'supersede-css-jlg'); ?>" style="margin-top: 16px;">
          <h2><?php echo esc_html__('🛑 Zone de Danger', 'supersede-css-jlg'); ?></h2>
          <p id="ssc-danger-intro"><?php echo esc_html__('Les actions ci-dessous sont irréversibles. Soyez certain de vouloir continuer.', 'supersede-css-jlg'); ?></p>
          <button id="ssc-reset-all-css" class="button" style="background: #dc2626; border-color: #991b1b; color: white;"><?php esc_html_e('Réinitialiser tout le CSS', 'supersede-css-jlg'); ?></button>
@@ -89,7 +123,7 @@ $css_revisions     = isset($css_revisions) && is_array($css_revisions) ? $css_re
          <p id="ssc-danger-desc" class="description"><?php echo wp_kses_post($danger_desc); ?></p>
     </div>
 
-    <div class="ssc-panel" style="margin-top: 16px;">
+    <div class="ssc-panel" data-ssc-debug-label="<?php echo esc_attr__('Révisions CSS', 'supersede-css-jlg'); ?>" style="margin-top: 16px;">
         <div class="ssc-panel-header">
             <div>
                 <h2><?php echo esc_html__('Révisions CSS enregistrées', 'supersede-css-jlg'); ?></h2>
@@ -262,7 +296,7 @@ $css_revisions     = isset($css_revisions) && is_array($css_revisions) ? $css_re
         <?php endif; ?>
     </div>
 
-    <div class="ssc-panel" style="margin-top: 16px;">
+    <div class="ssc-panel" data-ssc-debug-label="<?php echo esc_attr__('Journal d’activité', 'supersede-css-jlg'); ?>" style="margin-top: 16px;">
         <div class="ssc-panel-header">
             <div>
                 <h2><?php echo esc_html__('Journal d\'Activité Récent', 'supersede-css-jlg'); ?></h2>

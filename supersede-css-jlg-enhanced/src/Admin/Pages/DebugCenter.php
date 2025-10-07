@@ -55,6 +55,13 @@ class DebugCenter extends AbstractPage
                         'durationMinutes'                => __('%d minute(s)', 'supersede-css-jlg'),
                         'durationHours'                  => __('%d heure(s)', 'supersede-css-jlg'),
                         'durationDays'                   => __('%d jour(s)', 'supersede-css-jlg'),
+                        'visualDebugToggleOnLabel'       => __('Désactiver le débogage visuel', 'supersede-css-jlg'),
+                        'visualDebugToggleOffLabel'      => __('Activer le débogage visuel', 'supersede-css-jlg'),
+                        'visualDebugEnabledMessage'      => __('Débogage visuel actif. Les surfaces sont annotées dans toute l’interface.', 'supersede-css-jlg'),
+                        'visualDebugDisabledMessage'     => __('Débogage visuel inactif.', 'supersede-css-jlg'),
+                        'visualDebugEnabledToast'        => __('Débogage visuel activé.', 'supersede-css-jlg'),
+                        'visualDebugDisabledToast'       => __('Débogage visuel désactivé.', 'supersede-css-jlg'),
+                        'visualDebugPersistedNotice'     => __('Préférence sauvegardée pour toutes les pages Supersede CSS.', 'supersede-css-jlg'),
                     ],
                 ]
             );

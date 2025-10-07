@@ -32,6 +32,10 @@
         const detailsPanel = $('#ssc-health-details');
         const errorNotice = $('#ssc-health-error');
         const copyButton = $('#ssc-health-copy');
+        const visualDebug = window.sscVisualDebug || null;
+        const visualDebugToggle = $('#ssc-visual-debug-toggle');
+        const visualDebugStatus = $('#ssc-visual-debug-status');
+        const visualDebugNotice = $('#ssc-visual-debug-note');
 
         let lastHealthPayload = '';
 
@@ -57,6 +61,16 @@
             warning: translate('healthSeverityWarning', 'Avertissement'),
             error: translate('healthSeverityError', 'Erreur'),
             info: translate('healthSeverityInfo', 'Info')
+        };
+
+        const visualDebugMessages = {
+            onLabel: translate('visualDebugToggleOnLabel', 'Désactiver le débogage visuel'),
+            offLabel: translate('visualDebugToggleOffLabel', 'Activer le débogage visuel'),
+            enabled: translate('visualDebugEnabledMessage', 'Débogage visuel actif. Les surfaces sont annotées dans toute l’interface.'),
+            disabled: translate('visualDebugDisabledMessage', 'Débogage visuel inactif.'),
+            enabledToast: translate('visualDebugEnabledToast', 'Débogage visuel activé.'),
+            disabledToast: translate('visualDebugDisabledToast', 'Débogage visuel désactivé.'),
+            persisted: translate('visualDebugPersistedNotice', 'Préférence sauvegardée pour toutes les pages Supersede CSS.'),
         };
 
         const labelMap = {
@@ -1020,6 +1034,77 @@
                 document.body.removeChild(link);
             }, 0);
         };
+
+        const updateVisualDebugUi = (enabled, { silent = false } = {}) => {
+            const isEnabled = !!enabled;
+
+            if (visualDebugToggle.length) {
+                visualDebugToggle.attr('aria-pressed', isEnabled ? 'true' : 'false');
+                visualDebugToggle.text(isEnabled ? visualDebugMessages.onLabel : visualDebugMessages.offLabel);
+            }
+
+            if (visualDebugStatus.length) {
+                visualDebugStatus.text(isEnabled ? visualDebugMessages.enabled : visualDebugMessages.disabled);
+            }
+
+            if (!silent && typeof window.sscToast === 'function') {
+                window.sscToast(isEnabled ? visualDebugMessages.enabledToast : visualDebugMessages.disabledToast, {
+                    politeness: 'polite',
+                });
+            }
+
+            if (visualDebugNotice.length) {
+                if (isEnabled) {
+                    visualDebugNotice.removeAttr('hidden').text(visualDebugMessages.persisted).show();
+                } else {
+                    visualDebugNotice.text('').attr('hidden', 'hidden').hide();
+                }
+            }
+        };
+
+        const bindVisualDebug = () => {
+            if (!visualDebugToggle.length) {
+                return;
+            }
+
+            const handleChange = (state, meta = {}) => {
+                const fromDebugCenter = meta && meta.source === 'debug-center';
+                const shouldRemainSilent = meta && (meta.silent || meta.initial || !fromDebugCenter);
+                updateVisualDebugUi(state, { silent: shouldRemainSilent });
+            };
+
+            if (visualDebug && typeof visualDebug.onChange === 'function') {
+                visualDebug.onChange(handleChange);
+            } else {
+                $(document).on('ssc:visual-debug:change', (event, state, meta = {}) => {
+                    handleChange(!!state, meta || {});
+                });
+                handleChange($('body').hasClass('ssc-visual-debug-active'), { silent: true, initial: true });
+            }
+
+            visualDebugToggle.on('click', function(event) {
+                event.preventDefault();
+                const nextState = visualDebugToggle.attr('aria-pressed') !== 'true';
+
+                if (visualDebug && typeof visualDebug.set === 'function') {
+                    visualDebug.set(nextState, { source: 'debug-center' });
+                } else {
+                    $('body').toggleClass('ssc-visual-debug-active', nextState);
+                    try {
+                        window.localStorage.setItem('ssc-visual-debug-enabled', nextState ? '1' : '0');
+                    } catch (error) {
+                        // Ignore storage errors.
+                    }
+                    $(document).trigger('ssc:visual-debug:change', [nextState, { source: 'debug-center' }]);
+                }
+            });
+
+            if (visualDebugNotice.length) {
+                visualDebugNotice.attr('aria-live', 'polite');
+            }
+        };
+
+        bindVisualDebug();
 
         $('#ssc-export-css').on('click', function() {
             const activeId = $('#ssc-diff-compare').val() || $('#ssc-diff-base').val();
