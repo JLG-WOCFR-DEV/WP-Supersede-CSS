@@ -4,6 +4,24 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
     exit;
 }
 
+if (!function_exists('ssc_record_deleted_option')) {
+    function ssc_record_deleted_option(string $option_name): void
+    {
+        $recorded = false;
+
+        if (isset($GLOBALS['ssc_deleted_options']) && is_array($GLOBALS['ssc_deleted_options'])) {
+            $GLOBALS['ssc_deleted_options'][] = $option_name;
+            $recorded = true;
+        }
+
+        global $ssc_deleted_options;
+
+        if (!$recorded && isset($ssc_deleted_options) && is_array($ssc_deleted_options)) {
+            $ssc_deleted_options[] = $option_name;
+        }
+    }
+}
+
 // Liste de toutes les options à supprimer
 $ssc_options_to_delete = [
     'ssc_admin_log',
@@ -29,9 +47,7 @@ $ssc_options_to_delete = [
 foreach ($ssc_options_to_delete as $option_name) {
     delete_option($option_name);
 
-    if (isset($GLOBALS['ssc_deleted_options']) && is_array($GLOBALS['ssc_deleted_options'])) {
-        $GLOBALS['ssc_deleted_options'][] = $option_name;
-    }
+    ssc_record_deleted_option($option_name);
 }
 
 if (!is_multisite()) {
@@ -41,6 +57,8 @@ if (!is_multisite()) {
 // Supprime également les éventuelles options réseau
 foreach ($ssc_options_to_delete as $option_name) {
     delete_site_option($option_name);
+
+    ssc_record_deleted_option($option_name);
 }
 
 // Parcourt tous les sites du réseau pour supprimer les options locales
@@ -55,9 +73,7 @@ foreach ($site_ids as $site_id) {
     foreach ($ssc_options_to_delete as $option_name) {
         delete_option($option_name);
 
-        if (isset($GLOBALS['ssc_deleted_options']) && is_array($GLOBALS['ssc_deleted_options'])) {
-            $GLOBALS['ssc_deleted_options'][] = $option_name;
-        }
+        ssc_record_deleted_option($option_name);
     }
 
     restore_current_blog();
