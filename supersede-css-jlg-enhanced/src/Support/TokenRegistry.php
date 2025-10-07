@@ -192,7 +192,11 @@ final class TokenRegistry
         }
 
         $value = preg_replace('/\s+/', ' ', $value) ?? $value;
-        $value = preg_replace('/[^A-Za-z0-9_\-\s:#\.\[\]=\"\'\\]/', '', $value) ?? $value;
+        $value = preg_replace(
+            "~[^A-Za-z0-9_\\-:#\\.\\[\\]= \"'\\\\]~",
+            '',
+            $value
+        ) ?? $value;
         $value = trim($value);
 
         if ($value === '') {
