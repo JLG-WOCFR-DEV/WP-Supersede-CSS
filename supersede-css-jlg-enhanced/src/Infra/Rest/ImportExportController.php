@@ -134,6 +134,16 @@ final class ImportExportController extends BaseController
         $json = $request->get_json_params();
 
         if (!is_array($json)) {
+            $body = $request->get_body();
+            if (is_string($body) && trim($body) !== '') {
+                $decoded = json_decode($body, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $json = $decoded;
+                }
+            }
+        }
+
+        if (!is_array($json)) {
             return new WP_REST_Response([
                 'ok' => false,
                 'message' => __('Invalid JSON payload.', 'supersede-css-jlg'),
@@ -410,7 +420,36 @@ final class ImportExportController extends BaseController
             }
 
             if ($optionName === 'ssc_tokens_css') {
-                $tokens = TokenRegistry::convertCssToRegistry($sanitizedValue);
+                $detailedTokens = TokenRegistry::convertCssToRegistryDetailed($sanitizedValue);
+                if ($detailedTokens['duplicates'] !== []) {
+                    $duplicateLabels = array_map(static function (array $duplicate): string {
+                        $variants = $duplicate['variants'] ?? [];
+                        if (is_array($variants)) {
+                            $variants = array_values(array_filter(array_map('strval', $variants)));
+                        } else {
+                            $variants = [];
+                        }
+
+                        if ($variants !== []) {
+                            return implode(' / ', $variants);
+                        }
+
+                        return isset($duplicate['canonical']) ? (string) $duplicate['canonical'] : '';
+                    }, $detailedTokens['duplicates']);
+                    $duplicateSummary = implode(', ', array_filter($duplicateLabels));
+                    $skipped[] = sprintf(
+                        '%s (%s: %s)',
+                        $optionName,
+                        __('duplicate token names', 'supersede-css-jlg'),
+                        $duplicateSummary
+                    );
+                    foreach ($duplicateWarnings as $duplicatePath) {
+                        $skipped[] = sprintf('%s (duplicate key: %s)', $optionName, $duplicatePath);
+                    }
+                    continue;
+                }
+
+                $tokens = $detailedTokens['tokens'];
                 $existingRegistry = get_option('ssc_tokens_registry', []);
                 if (!is_array($existingRegistry)) {
                     $existingRegistry = [];

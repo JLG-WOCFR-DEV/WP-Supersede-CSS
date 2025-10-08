@@ -39,6 +39,7 @@ $ssc_options_to_delete = [
     'ssc_css_mobile', // Ajouté
     'ssc_css_cache', // Ajouté
     'ssc_css_cache_meta', // Ajouté
+    'ssc_css_cache_last_had_cache',
     'ssc_avatar_glow_presets', // Ajouté
     'ssc_optimization_settings', // Ajouté
     'ssc_css_revisions', // Historique des révisions CSS
@@ -49,6 +50,11 @@ foreach ($ssc_options_to_delete as $option_name) {
     delete_option($option_name);
 
     ssc_record_deleted_option($option_name);
+}
+
+global $ssc_deleted_options;
+if (isset($GLOBALS['ssc_deleted_options'])) {
+    $ssc_deleted_options = $GLOBALS['ssc_deleted_options'];
 }
 
 if (!is_multisite()) {

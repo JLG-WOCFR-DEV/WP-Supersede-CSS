@@ -3,6 +3,7 @@ dist/
 build/
 vendor/
 wordpress/
+wp-content/
 coverage/
 .DS_Store
 npm-debug.log*

@@ -105,10 +105,7 @@ if (!function_exists('ssc_get_cached_css')) {
             'version' => SSC_VERSION,
         ], false);
 
-        $ssc_css_runtime_cache = [
-            'css' => $css_filtered,
-            'version' => SSC_VERSION,
-        ];
+        delete_option('ssc_css_cache_last_had_cache');
 
         return $css_filtered;
     }
@@ -117,11 +114,21 @@ if (!function_exists('ssc_get_cached_css')) {
 if (!function_exists('ssc_invalidate_css_cache')) {
     function ssc_invalidate_css_cache(): void
     {
-        global $ssc_css_runtime_cache;
+        $cached = get_option('ssc_css_cache', false);
+        $hadCache = is_string($cached) && trim($cached) !== '';
 
-        $ssc_css_runtime_cache = null;
         delete_option('ssc_css_cache');
         delete_option('ssc_css_cache_meta');
+
+        if ($hadCache) {
+            update_option('ssc_css_cache_last_had_cache', 1, false);
+        } else {
+            delete_option('ssc_css_cache_last_had_cache');
+        }
+
+        if (function_exists('do_action')) {
+            do_action('ssc_css_cache_invalidated');
+        }
     }
 }
 
