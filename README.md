@@ -44,6 +44,10 @@ Vue synthétique avec liens rapides vers les zones critiques : éditeur CSS, tok
 ### Utilities (Éditeur CSS responsive)
 Éditeur multi-onglets (desktop/tablette/mobile) avec tutoriel `@media`, prévisualisation embarquée, sélecteur visuel 🎯 et toggles responsive pour tester le rendu dans une iframe sandboxée.
 
+> ℹ️ **À propos de l'avertissement "allow-scripts" / "allow-same-origin" dans la console**
+>
+> Le panneau de prévisualisation utilise une iframe sandboxée afin d'empêcher le contenu chargé d'interagir avec l'administration WordPress. Pour permettre l'injection du surlignage 🎯 et des interactions clavier, nous devons cumuler les flags `allow-scripts` et `allow-same-origin`. Les navigateurs signalent alors que l'iframe peut théoriquement "échapper" au sandbox. Dans notre cas, l'URL préchargée appartient déjà à votre site et l'iframe reste confinée à la zone d'aperçu. L'avertissement est donc attendu et n'indique pas une faille supplémentaire ; veillez simplement à ne pas charger de sites tiers non fiables dans l'aperçu.
+
 ### Tokens Manager
 Builder visuel de tokens CSS : fiches typées, moteur de recherche, filtres, compteur de résultats, aperçu direct et synchronisation JSON ↔️ CSS pour garder un design system fiable.
 
