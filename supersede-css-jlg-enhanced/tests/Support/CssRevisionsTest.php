@@ -213,7 +213,17 @@ $ssc_cache_invalidations = 0;
 
 global $ssc_cache_invalidations;
 
-if (!function_exists('ssc_invalidate_css_cache')) {
+if (function_exists('add_action')) {
+    static $ssc_css_cache_invalidated_listener_added = false;
+
+    if (!$ssc_css_cache_invalidated_listener_added) {
+        add_action('ssc_css_cache_invalidated', static function () use (&$ssc_cache_invalidations): void {
+            $ssc_cache_invalidations++;
+        });
+
+        $ssc_css_cache_invalidated_listener_added = true;
+    }
+} elseif (!function_exists('ssc_invalidate_css_cache')) {
     function ssc_invalidate_css_cache(): void
     {
         global $ssc_cache_invalidations;
