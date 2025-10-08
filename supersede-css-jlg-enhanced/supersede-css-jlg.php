@@ -13,6 +13,7 @@ if (!defined('ABSPATH')) { exit; }
 use SSC\Blocks\TokenPreview;
 use SSC\Infra\Cli\CssCacheCommand;
 use SSC\Support\CssSanitizer;
+use SSC\Support\PresetLibrary;
 
 define('SSC_VERSION','10.0.7');
 define('SSC_PLUGIN_FILE', __FILE__);
@@ -147,6 +148,8 @@ add_action('plugins_loaded', function(){
         ssc_invalidate_css_cache();
         ssc_get_cached_css();
     }
+
+    PresetLibrary::ensureDefaults();
 
     if (is_admin()) {
         new SSC\Admin\Admin();
