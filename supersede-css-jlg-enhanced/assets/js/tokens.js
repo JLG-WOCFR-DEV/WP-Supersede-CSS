@@ -110,7 +110,7 @@
             window.wp.a11y.speak(message, politeness || 'polite');
         }
     }
-    const defaultGroupName = 'Général';
+    const defaultGroupName = translate('defaultGroupName', 'Général');
     const diacriticRegex = /[\u0300-\u036f]/g;
     const hasStringNormalize = typeof ''.normalize === 'function';
     const localUiState = {

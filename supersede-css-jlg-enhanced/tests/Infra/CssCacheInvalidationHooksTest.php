@@ -6,6 +6,9 @@ final class CssCacheInvalidationHooksTest extends WP_UnitTestCase
     {
         parent::setUp();
 
+        global $ssc_css_runtime_cache;
+
+        $ssc_css_runtime_cache = null;
         delete_option('ssc_css_cache');
         delete_option('ssc_css_cache_meta');
         delete_option('ssc_active_css');
@@ -48,6 +51,26 @@ final class CssCacheInvalidationHooksTest extends WP_UnitTestCase
         $this->primeCache();
 
         delete_option('ssc_active_css');
+
+        $this->assertFalse(get_option('ssc_css_cache'));
+        $this->assertFalse(get_option('ssc_css_cache_meta'));
+    }
+
+    public function test_cache_is_invalidated_when_theme_switches(): void
+    {
+        $this->primeCache();
+
+        do_action('switch_theme');
+
+        $this->assertFalse(get_option('ssc_css_cache'));
+        $this->assertFalse(get_option('ssc_css_cache_meta'));
+    }
+
+    public function test_cache_is_invalidated_when_customizer_saves(): void
+    {
+        $this->primeCache();
+
+        do_action('customize_save_after', null);
 
         $this->assertFalse(get_option('ssc_css_cache'));
         $this->assertFalse(get_option('ssc_css_cache_meta'));
