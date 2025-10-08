@@ -265,6 +265,10 @@ if (!function_exists('ssc_register_blocks')) {
             return;
         }
 
+        if (function_exists('wp_installing') && wp_installing()) {
+            return;
+        }
+
         TokenPreview::register();
     }
 }
