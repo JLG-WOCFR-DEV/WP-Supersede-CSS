@@ -205,17 +205,84 @@ add_action('plugins_loaded', function(){
         SSC\Infra\Routes::register();
     }
 
-    add_action('wp_enqueue_scripts', function(){
-        // Récupère le CSS mis en cache, recalculé uniquement après une mise à jour.
-        $css_filtered = ssc_get_cached_css();
-
-        if ($css_filtered !== '') {
-            wp_register_style('ssc-styles-handle', false);
-            wp_enqueue_style('ssc-styles-handle');
-            wp_add_inline_style('ssc-styles-handle', '/* Supersede CSS */' . $css_filtered);
-        }
-    }, 99);
+    add_action('wp_enqueue_scripts', 'ssc_enqueue_frontend_inline_css', 99);
 });
+
+if (!function_exists('ssc_get_inline_style_handle')) {
+    /**
+     * Returns the stylesheet handle used when outputting inline CSS.
+     *
+     * @param string $context  The rendering context (e.g. "frontend", "editor").
+     * @param string $fallback Default handle used when the filter returns an empty value.
+     */
+    function ssc_get_inline_style_handle(string $context, string $fallback): string
+    {
+        $handle = apply_filters('ssc_inline_style_handle', $fallback, $context);
+
+        if (!is_string($handle)) {
+            return $fallback;
+        }
+
+        $handle = trim($handle);
+
+        return $handle !== '' ? $handle : $fallback;
+    }
+}
+
+if (!function_exists('ssc_prepare_inline_css_for_output')) {
+    /**
+     * Normalise cached CSS before injecting it into a page.
+     *
+     * Professional-grade plugins expose filters so that enterprise stacks can
+     * inject instrumentation (for example CSP nonce attributes or telemetry
+     * markers) without forking the code. The optional $resanitize flag keeps the
+     * existing defensive sanitation in place for contexts where the CSS may
+     * travel through extra filters (such as the block editor pipeline).
+     *
+     * @param string $context    A short name describing the render target.
+     * @param bool   $resanitize Whether to re-run sanitization on the cached CSS.
+     */
+    function ssc_prepare_inline_css_for_output(string $context, bool $resanitize = false): string
+    {
+        $css = ssc_get_cached_css();
+
+        if ($css === '') {
+            return '';
+        }
+
+        if ($resanitize) {
+            $css = CssSanitizer::sanitize($css);
+
+            if ($css === '') {
+                return '';
+            }
+        }
+
+        $filtered = apply_filters('ssc_inline_css', $css, $context);
+
+        return is_string($filtered) ? trim($filtered) : '';
+    }
+}
+
+if (!function_exists('ssc_enqueue_frontend_inline_css')) {
+    /**
+     * Enqueues the cached CSS on the public-facing site.
+     */
+    function ssc_enqueue_frontend_inline_css(): void
+    {
+        $css_filtered = ssc_prepare_inline_css_for_output('frontend');
+
+        if ($css_filtered === '') {
+            return;
+        }
+
+        $handle = ssc_get_inline_style_handle('frontend', 'ssc-styles-handle');
+
+        wp_register_style($handle, false, [], SSC_VERSION);
+        wp_enqueue_style($handle);
+        wp_add_inline_style($handle, '/* Supersede CSS */' . $css_filtered);
+    }
+}
 
 if (!function_exists('ssc_enqueue_block_editor_inline_css')) {
     /**
@@ -223,22 +290,17 @@ if (!function_exists('ssc_enqueue_block_editor_inline_css')) {
      */
     function ssc_enqueue_block_editor_inline_css(): void
     {
-        $css_filtered = ssc_get_cached_css();
+        $css_filtered = ssc_prepare_inline_css_for_output('editor', true);
 
         if ($css_filtered === '') {
             return;
         }
 
-        // Double vérification : assure que le CSS est filtré avant injection.
-        $css_filtered = CssSanitizer::sanitize($css_filtered);
+        $handle = ssc_get_inline_style_handle('editor', 'ssc-editor-styles-handle');
 
-        if ($css_filtered === '') {
-            return;
-        }
-
-        wp_register_style('ssc-editor-styles-handle', false);
-        wp_enqueue_style('ssc-editor-styles-handle');
-        wp_add_inline_style('ssc-editor-styles-handle', '/* Supersede CSS (Editor) */' . $css_filtered);
+        wp_register_style($handle, false, [], SSC_VERSION);
+        wp_enqueue_style($handle);
+        wp_add_inline_style($handle, '/* Supersede CSS (Editor) */' . $css_filtered);
     }
 }
 

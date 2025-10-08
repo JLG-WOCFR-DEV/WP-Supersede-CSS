@@ -15,10 +15,15 @@ Cette version a été entièrement refactorisée pour améliorer la stabilité, 
 * Les jeux de presets (scope, propriétés) et les effets Avatar Glow sont normalisés (textes, sélecteurs, couleurs, URLs) avant persistance afin d'éviter les injections sans perdre la configuration enregistrée.
 * Scénario manuel : ajouter un bloc CSS contenant `background-image: url("data:image/svg+xml;base64,PHN2Zy4uLg==");` puis un autre avec `background-image: url("javascript:alert(1)");`. Après sauvegarde, vérifier que la première propriété est intacte tandis que la seconde est supprimée du CSS généré dans l'interface.
 
+== Hooks ==
+* `ssc_inline_style_handle` — Permet d'ajuster le handle WordPress utilisé pour l'injection des styles inline (frontend ou éditeur) afin de s'intégrer aux stratégies de bundling existantes.
+* `ssc_inline_css` — Offre un point d'entrée pour modifier ou enrichir le CSS assaini juste avant sa sortie (par exemple pour injecter un nonce CSP ou des métriques d'observabilité).
+
 == Changelog ==
 = 10.0.7 =
 * NEW: Commande `wp ssc css flush` pour vider manuellement le cache CSS généré par le plugin.
 * IMPROVEMENT: Option `--rebuild` pour régénérer immédiatement un CSS assaini lors des déploiements automatisés.
+* IMPROVEMENT: Filtres `ssc_inline_style_handle` et `ssc_inline_css` pour mieux intégrer le plugin aux pipelines front-end professionnels.
 
 = 10.0.6 =
 * NEW: Module "CSS Performance Analyzer" pour visualiser le poids total, les doublons de sélecteurs et recevoir des recommandations d’optimisation.
