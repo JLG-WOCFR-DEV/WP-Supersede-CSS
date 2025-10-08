@@ -21,19 +21,13 @@ define('SSC_PLUGIN_DIR', plugin_dir_path(__FILE__));
 // CORRECTION : Déclaration de l'URL plus robuste pour éviter les erreurs 404.
 define('SSC_PLUGIN_URL', plugins_url('/', __FILE__));
 
-spl_autoload_register(function($class){
-    $prefix = 'SSC\\';
-    $base_dir = __DIR__ . '/src/';
-    $len = strlen($prefix);
-    if (strncmp($prefix, $class, $len) !== 0) {
-        return;
-    }
-    $relative_class = substr($class, $len);
-    $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
-    if (file_exists($file)) {
-        require $file;
-    }
-});
+$composerAutoload = __DIR__ . '/vendor/autoload.php';
+
+if (file_exists($composerAutoload)) {
+    require $composerAutoload;
+} else {
+    require __DIR__ . '/src/autoload-fallback.php';
+}
 
 if (!function_exists('ssc_get_required_capability')) {
     /**
