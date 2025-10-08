@@ -1,5 +1,11 @@
 <?php declare(strict_types=1);
 
+if (defined('SSC_WP_TEST_SUITE_AVAILABLE') && !SSC_WP_TEST_SUITE_AVAILABLE) {
+    fwrite(STDOUT, basename(__FILE__) . " skipped: WordPress test suite unavailable." . PHP_EOL);
+
+    return;
+}
+
 if (!defined('WP_UNINSTALL_PLUGIN')) {
     define('WP_UNINSTALL_PLUGIN', true);
 }

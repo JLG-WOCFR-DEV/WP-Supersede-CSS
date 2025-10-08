@@ -9,7 +9,7 @@ final class Admin
     private string $cap;
 
     public function __construct() {
-        $this->slug = 'supersede-css-jlg';
+        $this->slug = ModuleRegistry::BASE_SLUG;
         $this->cap  = \ssc_get_required_capability();
 
         add_action('admin_menu', [$this, 'menu']);
@@ -27,116 +27,21 @@ final class Admin
             58
         );
         
-        // Tous les modules sont déclarés ici pour simplifier la maintenance.
-        $modules = [
-            [
-                'slug'   => 'layout-builder',
-                'label'  => __('Maquettage de Page', 'supersede-css-jlg'),
-                'class'  => '\\SSC\\Admin\\Pages\\PageLayoutBuilder',
-            ],
-            [
-                'slug'   => 'utilities',
-                'label'  => __('Utilities', 'supersede-css-jlg'),
-                'class'  => '\\SSC\\Admin\\Pages\\Utilities',
-            ],
-            [
-                'slug'   => 'tokens',
-                'label'  => __('Tokens Manager', 'supersede-css-jlg'),
-                'class'  => '\\SSC\\Admin\\Pages\\Tokens',
-            ],
-            [
-                'slug'   => 'effects',
-                'label'  => __('Effets Visuels', 'supersede-css-jlg'),
-                'class'  => '\\SSC\\Admin\\Pages\\VisualEffects',
-            ],
-            [
-                'slug'   => 'filters',
-                'label'  => __('Filtres & Verre', 'supersede-css-jlg'),
-                'class'  => '\\SSC\\Admin\\Pages\\FilterEditor',
-            ],
-            [
-                'slug'   => 'clip-path',
-                'label'  => __('Découpe (Clip-Path)', 'supersede-css-jlg'),
-                'class'  => '\\SSC\\Admin\\Pages\\ClipPathEditor',
-            ],
-            [
-                'slug'   => 'typography',
-                'label'  => __('Typographie Fluide', 'supersede-css-jlg'),
-                'class'  => '\\SSC\\Admin\\Pages\\TypographyEditor',
-            ],
-            [
-                'slug'   => 'tron',
-                'label'  => __('Tron Grid', 'supersede-css-jlg'),
-                'class'  => '\\SSC\\Admin\\Pages\\TronGrid',
-            ],
-            [
-                'slug'   => 'avatar',
-                'label'  => __('Avatar Glow', 'supersede-css-jlg'),
-                'class'  => '\\SSC\\Admin\\Pages\\AvatarGlow',
-            ],
-            [
-                'slug'   => 'anim',
-                'label'  => __('Animation Studio', 'supersede-css-jlg'),
-                'class'  => '\\SSC\\Admin\\Pages\\AnimationStudio',
-            ],
-            [
-                'slug'   => 'grid',
-                'label'  => __('Grid Editor', 'supersede-css-jlg'),
-                'class'  => '\\SSC\\Admin\\Pages\\GridEditor',
-            ],
-            [
-                'slug'   => 'shadow',
-                'label'  => __('Shadow Editor', 'supersede-css-jlg'),
-                'class'  => '\\SSC\\Admin\\Pages\\ShadowEditor',
-            ],
-            [
-                'slug'   => 'gradient',
-                'label'  => __('Gradient Editor', 'supersede-css-jlg'),
-                'class'  => '\\SSC\\Admin\\Pages\\GradientEditor',
-            ],
-            [
-                'slug'   => 'scope',
-                'label'  => __('Scope Builder', 'supersede-css-jlg'),
-                'class'  => '\\SSC\\Admin\\Pages\\ScopeBuilder',
-            ],
-            [
-                'slug'   => 'preset',
-                'label'  => __('Preset Designer', 'supersede-css-jlg'),
-                'class'  => '\\SSC\\Admin\\Pages\\PresetDesigner',
-            ],
-            [
-                'slug'   => 'import',
-                'label'  => __('Import / Export', 'supersede-css-jlg'),
-                'class'  => '\\SSC\\Admin\\Pages\\ImportExport',
-            ],
-            [
-                'slug'   => 'css-viewer',
-                'label'  => __('Visualiseur CSS', 'supersede-css-jlg'),
-                'class'  => '\\SSC\\Admin\\Pages\\CssViewer',
-            ],
-            [
-                'slug'   => 'css-performance',
-                'label'  => __('Analyse Performance CSS', 'supersede-css-jlg'),
-                'class'  => '\\SSC\\Admin\\Pages\\CssPerformance',
-            ],
-            [
-                'slug'   => 'debug-center',
-                'label'  => __('Debug Center', 'supersede-css-jlg'),
-                'class'  => '\\SSC\\Admin\\Pages\\DebugCenter',
-            ],
-        ];
-
-        foreach ($modules as $module) {
-            $this->submenu(
-                $this->slug . '-' . $module['slug'],
-                $module['label'],
-                $module['class']
-            );
+        foreach (ModuleRegistry::submenuModules() as $module) {
+            $this->registerSubmenu($module);
         }
     }
 
-    private function submenu(string $slug, string $label, string $fqcn): void {
-        add_submenu_page($this->slug, $label, $label, $this->cap, $slug, function () use ($fqcn, $label, $slug): void {
+    /**
+     * @param array<string, mixed> $module
+     */
+    private function registerSubmenu(array $module): void {
+        $label = $module['label'];
+        $menu_label = $module['menu_label'] ?? $label;
+        $page_slug = $module['page_slug'];
+        $fqcn = $module['class'];
+
+        add_submenu_page($this->slug, $menu_label, $menu_label, $this->cap, $page_slug, function () use ($fqcn, $label, $page_slug): void {
             ob_start();
             try {
                 if (class_exists($fqcn)) {
@@ -161,7 +66,7 @@ final class Admin
             }
             $page_content = ob_get_clean();
             if (class_exists('\SSC\Admin\Layout')) {
-                \SSC\Admin\Layout::render($page_content, $slug);
+                \SSC\Admin\Layout::render($page_content, $page_slug);
             } else {
                 echo wp_kses($page_content, wp_kses_allowed_html('post'));
             }
@@ -194,8 +99,16 @@ final class Admin
         $page = is_string($page_input) ? sanitize_key($page_input) : '';
         if (strpos($page, $this->slug) !== 0) return;
 
+        $module = ModuleRegistry::findByPageSlug($page);
+        if ($module === null) {
+            $module = ModuleRegistry::modules()['dashboard'] ?? null;
+        }
+        if ($module === null) {
+            return;
+        }
+
         // Activation de l'uploader média sur les pages concernées
-        if ($page === $this->slug.'-avatar' || $page === $this->slug.'-effects') {
+        if (!empty($module['enqueue_media'])) {
             wp_enqueue_media();
         }
 
@@ -209,75 +122,56 @@ final class Admin
         wp_enqueue_script('ssc-codemirror', SSC_PLUGIN_URL . 'assets/codemirror/lib/codemirror.js', [], SSC_VERSION, true);
         wp_enqueue_script('ssc-codemirror-css', SSC_PLUGIN_URL . 'assets/codemirror/mode/css/css.js', ['ssc-codemirror'], SSC_VERSION, true);
 
-        // SortableJS for Drag & Drop
-        if ($page === $this->slug.'-shadow') {
-            wp_enqueue_script('ssc-sortable', SSC_PLUGIN_URL . 'assets/js/Sortable.min.js', [], SSC_VERSION, true);
-        }
+        foreach ($module['assets']['scripts'] ?? [] as $script) {
+            if (empty($script['path'])) {
+                continue;
+            }
 
-        // Scripts spécifiques aux sous-pages
-        $scripts_by_page = [
-            $this->slug.'-utilities'        => ['utilities'],
-            $this->slug.'-preset'           => ['preset-designer'],
-            $this->slug.'-shadow'           => ['shadow-editor'],
-            $this->slug.'-gradient'         => ['gradient-editor'],
-            $this->slug.'-debug-center'     => ['debug-center'],
-            $this->slug.'-scope'            => ['scope-builder'],
-            $this->slug.'-import'           => ['import-export'],
-            $this->slug.'-avatar'           => ['effects-avatar'],
-            $this->slug.'-grid'             => ['grid-editor'],
-            $this->slug.'-tron'             => ['tron-grid'],
-            $this->slug.'-effects'          => ['visual-effects'],
-            $this->slug.'-anim'             => ['animation-studio'],
-            $this->slug.'-tokens'           => ['tokens'],
-            $this->slug.'-layout-builder'   => ['page-layout-builder'],
-            $this->slug.'-filters'          => ['filter-editor'],
-            $this->slug.'-clip-path'        => ['clip-path-editor'],
-            $this->slug.'-typography'       => ['typography-editor'],
-        ];
+            $deps = $script['deps'] ?? ['jquery'];
+            $in_footer = $script['in_footer'] ?? true;
+            $handle = $script['handle'] ?? 'ssc-' . sanitize_key(str_replace(['.min', '.'], ['-', '-'], basename($script['path'], '.js')));
+            $full_path = SSC_PLUGIN_DIR . $script['path'];
 
-        $styles_by_page = [
-            $this->slug                     => ['dashboard'],
-            $this->slug.'-utilities'        => ['utilities'],
-            $this->slug.'-layout-builder'   => ['page-layout-builder'],
-            $this->slug.'-tokens'           => ['tokens'],
-            $this->slug.'-effects'          => ['visual-effects'],
-            $this->slug.'-filters'          => ['filter-editor'],
-            $this->slug.'-clip-path'        => ['clip-path-editor'],
-            $this->slug.'-typography'       => ['typography-editor'],
-            $this->slug.'-anim'             => ['animation-studio'],
-        ];
+            if (!is_file($full_path)) {
+                continue;
+            }
 
-        if (isset($scripts_by_page[$page])) {
-            foreach ($scripts_by_page[$page] as $handle) {
-                $path = 'assets/js/' . $handle . '.js';
-                if (is_file(SSC_PLUGIN_DIR . $path)) {
-                    $dependencies = ['jquery'];
-                    if (in_array($handle, ['utilities', 'import-export', 'debug-center'], true)) {
-                        $dependencies[] = 'wp-i18n';
-                    }
+            wp_enqueue_script(
+                $handle,
+                SSC_PLUGIN_URL . $script['path'],
+                $deps,
+                SSC_VERSION,
+                $in_footer
+            );
 
-                    $script_handle = 'ssc-' . $handle;
-
-                    wp_enqueue_script($script_handle, SSC_PLUGIN_URL . $path, $dependencies, SSC_VERSION, true);
-
-                    if (in_array($handle, ['utilities', 'import-export', 'debug-center'], true) && function_exists('wp_set_script_translations')) {
-                        wp_set_script_translations(
-                            $script_handle,
-                            'supersede-css-jlg',
-                            SSC_PLUGIN_DIR . 'languages'
-                        );
-                    }
-                }
+            if (!empty($script['translations']) && function_exists('wp_set_script_translations')) {
+                wp_set_script_translations(
+                    $handle,
+                    'supersede-css-jlg',
+                    SSC_PLUGIN_DIR . 'languages'
+                );
             }
         }
 
-        if (isset($styles_by_page[$page])) {
-            foreach ($styles_by_page[$page] as $handle) {
-                $path = 'assets/css/' . $handle . '.css';
-                if (is_file(SSC_PLUGIN_DIR . $path)) {
-                    wp_enqueue_style('ssc-' . $handle . '-style', SSC_PLUGIN_URL . $path, [], SSC_VERSION);
-                }
+        foreach ($module['assets']['styles'] ?? [] as $style) {
+            if (empty($style['path'])) {
+                continue;
             }
+
+            $deps = $style['deps'] ?? [];
+            $handle = $style['handle'] ?? 'ssc-' . sanitize_key(str_replace(['.min', '.'], ['-', '-'], basename($style['path'], '.css'))) . '-style';
+            $full_path = SSC_PLUGIN_DIR . $style['path'];
+
+            if (!is_file($full_path)) {
+                continue;
+            }
+
+            wp_enqueue_style(
+                $handle,
+                SSC_PLUGIN_URL . $style['path'],
+                $deps,
+                SSC_VERSION
+            );
         }
 
         wp_localize_script('ssc-ux', 'SSC', [

@@ -1,5 +1,11 @@
 <?php declare(strict_types=1);
 
+if (defined('SSC_WP_TEST_SUITE_AVAILABLE') && !SSC_WP_TEST_SUITE_AVAILABLE) {
+    fwrite(STDOUT, basename(__FILE__) . " skipped: WordPress test suite unavailable." . PHP_EOL);
+
+    return;
+}
+
 use SSC\Support\CssRevisions;
 
 if (!defined('ABSPATH')) {
@@ -75,6 +81,22 @@ if (!function_exists('wp_get_current_user')) {
             'ID' => 42,
             'user_login' => 'revision_tester',
         ];
+    }
+}
+
+if (function_exists('username_exists') && function_exists('wp_set_current_user')) {
+    $revisionTesterId = username_exists('revision_tester');
+
+    if (!$revisionTesterId && function_exists('wp_create_user')) {
+        $password = function_exists('wp_generate_password') ? wp_generate_password() : 'temporary-password';
+        $createdUserId = wp_create_user('revision_tester', $password, 'revision_tester@example.com');
+        if (!is_wp_error($createdUserId)) {
+            $revisionTesterId = $createdUserId;
+        }
+    }
+
+    if ($revisionTesterId && !is_wp_error($revisionTesterId)) {
+        wp_set_current_user((int) $revisionTesterId);
     }
 }
 

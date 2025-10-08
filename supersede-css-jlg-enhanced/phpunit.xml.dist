@@ -10,6 +10,9 @@
         <testsuite name="Support">
             <directory>tests/Support</directory>
         </testsuite>
+        <testsuite name="Admin">
+            <directory>tests/Admin</directory>
+        </testsuite>
     </testsuites>
     <coverage processUncoveredFiles="true">
         <include>
