@@ -66,6 +66,11 @@
 
         function setActiveTab($newTab, focus = false) {
             if (!$newTab.length) return;
+
+            const $currentTab = $tabs.filter('.active');
+            const currentPanelId = $currentTab.attr('aria-controls');
+            const $currentPanel = currentPanelId ? $(`#${currentPanelId}`) : $();
+
             const panelId = $newTab.attr('aria-controls');
             const $panel = panelId ? $(`#${panelId}`) : $();
 
@@ -80,6 +85,11 @@
                 $(this).removeClass('active').attr('hidden', true);
             });
 
+            if ($currentPanel.length) {
+                $currentPanel.trigger('ssc-ve-panel-hidden');
+                $(document).trigger('ssc-ve-panel-hidden', [$currentPanel]);
+            }
+
             $newTab.addClass('active').attr({
                 'aria-selected': 'true',
                 tabindex: '0'
@@ -91,6 +101,8 @@
 
             if ($panel.length) {
                 $panel.addClass('active').removeAttr('hidden');
+                $panel.trigger('ssc-ve-panel-shown');
+                $(document).trigger('ssc-ve-panel-shown', [$panel]);
             }
         }
 
@@ -265,6 +277,17 @@
         });
 
         restartAnimation();
+        $(document).on('ssc-ve-panel-shown', (event, $panel) => {
+            if ($panel && $panel.attr('id') === 'ssc-ve-panel-crt') {
+                restartAnimation();
+            }
+        });
+
+        $(document).on('ssc-ve-panel-hidden', (event, $panel) => {
+            if ($panel && $panel.attr('id') === 'ssc-ve-panel-crt') {
+                stopAnimation();
+            }
+        });
         onMotionPreferenceChange(() => {
             restartAnimation();
         });
@@ -1262,6 +1285,11 @@ ${reduceMotionBlock}`;
         setValidationState(true);
 
         generateBackgroundCSS();
+        $(document).on('ssc-ve-panel-shown', (event, $panel) => {
+            if ($panel && $panel.attr('id') === 'ssc-ve-panel-backgrounds') {
+                generateBackgroundCSS();
+            }
+        });
         onMotionPreferenceChange(generateBackgroundCSS);
 
         if (presetsEndpoint) {
@@ -1358,6 +1386,11 @@ ${reduceMotionBlock}`;
              });
         });
         generateECGCSS();
+        $(document).on('ssc-ve-panel-shown', (event, $panel) => {
+            if ($panel && $panel.attr('id') === 'ssc-ve-panel-ecg') {
+                generateECGCSS();
+            }
+        });
         onMotionPreferenceChange(generateECGCSS);
     }
 })(jQuery);
