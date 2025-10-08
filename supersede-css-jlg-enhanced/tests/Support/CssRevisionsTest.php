@@ -84,6 +84,22 @@ if (!function_exists('wp_get_current_user')) {
     }
 }
 
+if (function_exists('username_exists') && function_exists('wp_set_current_user')) {
+    $revisionTesterId = username_exists('revision_tester');
+
+    if (!$revisionTesterId && function_exists('wp_create_user')) {
+        $password = function_exists('wp_generate_password') ? wp_generate_password() : 'temporary-password';
+        $createdUserId = wp_create_user('revision_tester', $password, 'revision_tester@example.com');
+        if (!is_wp_error($createdUserId)) {
+            $revisionTesterId = $createdUserId;
+        }
+    }
+
+    if ($revisionTesterId && !is_wp_error($revisionTesterId)) {
+        wp_set_current_user((int) $revisionTesterId);
+    }
+}
+
 if (!function_exists('__')) {
     function __(string $text, string $domain = ''): string
     {
