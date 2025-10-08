@@ -13,5 +13,5 @@
 ### Suivi post-revue
 
 - 🟢 `ssc/css-revisions` : filtre `ssc_max_css_revisions` intégré (PR #142 en production).
-- 🟡 Internationalisation des libellés JS : localisation à implémenter dans le bundle Vite, dépend de la configuration `wp-i18n` (ticket #188).
+- 🟢 Internationalisation des libellés JS : localisation implémentée dans `assets/js/tokens.js` via `wp_localize_script` et `wp.i18n` (PR #214).
 - ⚪️ Tests d’intégration supplémentaires : en attente de la migration PHPUnit 10 pour disposer des data providers typés (planifié Q1 2025).

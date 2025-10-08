@@ -2,9 +2,39 @@
     const restRoot = window.SSC && window.SSC.rest && window.SSC.rest.root ? window.SSC.rest.root : '';
     const restNonce = window.SSC && window.SSC.rest && window.SSC.rest.nonce ? window.SSC.rest.nonce : '';
     const localized = window.SSC_TOKENS_DATA || {};
+    const i18n = localized.i18n || {};
+    const wpI18n = window.wp && window.wp.i18n ? window.wp.i18n : null;
+    const hasI18n = !!(wpI18n && typeof wpI18n.__ === 'function');
+    const sprintf = hasI18n && typeof wpI18n.sprintf === 'function'
+        ? wpI18n.sprintf
+        : function(message) {
+            const args = Array.prototype.slice.call(arguments, 1);
+            let index = 0;
+            return String(message).replace(/%s/g, function() {
+                const replacement = typeof args[index] === 'undefined' ? '' : args[index];
+                index += 1;
+                return String(replacement);
+            });
+        };
     const statusDefinitions = Array.isArray(localized.statuses) ? localized.statuses : [];
     const statusMetaMap = {};
     let defaultStatusValue = 'draft';
+
+    function translate(key, fallback) {
+        if (Object.prototype.hasOwnProperty.call(i18n, key) && typeof i18n[key] === 'string') {
+            return i18n[key];
+        }
+        if (hasI18n && typeof fallback === 'string') {
+            const translated = wpI18n.__(fallback, 'supersede-css-jlg');
+            if (typeof translated === 'string' && translated.length) {
+                return translated;
+            }
+        }
+        if (typeof fallback === 'string') {
+            return fallback;
+        }
+        return key;
+    }
 
     statusDefinitions.forEach((definition) => {
         if (!definition || typeof definition !== 'object') {
@@ -38,65 +68,65 @@
     let approvalsAvailable = true;
     const defaultTokenTypes = {
         color: {
-            label: 'Couleur',
+            label: translate('tokenTypeColorLabel', 'Couleur'),
             input: 'color',
-            help: 'Utilisez un code hexadécimal (ex. #4f46e5) ou une variable existante.',
+            help: translate('tokenTypeColorHelp', 'Utilisez un code hexadécimal (ex. #4f46e5) ou une variable existante.'),
         },
         text: {
-            label: 'Texte',
+            label: translate('tokenTypeTextLabel', 'Texte'),
             input: 'text',
-            placeholder: 'Ex. 16px ou clamp(1rem, 2vw, 2rem)',
-            help: 'Idéal pour les valeurs libres (unités CSS, fonctions, etc.).',
+            placeholder: translate('tokenTypeTextPlaceholder', 'Ex. 16px ou clamp(1rem, 2vw, 2rem)'),
+            help: translate('tokenTypeTextHelp', 'Idéal pour les valeurs libres (unités CSS, fonctions, etc.).'),
         },
         number: {
-            label: 'Nombre',
+            label: translate('tokenTypeNumberLabel', 'Nombre'),
             input: 'number',
-            help: 'Pour les valeurs strictement numériques (ex. 1.25).',
+            help: translate('tokenTypeNumberHelp', 'Pour les valeurs strictement numériques (ex. 1.25).'),
         },
         spacing: {
-            label: 'Espacement',
+            label: translate('tokenTypeSpacingLabel', 'Espacement'),
             input: 'text',
-            placeholder: 'Ex. 16px 24px',
-            help: 'Convient aux marges/paddings ou aux espacements multiples.',
+            placeholder: translate('tokenTypeSpacingPlaceholder', 'Ex. 16px 24px'),
+            help: translate('tokenTypeSpacingHelp', 'Convient aux marges/paddings ou aux espacements multiples.'),
         },
         font: {
-            label: 'Typographie',
+            label: translate('tokenTypeFontLabel', 'Typographie'),
             input: 'text',
-            placeholder: 'Ex. "Inter", sans-serif',
-            help: 'Définissez la pile de polices complète avec les guillemets requis.',
+            placeholder: translate('tokenTypeFontPlaceholder', 'Ex. "Inter", sans-serif'),
+            help: translate('tokenTypeFontHelp', 'Définissez la pile de polices complète avec les guillemets requis.'),
         },
         shadow: {
-            label: 'Ombre',
+            label: translate('tokenTypeShadowLabel', 'Ombre'),
             input: 'textarea',
-            placeholder: '0 2px 4px rgba(15, 23, 42, 0.25)',
+            placeholder: translate('tokenTypeShadowPlaceholder', '0 2px 4px rgba(15, 23, 42, 0.25)'),
             rows: 3,
-            help: 'Accepte plusieurs valeurs box-shadow, une par ligne si nécessaire.',
+            help: translate('tokenTypeShadowHelp', 'Accepte plusieurs valeurs box-shadow, une par ligne si nécessaire.'),
         },
         gradient: {
-            label: 'Dégradé',
+            label: translate('tokenTypeGradientLabel', 'Dégradé'),
             input: 'textarea',
-            placeholder: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+            placeholder: translate('tokenTypeGradientPlaceholder', 'linear-gradient(135deg, #4f46e5, #7c3aed)'),
             rows: 3,
-            help: 'Pour les dégradés CSS complexes (linear-, radial-…).',
+            help: translate('tokenTypeGradientHelp', 'Pour les dégradés CSS complexes (linear-, radial-…).'),
         },
         border: {
-            label: 'Bordure',
+            label: translate('tokenTypeBorderLabel', 'Bordure'),
             input: 'text',
-            placeholder: 'Ex. 1px solid currentColor',
-            help: 'Combinez largeur, style et couleur de bordure.',
+            placeholder: translate('tokenTypeBorderPlaceholder', 'Ex. 1px solid currentColor'),
+            help: translate('tokenTypeBorderHelp', 'Combinez largeur, style et couleur de bordure.'),
         },
         dimension: {
-            label: 'Dimensions',
+            label: translate('tokenTypeDimensionLabel', 'Dimensions'),
             input: 'text',
-            placeholder: 'Ex. 320px ou clamp(280px, 50vw, 480px)',
-            help: 'Largeurs/hauteurs ou tailles maximales avec clamp/min/max.',
+            placeholder: translate('tokenTypeDimensionPlaceholder', 'Ex. 320px ou clamp(280px, 50vw, 480px)'),
+            help: translate('tokenTypeDimensionHelp', 'Largeurs/hauteurs ou tailles maximales avec clamp/min/max.'),
         },
         transition: {
-            label: 'Transition',
+            label: translate('tokenTypeTransitionLabel', 'Transition'),
             input: 'textarea',
-            placeholder: 'all 0.3s ease-in-out\ncolor 150ms ease',
+            placeholder: translate('tokenTypeTransitionPlaceholder', 'all 0.3s ease-in-out\ncolor 150ms ease'),
             rows: 2,
-            help: 'Définissez des transitions multi-propriétés, une par ligne.',
+            help: translate('tokenTypeTransitionHelp', 'Définissez des transitions multi-propriétés, une par ligne.'),
         },
     };
 
@@ -111,30 +141,6 @@
     let hasLocalChanges = false;
     let beforeUnloadHandler = null;
     const tokenTypes = $.extend(true, {}, defaultTokenTypes, localized.types || {});
-    const i18n = localized.i18n || {};
-    const wpI18n = window.wp && window.wp.i18n ? window.wp.i18n : null;
-    const hasI18n = !!(wpI18n && typeof wpI18n.__ === 'function');
-    const sprintf = hasI18n && typeof wpI18n.sprintf === 'function'
-        ? wpI18n.sprintf
-        : function(message) {
-            const args = Array.prototype.slice.call(arguments, 1);
-            let index = 0;
-            return String(message).replace(/%s/g, function() {
-                const replacement = typeof args[index] === 'undefined' ? '' : args[index];
-                index += 1;
-                return String(replacement);
-            });
-        };
-
-    function translate(key, fallback) {
-        if (Object.prototype.hasOwnProperty.call(i18n, key) && typeof i18n[key] === 'string') {
-            return i18n[key];
-        }
-        if (typeof fallback === 'string') {
-            return fallback;
-        }
-        return key;
-    }
 
     function speak(message, politeness) {
         if (!message) {
@@ -145,6 +151,14 @@
         }
     }
     const defaultGroupName = translate('defaultGroupName', 'Général');
+    const defaultNewTokenName = (function() {
+        const fallback = '--nouveau-token';
+        const translated = translate('newTokenDefaultName', fallback);
+        if (typeof translated === 'string' && translated.trim().length) {
+            return translated;
+        }
+        return fallback;
+    })();
     const diacriticRegex = /[\u0300-\u036f]/g;
     const hasStringNormalize = typeof ''.normalize === 'function';
     const localUiState = {
@@ -1975,7 +1989,7 @@
         ensureContextOption(defaultContext);
 
         tokens.push({
-            name: '--nouveau-token',
+            name: defaultNewTokenName,
             value: defaultValue,
             type: defaultType,
             description: '',
