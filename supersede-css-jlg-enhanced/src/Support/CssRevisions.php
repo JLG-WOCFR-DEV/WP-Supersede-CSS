@@ -91,6 +91,10 @@ final class CssRevisions
             return '';
         }
 
+        if (method_exists($user, 'exists') && !$user->exists()) {
+            return '';
+        }
+
         $candidates = [];
 
         if (isset($user->user_login) && is_string($user->user_login)) {
@@ -115,10 +119,6 @@ final class CssRevisions
             if ($candidate !== '') {
                 return $candidate;
             }
-        }
-
-        if (method_exists($user, 'exists') && !$user->exists()) {
-            return '';
         }
 
         return '';

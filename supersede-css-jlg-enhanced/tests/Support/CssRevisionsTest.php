@@ -311,6 +311,8 @@ update_option('ssc_css_revisions', []);
 $ref = new ReflectionClass(CssRevisions::class);
 $maxRevisions = (int) $ref->getConstant('MAX_REVISIONS');
 
+$lastSanitizedCss = '';
+
 for ($i = 0; $i < $maxRevisions + 3; $i++) {
     $css = sprintf('.test-%d { color: #%1$02d%1$02d%1$02d; }', $i % 99);
     CssRevisions::record('ssc_active_css', $css, ['segments' => [
@@ -318,12 +320,20 @@ for ($i = 0; $i < $maxRevisions + 3; $i++) {
         'tablet' => '',
         'mobile' => '',
     ]]);
+
+    $lastSanitizedCss = \SSC\Support\CssSanitizer::sanitize($css);
 }
 
 $stored = get_option('ssc_css_revisions', []);
 
 if (!is_array($stored) || count($stored) !== $maxRevisions) {
     fwrite(STDERR, 'The revision history should be trimmed to the configured maximum size.' . PHP_EOL);
+    exit(1);
+}
+
+$latest = CssRevisions::all()[0] ?? null;
+if (!$latest || $latest['css'] !== $lastSanitizedCss) {
+    fwrite(STDERR, 'The newest revision should be kept at the beginning of the stack.' . PHP_EOL);
     exit(1);
 }
 
@@ -343,6 +353,8 @@ for ($i = 0; $i < 8; $i++) {
         'tablet' => '',
         'mobile' => '',
     ]]);
+
+    $lastSanitizedCss = \SSC\Support\CssSanitizer::sanitize($css);
 }
 
 $filteredStored = get_option('ssc_css_revisions', []);
@@ -355,10 +367,7 @@ if (!is_array($filteredStored) || count($filteredStored) !== 5) {
 $ssc_filters_store = [];
 
 $latest = CssRevisions::all()[0] ?? null;
-$latestCss = sprintf('.test-%d { color: #%1$02d%1$02d%1$02d; }', ($maxRevisions + 2) % 99);
-$expectedLatestCss = \SSC\Support\CssSanitizer::sanitize($latestCss);
-
-if (!$latest || $latest['css'] !== $expectedLatestCss) {
+if (!$latest || $latest['css'] !== $lastSanitizedCss) {
     fwrite(STDERR, 'The newest revision should be kept at the beginning of the stack.' . PHP_EOL);
     exit(1);
 }
