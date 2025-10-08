@@ -2,10 +2,127 @@
 
 declare(strict_types=1);
 
+use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
 use SSC\Admin\Layout;
 
-class LayoutTest extends WP_UnitTestCase
+if (!function_exists('esc_html__')) {
+    function esc_html__(string $text, string $domain = 'default'): string
+    {
+        return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+    }
+}
+
+if (!function_exists('esc_attr__')) {
+    function esc_attr__(string $text, string $domain = 'default'): string
+    {
+        return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+    }
+}
+
+if (!function_exists('esc_html')) {
+    function esc_html(string $text): string
+    {
+        return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+    }
+}
+
+if (!function_exists('esc_attr')) {
+    function esc_attr(string $text): string
+    {
+        return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+    }
+}
+
+if (!function_exists('esc_url')) {
+    function esc_url(string $url): string
+    {
+        return filter_var($url, FILTER_SANITIZE_URL) ?: $url;
+    }
+}
+
+if (!function_exists('admin_url')) {
+    function admin_url(string $path = ''): string
+    {
+        return 'https://example.com/wp-admin/' . ltrim($path, '/');
+    }
+}
+
+if (!function_exists('wp_kses_allowed_html')) {
+    function wp_kses_allowed_html(string $context = 'post'): array
+    {
+        return [
+            'a' => [
+                'href' => true,
+                'class' => true,
+                'aria-*' => true,
+            ],
+            'button' => [
+                'class' => true,
+                'type' => true,
+                'aria-*' => true,
+            ],
+            'div' => [
+                'class' => true,
+                'id' => true,
+            ],
+            'main' => [
+                'id' => true,
+                'class' => true,
+                'tabindex' => true,
+            ],
+            'nav' => [
+                'id' => true,
+                'class' => true,
+                'aria-*' => true,
+            ],
+            'style' => [
+                'id' => true,
+                'type' => true,
+            ],
+            'strong' => [
+                'class' => true,
+            ],
+            'p' => [
+                'class' => true,
+            ],
+        ];
+    }
+}
+
+if (!function_exists('wp_kses')) {
+    function wp_kses(string $string, array $allowed_html)
+    {
+        unset($allowed_html);
+
+        return $string;
+    }
+}
+
+if (!function_exists('wp_kses_bad_protocol')) {
+    function wp_kses_bad_protocol(string $string, array $allowed_protocols): string
+    {
+        unset($allowed_protocols);
+
+        return $string;
+    }
+}
+
+if (!function_exists('wp_allowed_protocols')) {
+    function wp_allowed_protocols(): array
+    {
+        return ['http', 'https'];
+    }
+}
+
+if (!function_exists('wp_http_validate_url')) {
+    function wp_http_validate_url(string $url)
+    {
+        return filter_var($url, FILTER_VALIDATE_URL) ? $url : false;
+    }
+}
+
+class LayoutTest extends TestCase
 {
     protected function setUp(): void
     {

@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+use SSC\Tests\Support\WordPressInstaller;
+
 $_tests_dir = getenv('WP_TESTS_DIR');
 if (!$_tests_dir) {
     $_tests_dir = dirname(__DIR__) . '/vendor/wp-phpunit/wp-phpunit';
@@ -8,19 +10,31 @@ if (!$_tests_dir) {
 
 require __DIR__ . '/Support/WordPressInstaller.php';
 
-SSC\Tests\Support\WordPressInstaller::ensure();
+$wordpressAvailable = true;
 
-if (!file_exists($_tests_dir . '/includes/functions.php')) {
-    fwrite(STDERR, "Could not find the WordPress test suite. Set WP_TESTS_DIR or run composer install." . PHP_EOL);
-    exit(1);
+try {
+    WordPressInstaller::ensure();
+} catch (\RuntimeException $exception) {
+    $wordpressAvailable = false;
+    fwrite(
+        STDERR,
+        '[wp-phpunit] WordPress test suite unavailable: ' . $exception->getMessage() . PHP_EOL .
+        'Falling back to offline bootstrap (tests relying on WordPress will be skipped).' . PHP_EOL
+    );
 }
 
-require $_tests_dir . '/includes/functions.php';
+if ($wordpressAvailable && file_exists($_tests_dir . '/includes/functions.php')) {
+    require $_tests_dir . '/includes/functions.php';
 
-require dirname(__DIR__) . '/vendor/autoload.php';
+    require dirname(__DIR__) . '/vendor/autoload.php';
 
-tests_add_filter('muplugins_loaded', static function (): void {
-    require dirname(__DIR__) . '/supersede-css-jlg.php';
-});
+    tests_add_filter('muplugins_loaded', static function (): void {
+        require dirname(__DIR__) . '/supersede-css-jlg.php';
+    });
 
-require $_tests_dir . '/includes/bootstrap.php';
+    require $_tests_dir . '/includes/bootstrap.php';
+
+    return;
+}
+
+require __DIR__ . '/offline/bootstrap.php';
