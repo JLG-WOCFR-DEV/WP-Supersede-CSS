@@ -53,11 +53,31 @@ final class CssRevisions
         }
 
         array_unshift($stored, $revision);
-        if (count($stored) > self::MAX_REVISIONS) {
-            $stored = array_slice($stored, 0, self::MAX_REVISIONS);
+        $maxRevisions = self::getMaxRevisions();
+        if ($maxRevisions > 0 && count($stored) > $maxRevisions) {
+            $stored = array_slice($stored, 0, $maxRevisions);
         }
 
         update_option(self::OPTION, array_values($stored), false);
+    }
+
+    private static function getMaxRevisions(): int
+    {
+        $max = self::MAX_REVISIONS;
+
+        if (function_exists('apply_filters')) {
+            $filtered = apply_filters('ssc_css_revisions_max', $max);
+
+            if (is_numeric($filtered)) {
+                $max = (int) $filtered;
+            }
+        }
+
+        if ($max < 1) {
+            return self::MAX_REVISIONS;
+        }
+
+        return $max;
     }
 
     /**
