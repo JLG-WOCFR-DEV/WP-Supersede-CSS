@@ -227,7 +227,7 @@ final class CssRevisions
             }
         }
 
-        if (function_exists('ssc_invalidate_css_cache')) {
+        if (function_exists('\\ssc_invalidate_css_cache')) {
             \ssc_invalidate_css_cache();
         }
 
