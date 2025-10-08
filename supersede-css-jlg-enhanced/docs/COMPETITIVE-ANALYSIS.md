@@ -2,6 +2,8 @@
 
 Cette note compare Supersede CSS JLG (Enhanced) à trois solutions professionnelles largement utilisées pour la conception d'interfaces et la gestion de design systems, puis propose des pistes concrètes pour rapprocher l'expérience utilisateur et la valeur produit des standards du marché.
 
+> **Mise à jour (déc. 2024)** : les axes 1, 3 et 4 sont en phase de conception active (cf. notes REST & Token Governance). Les axes 2 et 5 restent à prioriser une fois le Device Lab et la bibliothèque de presets cadrés.
+
 ## Tableau comparatif synthétique
 
 | Critère | Supersede CSS JLG (Enhanced) | Elementor Pro | Webflow | Figma avec Design Tokens plugins |
@@ -100,3 +102,13 @@ Cette note compare Supersede CSS JLG (Enhanced) à trois solutions professionnel
 3. **Long terme** : Webhooks/CLI, validation accessibilité approfondie, gestion multi-environnements.
 
 En implémentant ces améliorations, Supersede CSS JLG (Enhanced) se rapprochera des standards d'outils professionnels tout en conservant son avantage WordPress natif.
+
+## Suivi des actions
+
+| Axe | Prochaine étape | Responsable | Statut |
+| --- | --- | --- | --- |
+| Collaboration & workflows | Implémenter `wp_ssc_activity_log` + UI Debug Center | Équipe core | 🛠️ En cours |
+| Device Lab & previews | Finaliser prototype Figma et définir contraintes techniques iframe | UX | 🧩 À cadrer |
+| Exports multi-plateformes | Écrire RFC Style Dictionary + CLI | DX | 📄 À rédiger |
+| Guided tour & onboarding | Recueillir besoins utilisateurs (entretiens) | Produit | 🔍 Recherche |
+| Audits qualité | Benchmark outils WCAG intégrables | QA | 🗓️ Planifié (Q1 2025) |

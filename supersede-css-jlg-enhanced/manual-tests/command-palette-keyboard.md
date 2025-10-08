@@ -25,3 +25,8 @@
 - Les options disposent d'identifiants uniques et exposent correctement `aria-selected`.
 - L'attribut `aria-activedescendant` reflète toujours l'identifiant de l'option active.
 - La mise en évidence visuelle suit l'option active sans interférer avec la navigation tabulaire existante.
+
+### Extensions prévues
+
+- Vérifier les annonces de statut via les lecteurs d’écran (NVDA, VoiceOver) lorsque les raccourcis seront localisés.
+- Ajouter un scénario de test pour la navigation circulaire (fin → début) une fois la pagination implémentée dans la palette.

@@ -2,6 +2,8 @@
 
 Le bloc *Supersede › Token Preview* permet d'afficher automatiquement la bibliothèque de tokens CSS gérée par Supersede directement depuis l'éditeur WordPress.
 
+> **Évolution prévue** : le bloc passera en version 2 avec filtres par statut (`draft`, `ready`, `deprecated`) et pagination. L’API REST exposera également les métadonnées `owner` et `version` décrites dans la note de gouvernance.
+
 ## Installation dans une page ou un article
 
 1. Ouvrez l'éditeur de blocs (Gutenberg).
@@ -22,3 +24,9 @@ Le bloc *Supersede › Token Preview* permet d'afficher automatiquement la bibli
 - Plus besoin de copier/coller des classes : les tokens sont visualisés et documentés directement dans la page.
 - Les équipes éditoriales disposent d'un catalogue à jour, synchronisé avec les presets Supersede.
 - La mise en page reste fidèle au thème grâce au CSS partagé entre l'admin et le site public.
+
+## Améliorations planifiées
+
+- Ajouter un panneau latéral Gutenberg permettant de choisir le tri (par catégorie, statut, owner).
+- Supporter la sélection d’un preset (`data-ssc-preset`) pour prévisualiser les tokens dans un contexte spécifique.
+- Exposer un mode « compact » (tableau) vs « visuel » (cartes) pour s’adapter aux guides de style.

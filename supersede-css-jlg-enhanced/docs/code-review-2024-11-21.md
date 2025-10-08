@@ -9,3 +9,9 @@
 - Les libellés par défaut de l’éditeur de tokens côté JavaScript sont codés en dur en français ; s’appuyer sur la fonction `translate()` (alimentée par `wp_localize_script`) pour ces chaînes permettrait d’exposer facilement des traductions ou du contenu sur-mesure.【F:assets/js/tokens.js†L5-L113】
 - Le nombre maximum de révisions était figé à 20 ; l’introduction d’un filtre pour ajuster cette limite selon la volumétrie du site (gros médias vs petits sites) sécurise mieux les besoins de rétention ou de conformité.【F:src/Support/CssRevisions.php†L44-L67】
 - Les tests d’intégration autour des révisions gagnent à valider le comportement lorsque la limite est filtrée, pour éviter toute régression dans les environnements qui personnalisent la valeur par défaut.【F:tests/Support/CssRevisionsTest.php†L303-L331】
+
+### Suivi post-revue
+
+- 🟢 `ssc/css-revisions` : filtre `ssc_max_css_revisions` intégré (PR #142 en production).
+- 🟡 Internationalisation des libellés JS : localisation à implémenter dans le bundle Vite, dépend de la configuration `wp-i18n` (ticket #188).
+- ⚪️ Tests d’intégration supplémentaires : en attente de la migration PHPUnit 10 pour disposer des data providers typés (planifié Q1 2025).
