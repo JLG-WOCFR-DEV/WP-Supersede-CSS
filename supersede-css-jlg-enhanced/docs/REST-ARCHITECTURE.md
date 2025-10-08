@@ -13,15 +13,17 @@ Les contrôleurs implémentent l'interface `ControllerInterface` et héritent de
 
 L'enregistrement des routes s'effectue via `SSC\Infra\Routes`. À l'initialisation (`Routes::register()`), un service de sanitisation (`SSC\Infra\Import\Sanitizer`) est instancié puis partagé entre les contrôleurs qui en ont besoin (`CssController` et `ImportExportController`). Chaque contrôleur expose ensuite ses routes au moment du hook `rest_api_init`.
 
-## Évolutions planifiées (roadmap)
+## Nouveaux contrôleurs livrés
 
-La prochaine phase de développement introduira des contrôleurs supplémentaires afin de supporter les workflows décrits dans la note [_Gouvernance des tokens et workflow d’approbation_](./TOKEN-GOVERNANCE-AND-DEBUG.md) :
+Les workflows de gouvernance décrits dans la note [_Gouvernance des tokens et workflow d’approbation_](./TOKEN-GOVERNANCE-AND-DEBUG.md) sont désormais exposés via trois contrôleurs dédiés :
 
-- `ApprovalsController` : reçoit les demandes d’approbation de tokens, valide les capacités `manage_ssc_approvals` et orchestre la transition des statuts `draft → ready`.
-- `ActivityLogController` : expose un journal paginé (`wp_ssc_activity_log`) avec filtres temporels et export CSV/JSON.
-- `ExportsController` : gère les exports multi-plateformes (Style Dictionary, Android, iOS) et déclenche des tâches asynchrones via Action Scheduler.
+- `ApprovalsController` : reçoit les demandes d’approbation de tokens, applique la capacité `manage_ssc_approvals`, enregistre les commentaires et déclenche la transition `draft → ready` ou le retour en brouillon.
+- `ActivityLogController` : interroge la table `wp_ssc_activity_log`, fournit pagination, filtres temporels (`24h`, `7d`, `30d`) et export CSV/JSON pour audit.
+- `ExportsController` : génère les exports multi-plateformes (JSON brut, Style Dictionary, Android XML, iOS JSON) pour les scopes `ready`, `deprecated` ou `all`, soumis à la capability `manage_ssc_exports`.
 
-Ces services partageront une couche commune `EventRecorder` responsable de persister les événements et d’émettre des webhooks sortants. Le schéma suivant synthétise les dépendances prévues :
+Ces services s’appuient sur la couche `EventRecorder`, qui crée la table `wp_ssc_activity_log`, attribue les capacités par défaut aux administrateurs et consigne chaque événement métier (création/mise à jour de token, export généré, décision d’approbation).
+
+Le schéma suivant synthétise les interactions mises en place :
 
 ```mermaid
 graph TD
@@ -34,7 +36,9 @@ graph TD
     EventRecorder --> Sanitizer
 ```
 
-> 📌 **Statut** : la conception des modèles de données et migrations est en cours. Une RFC pour l’API des exports sera partagée avant implémentation.
+> ✅ **Statut** : backend livré (déc. 2024) et formulaire Tokens connecté (janv. 2025).
+
+La page **Supersede CSS → Tokens** consomme désormais `GET/POST /ssc/v1/approvals` pour afficher le statut courant des variables (badge `Brouillon`, `Prêt`, `Déprécié`) et proposer un bouton « Demander une revue » qui déclenche la route `POST /ssc/v1/approvals`. Un indicateur « Revue en attente » est rendu côté UI tant que la décision n’est pas prise, et un message d’état remplace le bouton si l’utilisateur ne possède pas la capability `manage_ssc_approvals`.
 
 ## Sanitizer d'import
 
@@ -50,8 +54,14 @@ graph TD
     Routes --> ImportExportController
     Routes --> LogsController
     Routes --> SystemController
+    Routes --> ApprovalsController
+    Routes --> ActivityLogController
+    Routes --> ExportsController
     CssController --> Sanitizer
     ImportExportController --> Sanitizer
+    ApprovalsController --> EventRecorder
+    ActivityLogController --> EventRecorder
+    ExportsController --> EventRecorder
 ```
 
 Ce découpage facilite l'ajout de nouveaux endpoints (création d'un contrôleur dédié) et permet le partage explicite des composants transverses comme le sanitiseur d'import.

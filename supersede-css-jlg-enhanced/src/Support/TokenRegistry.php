@@ -2,6 +2,8 @@
 
 namespace SSC\Support;
 
+use SSC\Infra\Activity\EventRecorder;
+
 if (!defined('ABSPATH')) { exit; }
 
 final class TokenRegistry
@@ -10,6 +12,27 @@ final class TokenRegistry
     private const OPTION_CSS = 'ssc_tokens_css';
     private const REGISTRY_NOT_FOUND = '__ssc_tokens_registry_missing__';
     private const DEFAULT_CONTEXT = ':root';
+    private const STATUS_DRAFT = 'draft';
+    private const STATUS_READY = 'ready';
+    private const STATUS_DEPRECATED = 'deprecated';
+
+    /**
+     * @var array<string, array{label: string, description: string}>
+     */
+    private const SUPPORTED_STATUSES = [
+        self::STATUS_DRAFT => [
+            'label' => 'Brouillon',
+            'description' => 'Travail en cours, nécessite une revue avant diffusion.',
+        ],
+        self::STATUS_READY => [
+            'label' => 'Prêt',
+            'description' => 'Validé pour la production et utilisable par les équipes.',
+        ],
+        self::STATUS_DEPRECATED => [
+            'label' => 'Déprécié',
+            'description' => 'Remplacé ou obsolète, à retirer des interfaces.',
+        ],
+    ];
 
     /**
      * @var array<int, array{value: string, label: string, preview?: array<string, string>}>
@@ -159,6 +182,24 @@ final class TokenRegistry
     }
 
     /**
+     * @return array<int, array{value: string, label: string, description: string}>
+     */
+    public static function getSupportedStatuses(): array
+    {
+        $statuses = [];
+
+        foreach (self::SUPPORTED_STATUSES as $value => $meta) {
+            $statuses[] = [
+                'value' => $value,
+                'label' => __($meta['label'], 'supersede-css-jlg'),
+                'description' => __($meta['description'], 'supersede-css-jlg'),
+            ];
+        }
+
+        return $statuses;
+    }
+
+    /**
      * @return array<int, string>
      */
     private static function getSupportedContextValues(): array
@@ -212,8 +253,109 @@ final class TokenRegistry
         return $value;
     }
 
+    private static function sanitizeStatus($raw): string
+    {
+        if (!is_string($raw)) {
+            $raw = '';
+        }
+
+        $status = strtolower(trim($raw));
+        $allowed = [self::STATUS_DRAFT, self::STATUS_READY, self::STATUS_DEPRECATED];
+
+        if (!in_array($status, $allowed, true)) {
+            return self::STATUS_DRAFT;
+        }
+
+        return $status;
+    }
+
     /**
-     * @return array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}>
+     * @param mixed $raw
+     */
+    private static function sanitizeOwner($raw): int
+    {
+        if (is_numeric($raw)) {
+            $owner = (int) $raw;
+
+            return $owner > 0 ? $owner : 0;
+        }
+
+        return 0;
+    }
+
+    /**
+     * @param mixed $raw
+     */
+    private static function sanitizeVersion($raw): string
+    {
+        if (!is_string($raw)) {
+            return '';
+        }
+
+        $value = trim($raw);
+
+        if ($value === '') {
+            return '';
+        }
+
+        $value = ltrim($value, "vV");
+
+        if (!preg_match('/^(\d+\.\d+\.\d+)(?:[+-][0-9A-Za-z.-]+)?$/', $value)) {
+            return '';
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param mixed $raw
+     * @return array<int, string>
+     */
+    private static function sanitizeLinkedComponentsList($raw): array
+    {
+        if (is_string($raw)) {
+            $raw = array_filter(array_map('trim', preg_split('/[,\s]+/', $raw) ?: []));
+        }
+
+        if (!is_array($raw)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($raw as $value) {
+            if (!is_scalar($value)) {
+                continue;
+            }
+
+            $stringValue = (string) $value;
+
+            if ($stringValue === '') {
+                continue;
+            }
+
+            $slug = sanitize_title($stringValue);
+
+            if ($slug === '') {
+                $slug = strtolower(preg_replace('/[^a-z0-9_-]+/i', '-', $stringValue) ?? '');
+            }
+
+            $slug = trim($slug, '-');
+
+            if ($slug === '') {
+                continue;
+            }
+
+            $normalized[$slug] = $slug;
+        }
+
+        ksort($normalized);
+
+        return array_values($normalized);
+    }
+
+    /**
+     * @return array<int, array{name: string, value: string, type: string, description: string, group: string, context: string, status: string, owner: int, version: string, changelog: string, linked_components: array<int, string>}>
      */
     public static function getRegistry(): array
     {
@@ -262,7 +404,7 @@ final class TokenRegistry
     }
 
     /**
-     * @return array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}>
+     * @return array<int, array{name: string, value: string, type: string, description: string, group: string, context: string, status: string, owner: int, version: string, changelog: string, linked_components: array<int, string>}>
      */
     public static function getDefaultRegistry(): array
     {
@@ -274,6 +416,11 @@ final class TokenRegistry
                 'description' => 'Couleur principale utilisée pour les éléments interactifs.',
                 'group' => 'Couleurs',
                 'context' => self::DEFAULT_CONTEXT,
+                'status' => self::STATUS_READY,
+                'owner' => 0,
+                'version' => '1.0.0',
+                'changelog' => '',
+                'linked_components' => [],
             ],
             [
                 'name' => '--radius-moyen',
@@ -282,16 +429,22 @@ final class TokenRegistry
                 'description' => 'Rayon par défaut appliqué aux composants principaux.',
                 'group' => 'Général',
                 'context' => self::DEFAULT_CONTEXT,
+                'status' => self::STATUS_READY,
+                'owner' => 0,
+                'version' => '1.0.0',
+                'changelog' => '',
+                'linked_components' => [],
             ],
         ];
     }
 
     /**
-     * @param array<int, array{name?: mixed, value?: mixed, type?: mixed, description?: mixed, group?: mixed, context?: mixed}> $tokens
-     * @return array{tokens: array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}>, duplicates: array<int, array{canonical: string, context: string, variants: array<int, string>, conflicts: array<int, array{name: string, value: string, context?: string}>}>}
+     * @param array<int, array{name?: mixed, value?: mixed, type?: mixed, description?: mixed, group?: mixed, context?: mixed, status?: mixed, owner?: mixed, version?: mixed, changelog?: mixed, linked_components?: mixed}> $tokens
+     * @return array{tokens: array<int, array{name: string, value: string, type: string, description: string, group: string, context: string, status: string, owner: int, version: string, changelog: string, linked_components: array<int, string>}>, duplicates: array<int, array{canonical: string, context: string, variants: array<int, string>, conflicts: array<int, array{name: string, value: string, context?: string}>}>}
      */
     public static function saveRegistry(array $tokens): array
     {
+        $previous = self::getRegistry();
         $result = self::normalizeRegistry($tokens);
         $normalized = $result['tokens'];
 
@@ -306,7 +459,45 @@ final class TokenRegistry
 
         self::persistCss($normalized);
 
+        self::recordRegistryChanges($previous, $normalized);
+
         return $result;
+    }
+
+    public static function updateTokenMetadata(string $name, string $context, array $metadata): ?array
+    {
+        $registry = self::getRegistry();
+        $nameKey = strtolower($name);
+        $contextKey = strtolower($context);
+        $updated = false;
+
+        foreach ($registry as $index => $token) {
+            if (strtolower($token['name']) !== $nameKey || strtolower($token['context']) !== $contextKey) {
+                continue;
+            }
+
+            $registry[$index] = self::applyMetadataPatch($token, $metadata);
+            $updated = true;
+            break;
+        }
+
+        if (!$updated) {
+            return null;
+        }
+
+        $result = self::saveRegistry($registry);
+
+        if ($result['duplicates'] !== []) {
+            return null;
+        }
+
+        foreach ($result['tokens'] as $token) {
+            if (strtolower($token['name']) === $nameKey && strtolower($token['context']) === $contextKey) {
+                return $token;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -357,8 +548,8 @@ final class TokenRegistry
     }
 
     /**
-     * @param array{name?: mixed, value?: mixed, type?: mixed, description?: mixed, group?: mixed, context?: mixed} $token
-     * @return array{name: string, value: string, type: string, description: string, group: string, context: string}|null
+     * @param array{name?: mixed, value?: mixed, type?: mixed, description?: mixed, group?: mixed, context?: mixed, status?: mixed, owner?: mixed, version?: mixed, changelog?: mixed, linked_components?: mixed} $token
+     * @return array{name: string, value: string, type: string, description: string, group: string, context: string, status: string, owner: int, version: string, changelog: string, linked_components: array<int, string>}|null
      */
     public static function normalizeToken(array $token): ?array
     {
@@ -396,6 +587,12 @@ final class TokenRegistry
         }
 
         $context = self::sanitizeContext($token['context'] ?? self::DEFAULT_CONTEXT);
+        $status = self::sanitizeStatus($token['status'] ?? self::STATUS_DRAFT);
+        $owner = self::sanitizeOwner($token['owner'] ?? 0);
+        $version = self::sanitizeVersion($token['version'] ?? '');
+        $changelogRaw = isset($token['changelog']) ? (string) $token['changelog'] : '';
+        $changelog = sanitize_textarea_field($changelogRaw);
+        $linkedComponents = self::sanitizeLinkedComponentsList($token['linked_components'] ?? []);
 
         return [
             'name' => $normalizedName,
@@ -404,12 +601,17 @@ final class TokenRegistry
             'description' => $description,
             'group' => $group,
             'context' => $context,
+            'status' => $status,
+            'owner' => $owner,
+            'version' => $version,
+            'changelog' => $changelog,
+            'linked_components' => $linkedComponents,
         ];
     }
 
     /**
-     * @param array<int, array{name?: mixed, value?: mixed, type?: mixed, description?: mixed, group?: mixed, context?: mixed}> $tokens
-     * @return array{tokens: array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}>, duplicates: array<int, array{canonical: string, context: string, variants: array<int, string>, conflicts: array<int, array{name: string, value: string, context?: string}>}>}
+     * @param array<int, array{name?: mixed, value?: mixed, type?: mixed, description?: mixed, group?: mixed, context?: mixed, status?: mixed, owner?: mixed, version?: mixed, changelog?: mixed, linked_components?: mixed}> $tokens
+     * @return array{tokens: array<int, array{name: string, value: string, type: string, description: string, group: string, context: string, status: string, owner: int, version: string, changelog: string, linked_components: array<int, string>}>, duplicates: array<int, array{canonical: string, context: string, variants: array<int, string>, conflicts: array<int, array{name: string, value: string, context?: string}>}>}
      */
     public static function normalizeRegistry(array $tokens): array
     {
@@ -513,7 +715,7 @@ final class TokenRegistry
 
     /**
      * @param string $css
-     * @return array{tokens: array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}>, duplicates: array<int, array{canonical: string, context: string, variants: array<int, string>, conflicts: array<int, array{name: string, value: string, context?: string}>}>}
+     * @return array{tokens: array<int, array{name: string, value: string, type: string, description: string, group: string, context: string, status: string, owner: int, version: string, changelog: string, linked_components: array<int, string>}>, duplicates: array<int, array{canonical: string, context: string, variants: array<int, string>, conflicts: array<int, array{name: string, value: string, context?: string}>}>}
      */
     public static function convertCssToRegistryDetailed(string $css): array
     {
@@ -685,6 +887,11 @@ final class TokenRegistry
                     'description' => '',
                     'group' => 'Legacy',
                     'context' => $context,
+                    'status' => self::STATUS_DRAFT,
+                    'owner' => 0,
+                    'version' => '',
+                    'changelog' => '',
+                    'linked_components' => [],
                 ];
 
                 $tokensByName[] = $token;
@@ -704,13 +911,181 @@ final class TokenRegistry
 
     /**
      * @param string $css
-     * @return array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}>
+     * @return array<int, array{name: string, value: string, type: string, description: string, group: string, context: string, status: string, owner: int, version: string, changelog: string, linked_components: array<int, string>}>
      */
     public static function convertCssToRegistry(string $css): array
     {
         $result = self::convertCssToRegistryDetailed($css);
 
         return $result['tokens'];
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $previous
+     * @param array<int, array<string, mixed>> $current
+     */
+    private static function recordRegistryChanges(array $previous, array $current): void
+    {
+        $previousIndex = self::indexTokensByKey($previous);
+        $currentIndex = self::indexTokensByKey($current);
+
+        foreach ($currentIndex as $key => $token) {
+            if (!isset($previousIndex[$key])) {
+                EventRecorder::record('token.created', [
+                    'entity_type' => 'token',
+                    'entity_id' => $key,
+                    'details' => [
+                        'name' => $token['name'] ?? '',
+                        'context' => $token['context'] ?? '',
+                        'status' => $token['status'] ?? self::STATUS_DRAFT,
+                    ],
+                ]);
+
+                continue;
+            }
+
+            $diff = self::computeTokenDiff($previousIndex[$key], $token);
+
+            if ($diff === []) {
+                continue;
+            }
+
+            EventRecorder::record('token.updated', [
+                'entity_type' => 'token',
+                'entity_id' => $key,
+                'details' => [
+                    'name' => $token['name'] ?? '',
+                    'context' => $token['context'] ?? '',
+                    'diff' => $diff,
+                ],
+            ]);
+
+            if (isset($diff['status'])) {
+                $newStatus = $diff['status']['new'] ?? null;
+                if ($newStatus === self::STATUS_DEPRECATED) {
+                    EventRecorder::record('token.deprecated', [
+                        'entity_type' => 'token',
+                        'entity_id' => $key,
+                        'details' => [
+                            'name' => $token['name'] ?? '',
+                            'context' => $token['context'] ?? '',
+                        ],
+                    ]);
+                }
+            }
+        }
+
+        foreach ($previousIndex as $key => $token) {
+            if (isset($currentIndex[$key])) {
+                continue;
+            }
+
+            EventRecorder::record('token.deleted', [
+                'entity_type' => 'token',
+                'entity_id' => $key,
+                'details' => [
+                    'name' => $token['name'] ?? '',
+                    'context' => $token['context'] ?? '',
+                ],
+            ]);
+        }
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $tokens
+     * @return array<string, array<string, mixed>>
+     */
+    private static function indexTokensByKey(array $tokens): array
+    {
+        $indexed = [];
+
+        foreach ($tokens as $token) {
+            if (!isset($token['name'], $token['context'])) {
+                continue;
+            }
+
+            $key = self::buildTokenKey((string) $token['name'], (string) $token['context']);
+            $indexed[$key] = $token;
+        }
+
+        return $indexed;
+    }
+
+    private static function buildTokenKey(string $name, string $context): string
+    {
+        return strtolower($context) . '|' . strtolower($name);
+    }
+
+    /**
+     * @param array<string, mixed> $token
+     */
+    private static function applyMetadataPatch(array $token, array $metadata): array
+    {
+        $patch = [];
+
+        if (array_key_exists('status', $metadata)) {
+            $patch['status'] = self::sanitizeStatus((string) $metadata['status']);
+        }
+
+        if (array_key_exists('owner', $metadata)) {
+            $patch['owner'] = self::sanitizeOwner($metadata['owner']);
+        }
+
+        if (array_key_exists('version', $metadata)) {
+            $patch['version'] = self::sanitizeVersion($metadata['version']);
+        }
+
+        if (array_key_exists('changelog', $metadata)) {
+            $patch['changelog'] = sanitize_textarea_field((string) $metadata['changelog']);
+        }
+
+        if (array_key_exists('linked_components', $metadata)) {
+            $patch['linked_components'] = self::sanitizeLinkedComponentsList($metadata['linked_components']);
+        }
+
+        return array_merge($token, $patch);
+    }
+
+    /**
+     * @param array<string, mixed> $previous
+     * @param array<string, mixed> $current
+     * @return array<string, array{old: mixed, new: mixed}>
+     */
+    private static function computeTokenDiff(array $previous, array $current): array
+    {
+        $fields = ['value', 'type', 'description', 'group', 'context', 'status', 'owner', 'version', 'changelog'];
+        $diff = [];
+
+        foreach ($fields as $field) {
+            $old = $previous[$field] ?? null;
+            $new = $current[$field] ?? null;
+
+            if ($field === 'owner') {
+                $old = (int) $old;
+                $new = (int) $new;
+            }
+
+            if ($old === $new) {
+                continue;
+            }
+
+            $diff[$field] = [
+                'old' => $old,
+                'new' => $new,
+            ];
+        }
+
+        $oldComponents = self::sanitizeLinkedComponentsList($previous['linked_components'] ?? []);
+        $newComponents = self::sanitizeLinkedComponentsList($current['linked_components'] ?? []);
+
+        if ($oldComponents !== $newComponents) {
+            $diff['linked_components'] = [
+                'old' => $oldComponents,
+                'new' => $newComponents,
+            ];
+        }
+
+        return $diff;
     }
 
     /**

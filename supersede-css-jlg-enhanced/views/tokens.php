@@ -3,10 +3,12 @@ if (!defined('ABSPATH')) {
     exit;
 }
 /** @var string $tokens_css */
-/** @var array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}> $tokens_registry */
+/** @var array<int, array{name: string, value: string, type: string, description: string, group: string, context: string, status: string, owner: int, version: string, changelog: string, linked_components: array<int, string>}> $tokens_registry */
 /** @var array<string, array{label: string, input: string, placeholder?: string, help?: string, rows?: int}> $token_types */
 /** @var array<int, array{value: string, label: string, preview?: array<string, string>}> $token_contexts */
 /** @var string $default_context */
+/** @var array<int, array{value: string, label: string, description: string}> $token_statuses */
+/** @var array<int, array<string, mixed>> $token_approvals */
 
 if (function_exists('wp_localize_script')) {
     $localized_types = [];
@@ -41,6 +43,8 @@ if (function_exists('wp_localize_script')) {
         'css' => $tokens_css,
         'contexts' => $token_contexts,
         'defaultContext' => $default_context,
+        'statuses' => $token_statuses,
+        'approvals' => $token_approvals,
         'i18n' => [
             'addToken' => __('Ajouter un token', 'supersede-css-jlg'),
             'emptyState' => __('Aucun token pour le moment. Utilisez le bouton ci-dessous pour commencer.', 'supersede-css-jlg'),
@@ -78,6 +82,19 @@ if (function_exists('wp_localize_script')) {
             'deviceStateAnnouncement' => __('Simulation de l’état : %s', 'supersede-css-jlg'),
             'deviceReducedMotionOn' => __('Préférence « réduction des animations » activée', 'supersede-css-jlg'),
             'deviceReducedMotionOff' => __('Préférence « réduction des animations » désactivée', 'supersede-css-jlg'),
+            'statusLabel' => __('Statut', 'supersede-css-jlg'),
+            'statusUnknown' => __('Statut inconnu', 'supersede-css-jlg'),
+            'approvalRequestLabel' => __('Demander une revue', 'supersede-css-jlg'),
+            'approvalRequestDisabledUnsaved' => __('Enregistrez vos tokens avant de demander une revue.', 'supersede-css-jlg'),
+            'approvalCommentPrompt' => __('Ajouter un commentaire pour les réviseurs (facultatif) :', 'supersede-css-jlg'),
+            'approvalRequestedToast' => __('Demande d’approbation envoyée.', 'supersede-css-jlg'),
+            'approvalRequestFailedToast' => __('Impossible d’envoyer la demande d’approbation.', 'supersede-css-jlg'),
+            'approvalPendingLabel' => __('Revue en attente', 'supersede-css-jlg'),
+            'approvalApprovedLabel' => __('Revue approuvée', 'supersede-css-jlg'),
+            'approvalChangesRequestedLabel' => __('Modifications demandées', 'supersede-css-jlg'),
+            'approvalTooltipComment' => __('Commentaire', 'supersede-css-jlg'),
+            'approvalTooltipRequestedAt' => __('Envoyée le %s', 'supersede-css-jlg'),
+            'approvalUnavailableLabel' => __('Les demandes d’approbation nécessitent des droits supplémentaires.', 'supersede-css-jlg'),
         ],
     ]);
 }

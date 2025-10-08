@@ -34,6 +34,7 @@ Supersede CSS JLG (Enhanced) est une boîte à outils visuelle pour accélérer 
 - **Bloc Gutenberg « Token Preview »** – Un bloc dédié affiche la bibliothèque de tokens dans Gutenberg en se connectant à l’API REST Supersede.
 - **Filtre de capacité** – Ajustez la capacité requise (`manage_options` par défaut) via le hook `ssc_required_capability` pour déléguer l’accès à vos équipes.
 - **Tests automatisés** – Playwright valide l’interface du gestionnaire de tokens contre un WordPress de test orchestré par `@wordpress/env` et PHPUnit couvre la couche PHP.
+- **Workflow d’approbation et journal d’activité** – Soumettez des demandes d’approbation, exportez les tokens approuvés (JSON, Style Dictionary, Android, iOS) et auditez toutes les actions via les endpoints `ssc/v1/approvals`, `ssc/v1/activity-log` et `ssc/v1/exports`.
 
 ## Catalogue des modules
 

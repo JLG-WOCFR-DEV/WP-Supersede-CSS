@@ -72,11 +72,119 @@
     margin: 0 0 8px;
 }
 
-.ssc-token-row { 
+.ssc-token-row {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
     align-items: flex-end;
+}
+
+.ssc-token-row__meta {
+    flex: 1 1 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.ssc-token-row__meta-primary,
+.ssc-token-row__meta-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.ssc-token-row__meta-actions {
+    margin-left: auto;
+}
+
+.ssc-token-status {
+    --ssc-token-status-bg: color-mix(in srgb, var(--ssc-card) 85%, var(--ssc-border) 15%);
+    --ssc-token-status-text: var(--ssc-text);
+    --ssc-token-status-dot: var(--ssc-accent, #2563eb);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--ssc-token-status-bg);
+    color: var(--ssc-token-status-text);
+    line-height: 1.2;
+}
+
+.ssc-token-status__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--ssc-token-status-dot);
+}
+
+.ssc-token-status--draft {
+    --ssc-token-status-bg: color-mix(in srgb, #fef3c7 65%, transparent);
+    --ssc-token-status-text: color-mix(in srgb, #92400e 70%, var(--ssc-text) 30%);
+    --ssc-token-status-dot: #f59e0b;
+}
+
+.ssc-token-status--ready {
+    --ssc-token-status-bg: color-mix(in srgb, #dcfce7 65%, transparent);
+    --ssc-token-status-text: color-mix(in srgb, #166534 70%, var(--ssc-text) 30%);
+    --ssc-token-status-dot: #16a34a;
+}
+
+.ssc-token-status--deprecated {
+    --ssc-token-status-bg: color-mix(in srgb, #e5e7eb 65%, transparent);
+    --ssc-token-status-text: color-mix(in srgb, #374151 70%, var(--ssc-text) 30%);
+    --ssc-token-status-dot: #6b7280;
+}
+
+.ssc-token-approval {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ssc-card) 92%, var(--ssc-border) 8%);
+    color: var(--ssc-text);
+    line-height: 1.2;
+}
+
+.ssc-token-approval--pending {
+    background: color-mix(in srgb, #fef3c7 55%, transparent);
+    color: color-mix(in srgb, #92400e 60%, var(--ssc-text) 40%);
+}
+
+.ssc-token-approval-unavailable {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: color-mix(in srgb, var(--ssc-text) 45%, #6b7280 55%);
+    background: color-mix(in srgb, var(--ssc-card) 92%, var(--ssc-border) 8%);
+    border-radius: 6px;
+    padding: 4px 10px;
+}
+
+.ssc-token-approval--approved {
+    background: color-mix(in srgb, #dcfce7 55%, transparent);
+    color: color-mix(in srgb, #166534 65%, var(--ssc-text) 35%);
+}
+
+.ssc-token-approval--changes_requested {
+    background: color-mix(in srgb, #fee2e2 60%, transparent);
+    color: color-mix(in srgb, #b91c1c 65%, var(--ssc-text) 35%);
+}
+
+.token-request-approval.is-busy,
+.ssc-token-row__meta-actions .token-request-approval[disabled] {
+    pointer-events: none;
+    opacity: 0.65;
 }
 
 .ssc-token-row--matches {
@@ -196,6 +304,16 @@
 .ssc-dark .ssc-token-row--matches {
     background: color-mix(in srgb, var(--ssc-card) 80%, var(--ssc-border) 20%);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ssc-border) 55%, transparent 45%);
+}
+
+.ssc-dark .ssc-token-status {
+    --ssc-token-status-bg: color-mix(in srgb, var(--ssc-card) 70%, var(--ssc-border) 30%);
+    --ssc-token-status-text: color-mix(in srgb, var(--ssc-text) 85%, var(--ssc-muted) 15%);
+}
+
+.ssc-dark .ssc-token-approval {
+    background: color-mix(in srgb, var(--ssc-card) 75%, var(--ssc-border) 25%);
+    color: color-mix(in srgb, var(--ssc-text) 85%, var(--ssc-muted) 15%);
 }
 
 .ssc-dark .ssc-token-row__matches {

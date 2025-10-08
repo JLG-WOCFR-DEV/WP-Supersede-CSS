@@ -2,7 +2,7 @@
 
 Ce dossier regroupe les scénarios manuels (fichiers `*.md`) à rejouer avant une publication majeure. Les scénarios peuvent être exécutés dans l'ordre de votre choix en fonction des changements apportés.
 
-> **À noter** : la refonte Debug Center + gouvernance des tokens ajoutera de nouveaux scénarios (approbation, exports multi-plateformes). Ils seront ajoutés ici au fur et à mesure du développement.
+> **À noter** : la refonte Debug Center + gouvernance des tokens a désormais ses endpoints REST (`/approvals`, `/activity-log`, `/exports`). Les scénarios manuels décrivant l’UI seront ajoutés au fil de l’intégration front-end.
 
 ## Tests UI automatisés
 
@@ -42,11 +42,11 @@ Ces tests s'exécutent de manière isolée grâce au moquage des appels REST. Au
 - `uninstall-multisite.md`
 - `css-save-network-error.md`
 - `command-palette-keyboard.md`
+- `token-approval-request.md`
 
 Consultez chaque fichier pour les prérequis et étapes détaillées.
 
 ### Scénarios à rédiger
 
-- ✅ _Approvals happy path_ (workflow token `draft → ready`).
-- 🟡 _Exports Style Dictionary_ (vérifier la génération et le téléchargement des archives).
-- 🟡 _Activity log pagination_ (navigation clavier + lecteurs d’écran).
+- 🟡 _Exports Style Dictionary_ (vérifier la génération et le téléchargement des archives `GET /ssc/v1/exports`).
+- 🟡 _Activity log pagination_ (navigation clavier + lecteurs d’écran sur `GET /ssc/v1/activity-log`).
