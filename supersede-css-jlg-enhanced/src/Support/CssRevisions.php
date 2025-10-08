@@ -27,10 +27,12 @@ final class CssRevisions
         $css = CssSanitizer::sanitize($css);
 
         $author = 'anon';
-        if (function_exists('wp_get_current_user')) {
-            $user = wp_get_current_user();
-            if ($user && isset($user->ID) && (int) $user->ID !== 0 && isset($user->user_login) && $user->user_login !== '') {
-                $author = (string) $user->user_login;
+        if (function_exists('wp_get_current_user') || function_exists('\\wp_get_current_user')) {
+            $user = \wp_get_current_user();
+            $candidate = self::resolveAuthorFromUser($user);
+
+            if ($candidate !== '') {
+                $author = $candidate;
             }
         }
 
@@ -78,6 +80,48 @@ final class CssRevisions
         }
 
         return $max;
+    }
+
+    /**
+     * @param mixed $user
+     */
+    private static function resolveAuthorFromUser($user): string
+    {
+        if (!is_object($user)) {
+            return '';
+        }
+
+        if (method_exists($user, 'exists') && !$user->exists()) {
+            return '';
+        }
+
+        $candidates = [];
+
+        if (isset($user->user_login) && is_string($user->user_login)) {
+            $candidates[] = $user->user_login;
+        }
+
+        if (method_exists($user, 'get')) {
+            $login = $user->get('user_login');
+            if (is_string($login)) {
+                $candidates[] = $login;
+            }
+        }
+
+        foreach (['user_nicename', 'display_name', 'user_email'] as $property) {
+            if (isset($user->{$property}) && is_string($user->{$property})) {
+                $candidates[] = $user->{$property};
+            }
+        }
+
+        foreach ($candidates as $candidate) {
+            $candidate = trim((string) $candidate);
+            if ($candidate !== '') {
+                return $candidate;
+            }
+        }
+
+        return '';
     }
 
     /**
