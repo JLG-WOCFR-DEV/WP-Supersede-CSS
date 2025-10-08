@@ -46,6 +46,7 @@ if (function_exists('wp_localize_script')) {
             'emptyState' => __('Aucun token pour le moment. Utilisez le bouton ci-dessous pour commencer.', 'supersede-css-jlg'),
             'emptyFilteredState' => __('Aucun token ne correspond à votre recherche ou filtre actuel.', 'supersede-css-jlg'),
             'groupLabel' => __('Groupe', 'supersede-css-jlg'),
+            'defaultGroupName' => __('Général', 'supersede-css-jlg'),
             'nameLabel' => __('Nom', 'supersede-css-jlg'),
             'valueLabel' => __('Valeur', 'supersede-css-jlg'),
             'typeLabel' => __('Type', 'supersede-css-jlg'),

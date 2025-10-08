@@ -392,7 +392,7 @@ final class TokenRegistry
             : '';
         $group = isset($token['group']) ? sanitize_text_field((string) $token['group']) : '';
         if ($group === '') {
-            $group = 'Général';
+            $group = __('Général', 'supersede-css-jlg');
         }
 
         $context = self::sanitizeContext($token['context'] ?? self::DEFAULT_CONTEXT);

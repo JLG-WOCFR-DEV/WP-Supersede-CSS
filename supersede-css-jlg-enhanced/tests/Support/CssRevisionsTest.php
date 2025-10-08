@@ -97,6 +97,63 @@ $ssc_options_store = [
 
 global $ssc_options_store;
 
+/** @var array<string, array<int, array{callback: callable, accepted_args: int}>> $ssc_filters_store */
+$ssc_filters_store = [];
+
+global $ssc_filters_store;
+
+if (!function_exists('add_filter')) {
+    function add_filter($hook, $callback, $priority = 10, $accepted_args = 1)
+    {
+        global $ssc_filters_store;
+
+        $priority = (int) $priority;
+        if (!isset($ssc_filters_store[$hook])) {
+            $ssc_filters_store[$hook] = [];
+        }
+        if (!isset($ssc_filters_store[$hook][$priority])) {
+            $ssc_filters_store[$hook][$priority] = [];
+        }
+
+        $ssc_filters_store[$hook][$priority][] = [
+            'callback' => $callback,
+            'accepted_args' => max(1, (int) $accepted_args),
+        ];
+
+        return true;
+    }
+}
+
+if (!function_exists('apply_filters')) {
+    function apply_filters($hook, $value)
+    {
+        global $ssc_filters_store;
+
+        $args = func_get_args();
+
+        if (!isset($ssc_filters_store[$hook]) || $ssc_filters_store[$hook] === []) {
+            return $value;
+        }
+
+        ksort($ssc_filters_store[$hook]);
+
+        foreach ($ssc_filters_store[$hook] as $callbacks) {
+            foreach ($callbacks as $entry) {
+                $accepted = max(1, (int) ($entry['accepted_args'] ?? 1));
+                $params = [$value];
+                if ($accepted > 1) {
+                    $additional = array_slice($args, 2, $accepted - 1);
+                    $params = array_merge($params, $additional);
+                }
+
+                $value = call_user_func_array($entry['callback'], $params);
+            }
+        }
+
+        return $value;
+    }
+}
+
 if (!function_exists('get_option')) {
     function get_option($name, $default = false)
     {
@@ -247,6 +304,33 @@ if (!is_array($stored) || count($stored) !== $maxRevisions) {
     fwrite(STDERR, 'The revision history should be trimmed to the configured maximum size.' . PHP_EOL);
     exit(1);
 }
+
+$ssc_filters_store = [];
+add_filter('ssc_css_revisions_max', static function ($value) {
+    unset($value);
+
+    return 5;
+});
+
+update_option('ssc_css_revisions', []);
+
+for ($i = 0; $i < 8; $i++) {
+    $css = sprintf('.filtered-%d { color: #%1$02d%1$02d%1$02d; }', $i % 99);
+    CssRevisions::record('ssc_active_css', $css, ['segments' => [
+        'desktop' => $css,
+        'tablet' => '',
+        'mobile' => '',
+    ]]);
+}
+
+$filteredStored = get_option('ssc_css_revisions', []);
+
+if (!is_array($filteredStored) || count($filteredStored) !== 5) {
+    fwrite(STDERR, 'The revision limit should be overridable via the ssc_css_revisions_max filter.' . PHP_EOL);
+    exit(1);
+}
+
+$ssc_filters_store = [];
 
 $latest = CssRevisions::all()[0] ?? null;
 $latestCss = sprintf('.test-%d { color: #%1$02d%1$02d%1$02d; }', ($maxRevisions + 2) % 99);
