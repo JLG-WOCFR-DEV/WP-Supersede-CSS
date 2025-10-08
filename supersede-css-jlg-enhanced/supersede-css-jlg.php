@@ -59,6 +59,17 @@ if (!function_exists('ssc_get_required_capability')) {
 if (!function_exists('ssc_get_cached_css')) {
     function ssc_get_cached_css(): string
     {
+        global $ssc_css_runtime_cache;
+
+        if (is_array($ssc_css_runtime_cache)) {
+            $runtime_css = isset($ssc_css_runtime_cache['css']) ? $ssc_css_runtime_cache['css'] : null;
+            $runtime_version = isset($ssc_css_runtime_cache['version']) ? $ssc_css_runtime_cache['version'] : null;
+
+            if (is_string($runtime_css) && $runtime_version === SSC_VERSION) {
+                return $runtime_css;
+            }
+        }
+
         $cache_meta = get_option('ssc_css_cache_meta', []);
         $cached_version = is_array($cache_meta) && isset($cache_meta['version'])
             ? (string) $cache_meta['version']
@@ -72,6 +83,11 @@ if (!function_exists('ssc_get_cached_css')) {
         }
 
         if (is_string($cached)) {
+            $ssc_css_runtime_cache = [
+                'css' => $cached,
+                'version' => SSC_VERSION,
+            ];
+
             return $cached;
         }
 
@@ -89,6 +105,11 @@ if (!function_exists('ssc_get_cached_css')) {
             'version' => SSC_VERSION,
         ], false);
 
+        $ssc_css_runtime_cache = [
+            'css' => $css_filtered,
+            'version' => SSC_VERSION,
+        ];
+
         return $css_filtered;
     }
 }
@@ -96,6 +117,9 @@ if (!function_exists('ssc_get_cached_css')) {
 if (!function_exists('ssc_invalidate_css_cache')) {
     function ssc_invalidate_css_cache(): void
     {
+        global $ssc_css_runtime_cache;
+
+        $ssc_css_runtime_cache = null;
         delete_option('ssc_css_cache');
         delete_option('ssc_css_cache_meta');
     }
@@ -137,6 +161,18 @@ if (!function_exists('ssc_maybe_invalidate_css_cache_on_option_change')) {
     add_action('added_option', 'ssc_maybe_invalidate_css_cache_on_option_change', 10, 2);
     add_action('deleted_option', 'ssc_maybe_invalidate_css_cache_on_option_change', 10, 1);
 }
+
+add_action('switch_theme', static function (): void {
+    if (function_exists('ssc_invalidate_css_cache')) {
+        ssc_invalidate_css_cache();
+    }
+});
+
+add_action('customize_save_after', static function (): void {
+    if (function_exists('ssc_invalidate_css_cache')) {
+        ssc_invalidate_css_cache();
+    }
+});
 
 add_action('plugins_loaded', function(){
     $cache_meta = get_option('ssc_css_cache_meta', []);
