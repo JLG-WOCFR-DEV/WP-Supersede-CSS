@@ -281,35 +281,7 @@ class Layout {
     public static function render(string $page_content, string $current_page_slug): void {
         $page_content = self::sanitize_style_blocks($page_content);
         
-        $menu_items = [
-            'Fondamentaux' => [
-                'supersede-css-jlg'                => 'Dashboard',
-                'supersede-css-jlg-utilities'      => 'Utilities (Éditeur CSS)',
-                'supersede-css-jlg-tokens'         => 'Tokens Manager',
-                'supersede-css-jlg-preset'         => 'Preset Designer',
-            ],
-            'Générateurs Visuels' => [
-                'supersede-css-jlg-layout-builder' => 'Maquettage de Page',
-                'supersede-css-jlg-grid'           => 'Grid Editor',
-                'supersede-css-jlg-shadow'         => 'Shadow Editor',
-                'supersede-css-jlg-gradient'       => 'Gradient Editor',
-                'supersede-css-jlg-typography'     => 'Typographie Fluide',
-                'supersede-css-jlg-clip-path'      => 'Découpe (Clip-Path)',
-                'supersede-css-jlg-filters'        => 'Filtres & Verre',
-            ],
-            'Effets & Animations' => [
-                'supersede-css-jlg-anim'           => 'Animation Studio',
-                'supersede-css-jlg-effects'        => 'Effets Visuels',
-                'supersede-css-jlg-tron'           => 'Tron Grid',
-                'supersede-css-jlg-avatar'         => 'Avatar Glow',
-            ],
-            'Outils & Maintenance' => [
-                'supersede-css-jlg-scope'          => 'Scope Builder',
-                'supersede-css-jlg-css-viewer'     => 'Visualiseur CSS',
-                'supersede-css-jlg-import'         => 'Import/Export',
-                'supersede-css-jlg-debug-center'   => 'Debug Center',
-            ],
-        ];
+        $menu_items = ModuleRegistry::groupedMenu();
         $back_to_admin_aria_label = esc_attr__('Retourner sur le tableau de bord WordPress', 'supersede-css-jlg');
         $back_to_admin_label = esc_html__('WP Admin', 'supersede-css-jlg');
         $theme_button_label = esc_html__('Thème', 'supersede-css-jlg');
