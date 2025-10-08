@@ -2,6 +2,8 @@
 
 Ce document détaille les évolutions à apporter à Supersede CSS JLG (Enhanced) pour aligner la gestion des design tokens et le Debug Center sur les standards professionnels rencontrés dans des outils comme Figma, Design Tokens Studio ou Webflow.
 
+> **Statut (déc. 2024)** : cadrage fonctionnel validé, maquettes en cours. Les migrations de base de données (`wp_ssc_activity_log`, colonnes additionnelles sur `wp_ssc_tokens`) seront proposées dans une PR dédiée avant développement UI.
+
 ## 1. Gestionnaire de tokens : métadonnées et contraintes avancées
 
 ### 1.1 Nouvelles métadonnées
@@ -104,3 +106,9 @@ Ce document détaille les évolutions à apporter à Supersede CSS JLG (Enhanced
 5. Ouvrir un pilote interne avec un jeu de tokens réel pour valider la gouvernance.
 
 Ces améliorations renforceront la traçabilité, la collaboration et la conformité des design tokens gérés dans Supersede CSS JLG (Enhanced), tout en offrant une visibilité complète sur les changements via le Debug Center.
+
+### Prochain jalon
+
+- ✅ RFC validée côté produit et tech.
+- 🛠️ À faire : implémenter les migrations + contrôleurs REST (`ApprovalsController`, `ActivityLogController`, `ExportsController`).
+- 🧪 À planifier : tests d’acceptation Playwright couvrant le workflow d’approbation et les exports multi-plateformes.

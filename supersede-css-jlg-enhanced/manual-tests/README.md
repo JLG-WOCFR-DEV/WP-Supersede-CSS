@@ -2,6 +2,8 @@
 
 Ce dossier regroupe les scénarios manuels (fichiers `*.md`) à rejouer avant une publication majeure. Les scénarios peuvent être exécutés dans l'ordre de votre choix en fonction des changements apportés.
 
+> **À noter** : la refonte Debug Center + gouvernance des tokens ajoutera de nouveaux scénarios (approbation, exports multi-plateformes). Ils seront ajoutés ici au fur et à mesure du développement.
+
 ## Tests UI automatisés
 
 Deux scénarios Playwright vérifient l'interface d'administration :
@@ -42,3 +44,9 @@ Ces tests s'exécutent de manière isolée grâce au moquage des appels REST. Au
 - `command-palette-keyboard.md`
 
 Consultez chaque fichier pour les prérequis et étapes détaillées.
+
+### Scénarios à rédiger
+
+- ✅ _Approvals happy path_ (workflow token `draft → ready`).
+- 🟡 _Exports Style Dictionary_ (vérifier la génération et le téléchargement des archives).
+- 🟡 _Activity log pagination_ (navigation clavier + lecteurs d’écran).

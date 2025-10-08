@@ -2,6 +2,8 @@
 
 Ce document complète `assets/css/foundation.css` et explique comment utiliser les tokens, primitives et utilitaires mis à disposition par le design system de Supersede CSS.
 
+> **État d’avancement** : la factorisation des tokens est déployée dans `foundation.css`. Reste à migrer les vues historiques (`views/*.php`) qui utilisent encore des styles inline ; un audit automatisé est planifié via Stylelint (voir backlog ci-dessous).
+
 ## 1. Design tokens
 
 Tous les tokens de base sont définis dans `foundation.css` au niveau de `:root`. Ils couvrent :
@@ -55,3 +57,9 @@ Les écrans immersifs (`ux.css`) conservent des rayons plus généreux. Le fichi
 ---
 
 En cas de doute, consultez `foundation.css` : chaque section est commentée et les tokens sont regroupés par type pour faciliter la découverte. Toute nouvelle règle générique doit être envisagée dans ce fichier avant d'être implémentée ailleurs.
+
+### Backlog styles
+
+- 🛠️ Mettre en place Stylelint + plugin `stylelint-declaration-strict-value` pour forcer l’usage des tokens.
+- 📚 Documenter les patterns dans Storybook (cartes, formulaires, toasts) et lier les snippets CSS.
+- 🧹 Migrer les derniers styles inline des vues `animation-studio.php`, `grid-editor.php` et `preset-designer.php` vers `assets/css/`.

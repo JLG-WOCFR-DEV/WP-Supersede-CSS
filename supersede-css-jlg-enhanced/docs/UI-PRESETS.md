@@ -2,6 +2,8 @@
 
 This document lists families of design presets that could be bundled with Supersede CSS to help teams start from a familiar design vocabulary. Each preset references a well known library and explains how we might adapt the underlying aesthetic into configurable tokens and components.
 
+> **Roadmap update** : tokens JSON pour « Headless UI » et « shadcn/ui » sont prêts au prototypage. Reste à produire les variations Storybook et l’assistant d’import côté plugin.
+
 ## Minimal & Composable
 
 ### Headless UI Inspired
@@ -148,3 +150,9 @@ This document lists families of design presets that could be bundled with Supers
 - Provide migration examples showing how to switch presets while keeping custom overrides.
 - Ship Storybook stories demonstrating before/after for key components under every preset.
 - Ensure accessibility audits run against every preset to validate contrast and focus management.
+
+### Next steps
+
+- 🛠️ Implémenter un endpoint `ssc/v1/presets/catalog` pour distribuer les bundles.
+- 🧪 Ajouter des tests Playwright vérifiant le chargement d’un preset et la mise à jour des tokens.
+- 📦 Créer des packages ZIP exemple (Landing Marketing, SaaS Dashboard) intégrant tokens + presets + CSS utilitaires.
