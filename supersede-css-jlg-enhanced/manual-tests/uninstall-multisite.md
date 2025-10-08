@@ -27,3 +27,8 @@ Objectif : vérifier qu'une suppression du plugin en environnement multisite é
 
 - Plus aucune option commençant par `ssc_` n'est présente dans les tables `wp_options` (ou équivalentes) de chacun des sites du réseau après la suppression du plugin.
 - Aucune option réseau `ssc_*` n'apparaît dans `wp_sitemeta` (`wp site meta list --search='ssc_%'`).
+
+### Suivi
+
+- 🟡 Ajouter un step de vérification pour les tables personnalisées (`wp_ssc_activity_log`) lorsque la gouvernance des tokens sera déployée.
+- ⚪️ Couvrir la désinstallation via un test E2E WP-CLI (script bash) une fois les migrations stabilisées.

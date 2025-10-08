@@ -30,3 +30,8 @@ Objectif : vérifier que le flux « Exporter → Importer » permet de restau
 
 - Le message de succès indique le nombre d’options restaurées et, le cas échéant, celles ignorées.
 - Les styles et presets supprimés à l’étape 3 sont de nouveau disponibles après l’import.
+
+### Points de vigilance
+
+- Tester également un fichier exporté incluant les nouveaux presets JSON une fois la fonctionnalité livrée.
+- Ajouter un cas d’erreur pour un export obsolète (schéma précédent) afin de valider le message de compatibilité.

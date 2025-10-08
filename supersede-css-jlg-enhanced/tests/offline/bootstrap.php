@@ -40,3 +40,12 @@ if (!class_exists('SSC\\AutoloadPlaceholder', false)) {
         }
     });
 }
+
+if (!function_exists('__')) {
+    function __(string $text, string $domain = ''): string
+    {
+        unset($domain);
+
+        return $text;
+    }
+}

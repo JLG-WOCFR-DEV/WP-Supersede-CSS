@@ -20,3 +20,8 @@ Vérifier qu'une erreur réseau lors de l'appel à `ssc/v1/save-css` affiche une
 
 - Une notification (toast) affichant un message d'erreur explicite s'affiche après l'échec.
 - Le bouton « Enregistrer le CSS » est réactivé automatiquement après l'affichage de l'erreur.
+
+### Notes supplémentaires
+
+- Ajouter un scénario dérivé lorsque l’API REST renvoie un code `500` avec message JSON afin de vérifier le fallback i18n.
+- Prévoir un test Playwright une fois la gestion d’erreurs centralisée dans le nouveau composant de toasts.

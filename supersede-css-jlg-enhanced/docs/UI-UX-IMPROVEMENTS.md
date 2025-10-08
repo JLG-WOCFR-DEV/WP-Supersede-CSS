@@ -1,5 +1,7 @@
 # Analyse UI/UX et Pistes d'Amélioration
 
+> **Journal de bord (déc. 2024)** : ateliers UX terminés, wireframes basse fidélité prêts. Phase suivante : prototypage interactif pour la nouvelle navigation et tests utilisateurs ciblés (janvier 2025).
+
 ## Constat vs. niveau « app pro »
 - **Densité typographique élevée** : la base admin utilise une taille de police unique de 14px et un contraste limité entre les textes primaires et secondaires, ce qui fatigue l’œil sur de longues sessions. 【F:supersede-css-jlg-enhanced/assets/css/admin.css†L2-L29】
 - **Styles en ligne récurrents** : de nombreux composants d’édition (ex. Grid Editor) définissent marges, bordures et alignements directement dans le HTML, ce qui complique la maintenance et l’harmonisation visuelle à l’échelle de l’app. 【F:supersede-css-jlg-enhanced/views/grid-editor.php†L9-L33】
@@ -33,6 +35,12 @@
 2. Sprint « Navigation & Layout » : mise en place d’une shell applicative avec barre latérale + topbar, refonte des panneaux et des feedbacks.
 3. Sprint « Preview Experience » : création de prévisualisations contextuelles, réglages rapides (ex. sliders à double poignée) et options responsive.
 4. Sprint « Quality & Accessibilité » : contrastes, focus states, raccourcis clavier mis en avant et tests utilisateurs ciblant designers/intégrateurs.
+
+### Kanban synthétique
+
+- 🟢 **Doing** : prototypage Figma de la barre latérale dockable + définition des tokens de typographie.
+- 🟡 **Next** : audit accessibilité (contrastes, focus) + recherche utilisateur sur les aperçus.
+- ⚪️ **Later** : mode offline et personnalisation avancée des layouts.
 
 ## Inspirations d’applications professionnelles
 Ces pistes prolongent l’ambition « studio » en s’inspirant des workflows d’outils comme Figma, Webflow ou LottieFiles.

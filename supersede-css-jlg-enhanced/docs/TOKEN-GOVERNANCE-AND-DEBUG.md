@@ -2,6 +2,8 @@
 
 Ce document détaille les évolutions à apporter à Supersede CSS JLG (Enhanced) pour aligner la gestion des design tokens et le Debug Center sur les standards professionnels rencontrés dans des outils comme Figma, Design Tokens Studio ou Webflow.
 
+> **Statut (déc. 2024)** : cadrage fonctionnel validé, contrôleurs REST et journal d’activité livrés (`ssc/v1/approvals`, `ssc/v1/activity-log`, `ssc/v1/exports`, table `wp_ssc_activity_log`). Les maquettes UI restent en cours pour brancher ces endpoints côté interface.
+
 ## 1. Gestionnaire de tokens : métadonnées et contraintes avancées
 
 ### 1.1 Nouvelles métadonnées
@@ -29,7 +31,7 @@ Ce document détaille les évolutions à apporter à Supersede CSS JLG (Enhanced
 | Typographie (`font-family`) | Liste blanche de familles validées. | "Choisissez une famille parmi la bibliothèque approuvée." |
 
 #### Implémentation
-- Étendre le schéma REST `ssc/v1/token` avec les nouveaux attributs et règles de validation.
+- Étendre le schéma REST `ssc/v1/token` avec les nouveaux attributs et règles de validation — ✅ livré côté backend (`TokenRegistry`, `TokensController`).
 - Ajouter un écran de configuration d'équipe pour définir palettes, intervalles et listes blanches.
 - Exposer les erreurs via l'UI de formulaire (notifications et inline error states).
 
@@ -41,7 +43,7 @@ Ce document détaille les évolutions à apporter à Supersede CSS JLG (Enhanced
 4. Les versions suivent SemVer : `major` pour rupture, `minor` pour amélioration compatible, `patch` pour correction.
 
 ### 1.4 API et export
-- Inclure métadonnées et contraintes dans les exports JSON/CSS existants.
+- ✅ Inclure métadonnées et contraintes dans les exports JSON/CSS existants (`GET /ssc/v1/exports`).
 - Ajouter des endpoints pour récupérer les palettes et intervalles afin d'alimenter des outils externes (Design Tokens CLI, Style Dictionary).
 
 ## 2. Debug Center : journal d'activité et approbations
@@ -56,19 +58,20 @@ Ce document détaille les évolutions à apporter à Supersede CSS JLG (Enhanced
 | `token.deprecated` | auteur, date cible de retrait | Marquage obsolète |
 | `css.published` | snapshot ID, hash | Publication CSS depuis Debug Center |
 | `preset.changed` | entité liée, tokens impactés | Modification de preset/bloc |
+| `export.generated` | format, scope, nombre de tokens | Export via `GET /ssc/v1/exports` |
 
 #### Exigences techniques
-- Stocker les événements dans une table dédiée (`wp_ssc_activity_log`) avec index sur `created_at` et `entity_id`.
-- Fournir un filtre temporel (24h, 7j, 30j) et par type d'événement.
-- Permettre l'export CSV/JSON du journal pour audit.
+- ✅ Stocker les événements dans une table dédiée (`wp_ssc_activity_log`) avec index sur `created_at` et `entity_id`.
+- ✅ Fournir un filtre temporel (24h, 7j, 30j) et par type d'événement (`GET /ssc/v1/activity-log`).
+- ✅ Permettre l'export CSV/JSON du journal pour audit (`GET /ssc/v1/activity-log/export`).
 
 ### 2.2 Workflow d'approbation
 
-1. **Demande** : l'auteur d'un token `draft` soumet une requête d'approbation depuis la sidebar du Debug Center.
-2. **Revue** : les utilisateurs disposant de la capability `manage_ssc_approvals` reçoivent une notification (email + centre de notifications WP).
-3. **Commentaire bloquant** : l'approbateur peut ajouter un commentaire requis (`blocking_comment`) qui renvoie le token en `draft`.
-4. **Approbation** : validation du token → statut `ready`, entrée `token.approved` dans le journal, déclenchement optionnel d'une pipeline (webhook).
-5. **Publication CSS** : lors de la publication, le snapshot consigne la liste des tokens `ready` inclus.
+1. **Demande** : l'auteur d'un token `draft` soumet une requête d'approbation via `POST /ssc/v1/approvals` (commentaire facultatif historisé). Le gestionnaire de tokens expose désormais un bouton « Demander une revue » qui consomme directement cette route.
+2. **Revue** : les utilisateurs disposant de la capability `manage_ssc_approvals` interrogent `GET /ssc/v1/approvals` (filtré par défaut sur les demandes `pending`). L’interface remplace automatiquement le bouton par un message informatif lorsque cette capability manque.
+3. **Commentaire bloquant** : l'approbateur renvoie le token en `draft` via `POST /ssc/v1/approvals/{id}` avec `decision = changes_requested` et commentaire obligatoire.
+4. **Approbation** : validation du token (`decision = approve`) → statut `ready`, entrée `token.approved` dans le journal, déclenchement optionnel d'une pipeline (webhook).
+5. **Publication CSS** : lors de la publication, le snapshot consigne la liste des tokens `ready` inclus (branche UI à implémenter).
 
 #### Interface
 - Onglet "Approbations" dans le Debug Center listant les tokens en attente avec badge de priorité.
@@ -83,11 +86,12 @@ Ce document détaille les évolutions à apporter à Supersede CSS JLG (Enhanced
 | Android | `colors.xml`, `dimens.xml`, thèmes Material 3 alignés sur tokens `ready`. | Design system mobile natif.
 | iOS | `xcassets` et fichiers SwiftGen générés depuis tokens approuvés. | Applications iOS/iPadOS.
 | Figma Tokens | JSON compatible plugin Tokens Studio, incluant mapping palettes. | Collaboration avec designers.
+Les formats Style Dictionary/Android/iOS sont servis par `GET /ssc/v1/exports` en fonction des paramètres `format` et `scope`.
 
 #### Déclenchement
+- ✅ Webhook REST `GET /ssc/v1/exports` permettant aux CI de récupérer la dernière version approuvée (formats `style-dictionary`, `json`, `android`, `ios`).
+- ✅ Historisation des exports réalisés dans le journal (`export.generated`).
 - Bouton "Exporter" dans le Debug Center avec options de format et portée (`ready`, `deprecated` inclus ou non).
-- Webhook REST `ssc/v1/exports` permettant aux CI de récupérer la dernière version approuvée.
-- Historisation des exports réalisés dans le journal (`export.generated`).
 
 ## 3. Sécurité et performances
 
@@ -97,10 +101,17 @@ Ce document détaille les évolutions à apporter à Supersede CSS JLG (Enhanced
 
 ## 4. Prochaines étapes
 
-1. Concevoir le schéma de base de données et les migrations nécessaires.
-2. Prototyper l'UI (Figma) pour valider la hiérarchie d'information.
-3. Implémenter les endpoints REST et tests PHPUnit correspondants.
-4. Mettre en place le workflow d'approbation et la génération d'exports.
-5. Ouvrir un pilote interne avec un jeu de tokens réel pour valider la gouvernance.
+1. ✅ Concevoir le schéma de base de données et les migrations nécessaires.
+2. 🛠️ Prototyper l'UI (Figma) pour valider la hiérarchie d'information.
+3. ✅ Implémenter les endpoints REST et tests associés.
+4. ✅ Mettre en place le workflow d'approbation et la génération d'exports.
+5. 🧪 Ouvrir un pilote interne avec un jeu de tokens réel pour valider la gouvernance.
 
 Ces améliorations renforceront la traçabilité, la collaboration et la conformité des design tokens gérés dans Supersede CSS JLG (Enhanced), tout en offrant une visibilité complète sur les changements via le Debug Center.
+
+### Prochain jalon
+
+- ✅ RFC validée côté produit et tech.
+- ✅ Migrations + contrôleurs REST (`ApprovalsController`, `ActivityLogController`, `ExportsController`) livrés.
+- 🛠️ À faire : intégrer le Debug Center aux nouveaux endpoints (le Tokens Manager déclenche déjà les demandes d’approbation).
+- 🧪 À planifier : tests d’acceptation Playwright couvrant le workflow d’approbation et les exports multi-plateformes.

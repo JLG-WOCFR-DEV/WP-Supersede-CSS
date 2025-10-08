@@ -34,6 +34,7 @@ Supersede CSS JLG (Enhanced) est une boîte à outils visuelle pour accélérer 
 - **Bloc Gutenberg « Token Preview »** – Un bloc dédié affiche la bibliothèque de tokens dans Gutenberg en se connectant à l’API REST Supersede.
 - **Filtre de capacité** – Ajustez la capacité requise (`manage_options` par défaut) via le hook `ssc_required_capability` pour déléguer l’accès à vos équipes.
 - **Tests automatisés** – Playwright valide l’interface du gestionnaire de tokens contre un WordPress de test orchestré par `@wordpress/env` et PHPUnit couvre la couche PHP.
+- **Workflow d’approbation et journal d’activité** – Soumettez des demandes d’approbation, exportez les tokens approuvés (JSON, Style Dictionary, Android, iOS) et auditez toutes les actions via les endpoints `ssc/v1/approvals`, `ssc/v1/activity-log` et `ssc/v1/exports`.
 
 ## Catalogue des modules
 
@@ -193,6 +194,17 @@ Supersede CSS JLG (Enhanced) est distribué sous licence [GPLv2 ou ultérieure](
 ## Contribuer
 
 Les contributions sont les bienvenues ! Forkez le projet, créez une branche avec votre fonctionnalité ou correction, puis ouvrez une pull request. Pour les changements majeurs, créez d’abord une issue afin d’en discuter.
+
+### Initiatives en cours
+
+Plusieurs chantiers sont décrits dans la documentation afin d’aligner Supersede CSS JLG (Enhanced) sur les standards des studios professionnels :
+
+- **Gouvernance des tokens et journal d’activité** : introduction de métadonnées (`status`, `owner`, `version`), d’un workflow d’approbation et d’exports multi-plateformes. Voir la note détaillée dans [`docs/TOKEN-GOVERNANCE-AND-DEBUG.md`](./supersede-css-jlg-enhanced/docs/TOKEN-GOVERNANCE-AND-DEBUG.md).
+- **Refonte UI/UX** : amélioration de la hiérarchie visuelle, des aperçus et de la navigation par panneaux. Synthétisée dans [`docs/UI-UX-IMPROVEMENTS.md`](./supersede-css-jlg-enhanced/docs/UI-UX-IMPROVEMENTS.md).
+- **Bibliothèque de presets & Device Lab** : packaging de familles de presets prêts à l’emploi et prévisualisations multi-appareils, décrits dans [`docs/UI-PRESETS.md`](./supersede-css-jlg-enhanced/docs/UI-PRESETS.md) et [`docs/COMPETITIVE-ANALYSIS.md`](./supersede-css-jlg-enhanced/docs/COMPETITIVE-ANALYSIS.md).
+- **API REST enrichie** : nouveaux contrôleurs (approbations, exports) et sanitizers partagés pour les futurs workflows. Les choix d’architecture sont consignés dans [`docs/REST-ARCHITECTURE.md`](./supersede-css-jlg-enhanced/docs/REST-ARCHITECTURE.md).
+
+Chaque chantier est découpé en étapes (design, migrations, tests) et sera référencé dans les issues GitHub correspondantes.
 
 ## Pistes d'amélioration
 
