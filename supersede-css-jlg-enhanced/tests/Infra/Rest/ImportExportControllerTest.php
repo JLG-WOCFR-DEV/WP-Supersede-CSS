@@ -93,6 +93,7 @@ final class ImportExportControllerTest extends WP_UnitTestCase
                 'type' => 'spacing',
                 'description' => 'Spacing value',
                 'group' => 'Layout',
+                'context' => ':root',
             ],
         ], $stored);
     }
@@ -142,6 +143,7 @@ final class ImportExportControllerTest extends WP_UnitTestCase
                 'type' => 'color',
                 'description' => 'Couleur principale',
                 'group' => 'Identité',
+                'context' => ':root',
             ],
             [
                 'name' => '--Heading-Font',
@@ -149,6 +151,7 @@ final class ImportExportControllerTest extends WP_UnitTestCase
                 'type' => 'font',
                 'description' => 'Police titres',
                 'group' => 'Général',
+                'context' => ':root',
             ],
         ], $stored);
     }

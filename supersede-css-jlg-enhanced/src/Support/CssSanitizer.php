@@ -1181,6 +1181,10 @@ final class CssSanitizer
             if (str_starts_with(strtolower($sanitizedValue), 'data:')) {
                 return '';
             }
+
+            if (!self::isSafeUrlValue($sanitizedValue)) {
+                return '';
+            }
         }
 
         if ($sanitizedValue === '') {
@@ -1198,6 +1202,47 @@ final class CssSanitizer
         }
 
         return 'url(' . $quote . $escaped . $quote . ')';
+    }
+
+    private static function isSafeUrlValue(string $value): bool
+    {
+        if ($value === '') {
+            return false;
+        }
+
+        if (str_starts_with($value, '//')) {
+            return false;
+        }
+
+        if (str_contains($value, '\n') || str_contains($value, '\r')) {
+            return false;
+        }
+
+        if (preg_match('/["\'<>]/', $value)) {
+            return false;
+        }
+
+        if (str_contains($value, ':')) {
+            if (preg_match('/^[a-z][a-z0-9+.-]*:\/\//i', $value) !== 1) {
+                return false;
+            }
+
+            return \wp_http_validate_url($value) !== false;
+        }
+
+        if (str_starts_with($value, '#')) {
+            return preg_match('/^#[A-Za-z0-9_-]+$/', $value) === 1;
+        }
+
+        if (str_starts_with($value, '/')) {
+            return preg_match('/^\/[A-Za-z0-9._~!$&+,;=@%-]*([\/][A-Za-z0-9._~!$&+,;=@%-]*)*(\?[A-Za-z0-9._~!$&+,;=:@%\-]*)?(#[A-Za-z0-9._~!$&+,;=:@%\-]*)?$/', $value) === 1;
+        }
+
+        if (str_starts_with($value, './') || str_starts_with($value, '../')) {
+            return preg_match('/^(?:\.\.\/|\.\/)[A-Za-z0-9._~!$&+,;=@%-]*([\/][A-Za-z0-9._~!$&+,;=@%-]*)*(\?[A-Za-z0-9._~!$&+,;=:@%\-]*)?(#[A-Za-z0-9._~!$&+,;=:@%\-]*)?$/', $value) === 1;
+        }
+
+        return preg_match('/^[A-Za-z0-9][A-Za-z0-9._~!$&+,;=@%-]*([\/][A-Za-z0-9._~!$&+,;=@%-]*)*(\?[A-Za-z0-9._~!$&+,;=:@%\-]*)?(#[A-Za-z0-9._~!$&+,;=:@%\-]*)?$/', $value) === 1;
     }
 
     private static function skipWhitespace(string $css, int $offset): int

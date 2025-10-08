@@ -119,6 +119,10 @@ final class CssCacheCommand
     {
         $cache = get_option('ssc_css_cache', false);
 
-        return is_string($cache) && trim($cache) !== '';
+        if (is_string($cache) && trim($cache) !== '') {
+            return true;
+        }
+
+        return get_option('ssc_css_cache_last_had_cache', false) !== false;
     }
 }
