@@ -82,7 +82,7 @@
             });
 
             $panels.each(function() {
-                $(this).removeClass('active').attr('hidden', true);
+                $(this).removeClass('active').prop('hidden', true);
             });
 
             if ($currentPanel.length) {
@@ -100,7 +100,7 @@
             }
 
             if ($panel.length) {
-                $panel.addClass('active').removeAttr('hidden');
+                $panel.addClass('active').prop('hidden', false);
                 $panel.trigger('ssc-ve-panel-shown');
                 $(document).trigger('ssc-ve-panel-shown', [$panel]);
             }
@@ -111,7 +111,7 @@
         if ($initialActive.length) {
             const initialPanelId = $initialActive.attr('aria-controls');
             if (initialPanelId) {
-                $panels.not(`#${initialPanelId}`).attr('hidden', true);
+                $panels.not(`#${initialPanelId}`).prop('hidden', true);
             }
         } else if ($tabs.length) {
             setActiveTab($tabs.eq(0));
