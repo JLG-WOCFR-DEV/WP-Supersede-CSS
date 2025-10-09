@@ -272,6 +272,7 @@
         const urlField = $('#ssc-preview-url');
         const previewToggleButton = $('#ssc-preview-toggle');
         const previewColumn = $('#ssc-preview-column');
+        const previewVisibilityLiveRegion = $('#ssc-preview-visibility-status');
         const previewLayoutQuery = typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 1024px)') : null;
         let previewVisible = true;
         let lastHovered;
@@ -869,25 +870,57 @@
         if (previewToggleButton.length && previewColumn.length && previewLayoutQuery) {
             const showLabel = previewToggleButton.data('show') || __('Afficher l\'aperçu', 'supersede-css-jlg');
             const hideLabel = previewToggleButton.data('hide') || __('Masquer l\'aperçu', 'supersede-css-jlg');
+            const announceShow = previewToggleButton.data('announce-show') || __('Colonne d\'aperçu affichée.', 'supersede-css-jlg');
+            const announceHide = previewToggleButton.data('announce-hide') || __('Colonne d\'aperçu masquée.', 'supersede-css-jlg');
 
-            const setPreviewVisibility = (visible) => {
+            const setPreviewVisibility = (visible, options = {}) => {
+                const { announce = true, focusOnShow = false } = options;
                 previewVisible = visible;
                 previewColumn.toggleClass('is-hidden', !visible);
-                previewToggleButton.text(visible ? hideLabel : showLabel);
-                previewToggleButton.attr('aria-expanded', visible ? 'true' : 'false');
+                previewColumn.attr('aria-hidden', visible ? 'false' : 'true');
+
+                const label = visible ? hideLabel : showLabel;
+                const currentLabel = (previewToggleButton.text() || '').trim();
+                if (currentLabel !== label) {
+                    previewToggleButton.text(label);
+                }
+                previewToggleButton.attr({
+                    'aria-expanded': visible ? 'true' : 'false',
+                    'aria-label': label
+                });
+
+                if (announce && previewVisibilityLiveRegion.length) {
+                    previewVisibilityLiveRegion.text(visible ? announceShow : announceHide);
+                }
+
+                if (visible && focusOnShow) {
+                    const focusable = previewColumn
+                        .find('input, button, select, textarea, a[href], [tabindex]:not([tabindex="-1"])')
+                        .filter(':visible')
+                        .first();
+                    if (focusable.length) {
+                        focusable.trigger('focus');
+                    } else {
+                        previewColumn.trigger('focus');
+                    }
+                }
             };
 
             const handleLayoutChange = (event) => {
                 if (event.matches) {
-                    setPreviewVisibility(false);
+                    setPreviewVisibility(false, { announce: false });
                 } else {
-                    setPreviewVisibility(true);
+                    setPreviewVisibility(true, { announce: false });
                 }
             };
 
             previewToggleButton.on('click', function() {
                 if (!previewLayoutQuery.matches) return;
-                setPreviewVisibility(!previewVisible);
+                const nextVisibleState = !previewVisible;
+                setPreviewVisibility(nextVisibleState, {
+                    announce: true,
+                    focusOnShow: nextVisibleState
+                });
             });
 
             handleLayoutChange(previewLayoutQuery);

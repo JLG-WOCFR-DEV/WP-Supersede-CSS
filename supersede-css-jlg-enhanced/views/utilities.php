@@ -68,10 +68,22 @@ if (!defined('ABSPATH')) {
                 </div>
             </div>
         </div>
-        <button type="button" id="ssc-preview-toggle" class="button ssc-preview-toggle" data-show="<?php echo esc_attr__('Afficher l\'aperçu', 'supersede-css-jlg'); ?>" data-hide="<?php echo esc_attr__('Masquer l\'aperçu', 'supersede-css-jlg'); ?>" aria-expanded="false" aria-controls="ssc-preview-column">
+        <button
+            type="button"
+            id="ssc-preview-toggle"
+            class="button ssc-preview-toggle"
+            data-show="<?php echo esc_attr__('Afficher l\'aperçu', 'supersede-css-jlg'); ?>"
+            data-hide="<?php echo esc_attr__('Masquer l\'aperçu', 'supersede-css-jlg'); ?>"
+            data-announce-show="<?php echo esc_attr__('Colonne d\'aperçu affichée.', 'supersede-css-jlg'); ?>"
+            data-announce-hide="<?php echo esc_attr__('Colonne d\'aperçu masquée.', 'supersede-css-jlg'); ?>"
+            aria-expanded="false"
+            aria-controls="ssc-preview-column"
+            aria-label="<?php echo esc_attr__('Afficher l\'aperçu', 'supersede-css-jlg'); ?>"
+        >
             <?php echo esc_html__('Afficher l\'aperçu', 'supersede-css-jlg'); ?>
         </button>
-        <div class="ssc-preview-column" id="ssc-preview-column">
+        <p id="ssc-preview-visibility-status" class="screen-reader-text" role="status" aria-live="polite" aria-atomic="true"></p>
+        <div class="ssc-preview-column" id="ssc-preview-column" tabindex="-1" aria-hidden="false">
             <div class="ssc-preview-header">
                 <div class="ssc-url-bar">
                     <label class="screen-reader-text" for="ssc-preview-url"><?php esc_html_e('URL de l\'aperçu', 'supersede-css-jlg'); ?></label>
