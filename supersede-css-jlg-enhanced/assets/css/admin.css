@@ -78,6 +78,94 @@
 #ssc-import-msg.ssc-success { color: var(--ssc-success); }
 #ssc-import-msg.ssc-error { color: var(--ssc-danger); }
 
+.ssc-transfer-panel {
+    display: grid;
+    gap: var(--ssc-space-sm);
+    margin-bottom: var(--ssc-space-md);
+}
+
+.ssc-module-fieldset {
+    border: none;
+    margin: 0;
+    padding: 0;
+}
+
+.ssc-module-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ssc-space-xs);
+}
+
+.ssc-module-action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ssc-space-xs);
+}
+
+.ssc-module-summary {
+    margin: 0;
+    color: var(--ssc-muted);
+    font-size: var(--ssc-font-size-200);
+}
+
+.ssc-module-grid {
+    display: grid;
+    gap: var(--ssc-space-xs);
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.ssc-module-option {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--ssc-space-xs);
+    padding: var(--ssc-space-xs) var(--ssc-space-sm);
+    border: 1px solid var(--ssc-border);
+    border-radius: var(--ssc-radius-sm);
+    background: var(--ssc-card);
+    transition: box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.ssc-module-option:focus-within {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ssc-accent) 40%, transparent);
+    border-color: color-mix(in srgb, var(--ssc-accent) 35%, var(--ssc-border));
+}
+
+.ssc-module-option input[type="checkbox"] {
+    margin-top: 4px;
+}
+
+.ssc-module-option__label {
+    display: grid;
+    gap: var(--ssc-space-3xs);
+    cursor: pointer;
+    color: var(--ssc-text);
+}
+
+.ssc-module-option__title {
+    font-weight: var(--ssc-font-weight-medium);
+    line-height: var(--ssc-line-height-tight);
+}
+
+.ssc-module-option__helper {
+    color: var(--ssc-muted);
+    font-size: var(--ssc-font-size-100);
+    line-height: var(--ssc-line-height-snug);
+}
+
+@media (max-width: 782px) {
+    .ssc-module-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--ssc-space-2xs);
+    }
+
+    .ssc-module-summary {
+        order: -1;
+    }
+}
+
 .ssc-two {
     display: grid;
     grid-template-columns: 1fr 1fr;

@@ -65,13 +65,40 @@ final class ImportExportController extends BaseController
      */
     public function exportConfig(WP_REST_Request $request)
     {
+        $rawModules = $request->get_param('modules');
+        $modules = $this->normalizeModules($rawModules);
+
+        if ($modules === []) {
+            return new WP_Error(
+                'ssc_export_config_invalid_modules',
+                __('No valid Supersede CSS modules were selected for export.', 'supersede-css-jlg'),
+                ['status' => 400]
+            );
+        }
+
         global $wpdb;
         $options = [];
-        $like_pattern = $wpdb->esc_like('ssc_') . '%';
-        $sql = $wpdb->prepare(
-            "SELECT option_name, option_value FROM {$wpdb->options} WHERE option_name LIKE %s",
-            $like_pattern
-        );
+        $selectionProvided = $rawModules !== null;
+        $whitelist = $selectionProvided ? $this->getModuleOptionWhitelist($modules) : null;
+
+        if ($selectionProvided && $whitelist !== null && $whitelist === []) {
+            return new WP_REST_Response([], 200);
+        }
+
+        if ($selectionProvided && $whitelist !== null && $whitelist !== []) {
+            $placeholders = implode(',', array_fill(0, count($whitelist), '%s'));
+            $sql = $wpdb->prepare(
+                "SELECT option_name, option_value FROM {$wpdb->options} WHERE option_name IN ($placeholders)",
+                ...$whitelist
+            );
+        } else {
+            $likePattern = $wpdb->esc_like('ssc_') . '%';
+            $sql = $wpdb->prepare(
+                "SELECT option_name, option_value FROM {$wpdb->options} WHERE option_name LIKE %s",
+                $likePattern
+            );
+        }
+
         $results = $wpdb->get_results($sql);
 
         if (empty($results)) {
@@ -96,18 +123,7 @@ final class ImportExportController extends BaseController
             $options[$result->option_name] = maybe_unserialize($result->option_value);
         }
 
-        $rawModules = $request->get_param('modules');
-        $modules = $this->normalizeModules($rawModules);
-
-        if ($modules === []) {
-            return new WP_Error(
-                'ssc_export_config_invalid_modules',
-                __('No valid Supersede CSS modules were selected for export.', 'supersede-css-jlg'),
-                ['status' => 400]
-            );
-        }
-
-        $options = $this->filterOptionsByModules($options, $modules, $rawModules !== null);
+        $options = $this->filterOptionsByModules($options, $modules, $selectionProvided);
 
         return new WP_REST_Response($options, 200);
     }
