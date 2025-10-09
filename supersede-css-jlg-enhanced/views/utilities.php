@@ -88,34 +88,73 @@ if (!defined('ABSPATH')) {
                     </button>
                 </div>
                 <p id="ssc-preview-url-help" class="screen-reader-text"><?php esc_html_e('Saisissez une URL du même domaine que l\'administration WordPress pour charger l\'aperçu.', 'supersede-css-jlg'); ?></p>
-                <div class="ssc-responsive-toggles">
+                <div class="ssc-responsive-toggles" role="group" aria-label="<?php echo esc_attr__('Basculer le viewport de l\'aperçu', 'supersede-css-jlg'); ?>">
                     <button
+                        type="button"
                         class="button button-primary"
                         data-vp="desktop"
+                        data-width="1440"
+                        data-label="<?php echo esc_attr__('Desktop', 'supersede-css-jlg'); ?>"
                         title="<?php echo esc_attr__('Desktop', 'supersede-css-jlg'); ?>"
                         aria-label="<?php echo esc_attr__('Desktop', 'supersede-css-jlg'); ?>"
+                        aria-pressed="true"
                     >
                         🖥️
                         <span class="screen-reader-text"><?php esc_html_e('Basculer vers la vue ordinateur', 'supersede-css-jlg'); ?></span>
                     </button>
                     <button
+                        type="button"
                         class="button"
                         data-vp="tablet"
+                        data-width="768"
+                        data-label="<?php echo esc_attr__('Tablette', 'supersede-css-jlg'); ?>"
                         title="<?php echo esc_attr__('Tablet', 'supersede-css-jlg'); ?>"
                         aria-label="<?php echo esc_attr__('Tablet', 'supersede-css-jlg'); ?>"
+                        aria-pressed="false"
                     >
                         📲
                         <span class="screen-reader-text"><?php esc_html_e('Basculer vers la vue tablette', 'supersede-css-jlg'); ?></span>
                     </button>
                     <button
+                        type="button"
                         class="button"
                         data-vp="mobile"
+                        data-width="375"
+                        data-label="<?php echo esc_attr__('Mobile', 'supersede-css-jlg'); ?>"
                         title="<?php echo esc_attr__('Mobile', 'supersede-css-jlg'); ?>"
                         aria-label="<?php echo esc_attr__('Mobile', 'supersede-css-jlg'); ?>"
+                        aria-pressed="false"
                     >
                         📱
                         <span class="screen-reader-text"><?php esc_html_e('Basculer vers la vue mobile', 'supersede-css-jlg'); ?></span>
                     </button>
+                </div>
+                <div id="ssc-viewport-status" class="screen-reader-text" role="status" aria-live="polite" aria-atomic="true"></div>
+                <div class="ssc-viewport-width-control">
+                    <label for="ssc-viewport-width"><?php esc_html_e('Largeur personnalisée de l\'aperçu (en pixels)', 'supersede-css-jlg'); ?></label>
+                    <p id="ssc-viewport-width-help" class="description"><?php esc_html_e('Ajustez la largeur pour simuler une taille d\'écran spécifique. Les boutons ci-dessus appliquent des largeurs préconfigurées.', 'supersede-css-jlg'); ?></p>
+                    <div class="ssc-viewport-width-inputs">
+                        <input
+                            type="range"
+                            id="ssc-viewport-width"
+                            min="320"
+                            max="1920"
+                            step="10"
+                            value="1024"
+                            aria-describedby="ssc-viewport-width-help"
+                        >
+                        <label class="screen-reader-text" for="ssc-viewport-width-number"><?php esc_html_e('Saisir une largeur personnalisée (en pixels)', 'supersede-css-jlg'); ?></label>
+                        <input
+                            type="number"
+                            id="ssc-viewport-width-number"
+                            min="320"
+                            max="1920"
+                            step="10"
+                            value="1024"
+                            inputmode="numeric"
+                            aria-describedby="ssc-viewport-width-help"
+                        >
+                    </div>
                 </div>
             </div>
             <div class="ssc-preview-frame-container">
