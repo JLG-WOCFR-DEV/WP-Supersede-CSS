@@ -24,41 +24,47 @@ if (!defined('ABSPATH')) {
             </div>
             <div class="ssc-editor-container">
                 <div id="ssc-editor-panel-desktop" class="ssc-editor-panel active" role="tabpanel" aria-labelledby="ssc-editor-tab-desktop" tabindex="0">
+                    <label class="screen-reader-text" for="ssc-css-editor-desktop"><?php esc_html_e('CSS pour la vue ordinateur', 'supersede-css-jlg'); ?></label>
                     <textarea id="ssc-css-editor-desktop"><?php echo esc_textarea($css_desktop); ?></textarea>
                 </div>
                 <div id="ssc-editor-panel-tablet" class="ssc-editor-panel" role="tabpanel" aria-labelledby="ssc-editor-tab-tablet" tabindex="0" hidden>
+                    <label class="screen-reader-text" for="ssc-css-editor-tablet"><?php esc_html_e('CSS pour la vue tablette', 'supersede-css-jlg'); ?></label>
                     <textarea id="ssc-css-editor-tablet"><?php echo esc_textarea($css_tablet); ?></textarea>
                 </div>
                 <div id="ssc-editor-panel-mobile" class="ssc-editor-panel" role="tabpanel" aria-labelledby="ssc-editor-tab-mobile" tabindex="0" hidden>
+                    <label class="screen-reader-text" for="ssc-css-editor-mobile"><?php esc_html_e('CSS pour la vue mobile', 'supersede-css-jlg'); ?></label>
                     <textarea id="ssc-css-editor-mobile"><?php echo esc_textarea($css_mobile); ?></textarea>
                 </div>
                 <div id="ssc-editor-panel-tutorial" class="ssc-editor-panel ssc-tutorial-content" role="tabpanel" aria-labelledby="ssc-editor-tab-tutorial" tabindex="0" hidden>
-                    <h3><?php esc_html_e('Le Principe : "Desktop First" Simplifié', 'supersede-css-jlg'); ?></h3>
-                    <p><?php esc_html_e('Pensez à votre design comme à la construction d\'une maison :', 'supersede-css-jlg'); ?></p>
-                    <ol>
-                        <li><?php printf(wp_kses_post(__('%1$s C\'est ici que vous définissez tous les styles fondamentaux (couleurs, polices, espacements). Ces styles s\'appliquent par défaut à %2$s.', 'supersede-css-jlg')), '<strong>L\'onglet <code>Desktop</code> est le plan de base de la maison.</strong>', '<strong>toutes les tailles d\'écran</strong>'); ?></li>
-                        <li><?php echo wp_kses_post(__('<strong>L\'onglet <code>Tablette</code> est l\'aménagement pour les pièces moyennes.</strong> Vous ne redessinez pas tout, vous spécifiez uniquement les changements. Par exemple, réduire la taille d\'un titre.', 'supersede-css-jlg')); ?></li>
-                        <li><?php echo wp_kses_post(__('<strong>L\'onglet <code>Mobile</code> est pour les plus petites pièces.</strong> Vous faites les derniers ajustements pour que tout soit parfait sur un petit écran.', 'supersede-css-jlg')); ?></li>
-                    </ol>
-                    <p><?php printf(wp_kses_post(__('En coulisses, le plugin enveloppe automatiquement le code des onglets Tablette et Mobile dans des %s, vous faisant gagner du temps.', 'supersede-css-jlg')), '<strong>@media queries</strong>'); ?></p>
-                    <hr>
-                    <h4><?php esc_html_e('Exemple Concret : Un Titre Adaptatif', 'supersede-css-jlg'); ?></h4>
-                    <p><?php printf(wp_kses_post(__('%1$s Un titre %2$s qui change de taille et d\'alignement.', 'supersede-css-jlg')), '<strong>Objectif :</strong>', '<code>.mon-titre</code>'); ?></p>
-                    <p><?php echo wp_kses_post(__('<strong>1. Onglet <code>Desktop</code> (la base) :</strong>', 'supersede-css-jlg')); ?></p>
-                    <pre class="ssc-code">.mon-titre {
+                    <details>
+                        <summary><?php esc_html_e('Afficher le tutoriel complet sur les breakpoints', 'supersede-css-jlg'); ?></summary>
+                        <h3><?php esc_html_e('Le Principe : "Desktop First" Simplifié', 'supersede-css-jlg'); ?></h3>
+                        <p><?php esc_html_e('Pensez à votre design comme à la construction d\'une maison :', 'supersede-css-jlg'); ?></p>
+                        <ol>
+                            <li><?php printf(wp_kses_post(__('%1$s C\'est ici que vous définissez tous les styles fondamentaux (couleurs, polices, espacements). Ces styles s\'appliquent par défaut à %2$s.', 'supersede-css-jlg')), '<strong>L\'onglet <code>Desktop</code> est le plan de base de la maison.</strong>', '<strong>toutes les tailles d\'écran</strong>'); ?></li>
+                            <li><?php echo wp_kses_post(__('<strong>L\'onglet <code>Tablette</code> est l\'aménagement pour les pièces moyennes.</strong> Vous ne redessinez pas tout, vous spécifiez uniquement les changements. Par exemple, réduire la taille d\'un titre.', 'supersede-css-jlg')); ?></li>
+                            <li><?php echo wp_kses_post(__('<strong>L\'onglet <code>Mobile</code> est pour les plus petites pièces.</strong> Vous faites les derniers ajustements pour que tout soit parfait sur un petit écran.', 'supersede-css-jlg')); ?></li>
+                        </ol>
+                        <p><?php printf(wp_kses_post(__('En coulisses, le plugin enveloppe automatiquement le code des onglets Tablette et Mobile dans des %s, vous faisant gagner du temps.', 'supersede-css-jlg')), '<strong>@media queries</strong>'); ?></p>
+                        <hr>
+                        <h4><?php esc_html_e('Exemple Concret : Un Titre Adaptatif', 'supersede-css-jlg'); ?></h4>
+                        <p><?php printf(wp_kses_post(__('%1$s Un titre %2$s qui change de taille et d\'alignement.', 'supersede-css-jlg')), '<strong>Objectif :</strong>', '<code>.mon-titre</code>'); ?></p>
+                        <p><?php echo wp_kses_post(__('<strong>1. Onglet <code>Desktop</code> (la base) :</strong>', 'supersede-css-jlg')); ?></p>
+                        <pre class="ssc-code">.mon-titre {
   font-size: 48px;
   color: blue;
   font-weight: bold;
 }</pre>
-                    <p><?php echo wp_kses_post(__('<strong>2. Onglet <code>Tablette</code> (premier ajustement) :</strong>', 'supersede-css-jlg')); ?></p>
-                    <pre class="ssc-code">.mon-titre {
+                        <p><?php echo wp_kses_post(__('<strong>2. Onglet <code>Tablette</code> (premier ajustement) :</strong>', 'supersede-css-jlg')); ?></p>
+                        <pre class="ssc-code">.mon-titre {
   font-size: 36px;
 }</pre>
-                    <p><?php echo wp_kses_post(__('<strong>3. Onglet <code>Mobile</code> (ajustement final) :</strong>', 'supersede-css-jlg')); ?></p>
-                    <pre class="ssc-code">.mon-titre {
+                        <p><?php echo wp_kses_post(__('<strong>3. Onglet <code>Mobile</code> (ajustement final) :</strong>', 'supersede-css-jlg')); ?></p>
+                        <pre class="ssc-code">.mon-titre {
   font-size: 24px;
   text-align: center;
 }</pre>
+                    </details>
                 </div>
             </div>
         </div>
@@ -68,7 +74,8 @@ if (!defined('ABSPATH')) {
         <div class="ssc-preview-column" id="ssc-preview-column">
             <div class="ssc-preview-header">
                 <div class="ssc-url-bar">
-                    <input type="url" id="ssc-preview-url" value="<?php echo esc_url($preview_url); ?>">
+                    <label class="screen-reader-text" for="ssc-preview-url"><?php esc_html_e('URL de l\'aperçu', 'supersede-css-jlg'); ?></label>
+                    <input type="url" id="ssc-preview-url" value="<?php echo esc_url($preview_url); ?>" aria-describedby="ssc-preview-url-help">
                     <button class="button" id="ssc-preview-load"><?php echo esc_html__('Load', 'supersede-css-jlg'); ?></button>
                     <button
                         class="button"
@@ -80,6 +87,7 @@ if (!defined('ABSPATH')) {
                         <span class="screen-reader-text"><?php esc_html_e('Cibler un élément', 'supersede-css-jlg'); ?></span>
                     </button>
                 </div>
+                <p id="ssc-preview-url-help" class="screen-reader-text"><?php esc_html_e('Saisissez une URL du même domaine que l\'administration WordPress pour charger l\'aperçu.', 'supersede-css-jlg'); ?></p>
                 <div class="ssc-responsive-toggles">
                     <button
                         class="button button-primary"
@@ -113,7 +121,7 @@ if (!defined('ABSPATH')) {
             <div class="ssc-preview-frame-container">
                 <div id="ssc-picker-overlay"></div>
                 <div id="ssc-picker-tooltip"></div>
-                <iframe id="ssc-preview-frame" sandbox="allow-same-origin allow-forms allow-scripts"></iframe>
+                <iframe id="ssc-preview-frame" title="<?php echo esc_attr__('Aperçu en direct du CSS', 'supersede-css-jlg'); ?>" sandbox="allow-same-origin allow-forms allow-scripts"></iframe>
             </div>
             <div style="padding-top: 8px;">
                 <label><?php esc_html_e('Sélecteur Ciblé :', 'supersede-css-jlg'); ?></label>

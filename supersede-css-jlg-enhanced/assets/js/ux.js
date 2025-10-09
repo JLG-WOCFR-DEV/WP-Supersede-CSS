@@ -400,6 +400,7 @@
                         aria-controls="ssc-cmdp-results"
                         aria-autocomplete="list"
                     >
+                    <div id="ssc-cmdp-status" class="screen-reader-text" role="status" aria-live="polite" aria-atomic="true"></div>
                     <ul id="ssc-cmdp-results" role="listbox" aria-live="polite"></ul>
                 </div>
             </div>`;
@@ -408,6 +409,7 @@
         const cmdp = $('#ssc-cmdp');
         const searchInput = $('#ssc-cmdp-search');
         const resultsList = $('#ssc-cmdp-results');
+        const resultsStatus = $('#ssc-cmdp-status');
         const backgroundElementsSelector = 'body > *:not(#ssc-cmdp)';
         let commands = [];
         let previouslyFocusedCommandElement = null;
@@ -600,6 +602,10 @@
                 if (announcement) {
                     wp.a11y.speak(announcement, 'polite');
                 }
+            }
+            if (resultsStatus && resultsStatus.length) {
+                const announcement = getCommandPaletteResultsAnnouncement(resultCount);
+                resultsStatus.text(announcement);
             }
             resultsList.attr('aria-busy', 'false');
             updatePaletteFocusableElements();

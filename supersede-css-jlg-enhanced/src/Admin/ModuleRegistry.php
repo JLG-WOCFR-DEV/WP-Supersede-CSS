@@ -37,11 +37,12 @@ final class ModuleRegistry
                 'menu_label' => __('Utilities', 'supersede-css-jlg'),
                 'class'     => '\\SSC\\Admin\\Pages\\Utilities',
                 'group'     => 'fundamentals',
+                'requires_codemirror' => true,
                 'assets'    => [
                     'scripts' => [
                         [
                             'path'         => 'assets/js/utilities.js',
-                            'deps'         => ['jquery', 'wp-i18n'],
+                            'deps'         => ['jquery', 'wp-i18n', 'ssc-codemirror-css'],
                             'translations' => true,
                         ],
                     ],
