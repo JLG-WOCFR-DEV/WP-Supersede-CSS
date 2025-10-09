@@ -32,6 +32,7 @@ class DebugCenter extends AbstractPage
                         'clearLogSuccess'                => __('Journal effacé ! La page va se recharger.', 'supersede-css-jlg'),
                         'clearLogError'                  => __('Erreur lors de la suppression du journal.', 'supersede-css-jlg'),
                         'confirmResetAllCss'             => __("ATTENTION : Vous êtes sur le point de supprimer TOUT le CSS généré par Supersede. Cette action est irréversible.\n\nVoulez-vous vraiment continuer ?", 'supersede-css-jlg'),
+                        'confirmResetAllCssSecondary'    => __('Confirmez une seconde fois : cette action est définitive et supprimera toutes vos personnalisations CSS.', 'supersede-css-jlg'),
                         'resetAllCssWorking'             => __('Réinitialisation...', 'supersede-css-jlg'),
                         'resetAllCssSuccess'             => __('Tout le CSS a été réinitialisé !', 'supersede-css-jlg'),
                         'resetAllCssLabel'               => __('Réinitialiser tout le CSS', 'supersede-css-jlg'),

@@ -23,6 +23,18 @@
             return hasI18n ? wpI18n.__(localized, domain) : localized;
         };
 
+        const setVisibility = (element, isVisible) => {
+            if (!element || !element.length) {
+                return;
+            }
+
+            if (isVisible) {
+                element.removeAttr('hidden');
+            } else {
+                element.attr('hidden', 'hidden');
+            }
+        };
+
         const resultPane = $('#ssc-health-json-raw');
         const healthPanel = $('#ssc-health-panel');
         const summaryList = $('#ssc-health-summary-list');
@@ -164,23 +176,28 @@
             }
 
             if (errorNotice.length) {
-                errorNotice.hide().text('');
+                errorNotice.text('');
+                setVisibility(errorNotice, false);
             }
 
             if (summaryMeta.length) {
-                summaryMeta.text('').hide();
+                summaryMeta.text('');
+                setVisibility(summaryMeta, false);
             }
 
             if (summaryGenerated.length) {
-                summaryGenerated.text('').hide();
+                summaryGenerated.text('');
+                setVisibility(summaryGenerated, false);
             }
 
             if (summaryList.length) {
-                summaryList.empty().hide();
+                summaryList.empty();
+                setVisibility(summaryList, false);
             }
 
             if (emptyState.length) {
-                emptyState.text(translate('healthCheckIdleMessage', 'Aucun diagnostic lancé pour le moment.')).show();
+                emptyState.text(translate('healthCheckIdleMessage', 'Aucun diagnostic lancé pour le moment.'));
+                setVisibility(emptyState, true);
             }
 
             if (detailsPanel.length) {
@@ -203,23 +220,28 @@
             healthPanel.attr('aria-busy', 'true');
 
             if (errorNotice.length) {
-                errorNotice.hide().text('');
+                errorNotice.text('');
+                setVisibility(errorNotice, false);
             }
 
             if (emptyState.length) {
-                emptyState.text(translate('healthCheckRunningMessage', 'Analyse du système…')).show();
+                emptyState.text(translate('healthCheckRunningMessage', 'Analyse du système…'));
+                setVisibility(emptyState, true);
             }
 
             if (summaryMeta.length) {
-                summaryMeta.text('').hide();
+                summaryMeta.text('');
+                setVisibility(summaryMeta, false);
             }
 
             if (summaryGenerated.length) {
-                summaryGenerated.text('').hide();
+                summaryGenerated.text('');
+                setVisibility(summaryGenerated, false);
             }
 
             if (summaryList.length) {
-                summaryList.empty().show();
+                summaryList.empty();
+                setVisibility(summaryList, true);
 
                 for (let i = 0; i < 3; i += 1) {
                     const skeleton = $('<li class="ssc-health-placeholder"></li>')
@@ -441,17 +463,19 @@
 
             if (!items.length) {
                 if (emptyState.length) {
-                    emptyState.text(translate('healthCheckEmptyResult', 'Le diagnostic n’a retourné aucune donnée exploitable.')).show();
+                    emptyState.text(translate('healthCheckEmptyResult', 'Le diagnostic n’a retourné aucune donnée exploitable.'));
+                    setVisibility(emptyState, true);
                 }
-                summaryList.hide();
+                setVisibility(summaryList, false);
                 if (summaryMeta.length) {
-                    summaryMeta.text('').hide();
+                    summaryMeta.text('');
+                    setVisibility(summaryMeta, false);
                 }
                 return;
             }
 
             if (emptyState.length) {
-                emptyState.hide();
+                setVisibility(emptyState, false);
             }
 
             const totals = {
@@ -523,7 +547,7 @@
                 summaryList.append(listItem);
             });
 
-            summaryList.show();
+            setVisibility(summaryList, true);
 
             if (summaryMeta.length) {
                 const parts = [
@@ -546,7 +570,8 @@
                     parts.push(sprintf(translate('healthSummaryInfo', '%d info(s)'), totals.info));
                 }
 
-                summaryMeta.text(parts.join(' • ')).show();
+                summaryMeta.text(parts.join(' • '));
+                setVisibility(summaryMeta, true);
             }
 
             if (summaryGenerated.length) {
@@ -608,12 +633,15 @@
                     ));
 
                     if (uniqueMessages.length) {
-                        summaryGenerated.text(uniqueMessages.join(' • ')).show();
+                        summaryGenerated.text(uniqueMessages.join(' • '));
+                        setVisibility(summaryGenerated, true);
                     } else {
-                        summaryGenerated.text('').hide();
+                        summaryGenerated.text('');
+                        setVisibility(summaryGenerated, false);
                     }
                 } else {
-                    summaryGenerated.text('').hide();
+                    summaryGenerated.text('');
+                    setVisibility(summaryGenerated, false);
                 }
             }
 
@@ -624,7 +652,8 @@
 
         const handleSuccess = (response) => {
             if (errorNotice.length) {
-                errorNotice.hide().text('');
+                errorNotice.text('');
+                setVisibility(errorNotice, false);
             }
 
             if (healthPanel.length) {
@@ -653,7 +682,8 @@
 
         const handleError = (message) => {
             if (errorNotice.length) {
-                errorNotice.text(message).show();
+                errorNotice.text(message);
+                setVisibility(errorNotice, true);
             }
 
             if (healthPanel.length) {
@@ -665,19 +695,23 @@
             }
 
             if (summaryMeta.length) {
-                summaryMeta.text('').hide();
+                summaryMeta.text('');
+                setVisibility(summaryMeta, false);
             }
 
             if (summaryGenerated.length) {
-                summaryGenerated.text('').hide();
+                summaryGenerated.text('');
+                setVisibility(summaryGenerated, false);
             }
 
             if (summaryList.length) {
-                summaryList.empty().hide();
+                summaryList.empty();
+                setVisibility(summaryList, false);
             }
 
             if (emptyState.length) {
-                emptyState.text(translate('healthCheckErrorPersistent', 'Impossible de récupérer les données du diagnostic. Réessayez ou consultez Santé du site.')).show();
+                emptyState.text(translate('healthCheckErrorPersistent', 'Impossible de récupérer les données du diagnostic. Réessayez ou consultez Santé du site.'));
+                setVisibility(emptyState, true);
             }
 
             if (detailsPanel.length) {
@@ -770,12 +804,18 @@
         });
 
         $('#ssc-reset-all-css').on('click', function() {
-            if (!confirm(translate('confirmResetAllCss', 'Réinitialiser tout le CSS personnalisé ?'))) {
+            const primaryMessage = translate('confirmResetAllCss', 'Réinitialiser tout le CSS personnalisé ?');
+            if (!confirm(primaryMessage)) {
+                return;
+            }
+
+            const secondaryMessage = translate('confirmResetAllCssSecondary', 'Dernier avertissement : cette action est irréversible. Confirmez la réinitialisation ?');
+            if (!confirm(secondaryMessage)) {
                 return;
             }
 
             const btn = $(this);
-            btn.text(translate('resetAllCssWorking', 'Réinitialisation…')).prop('disabled', true);
+            btn.text(translate('resetAllCssWorking', 'Réinitialisation…')).prop('disabled', true).attr('aria-busy', 'true');
 
             $.ajax({
                 url: SSC.rest.root + 'reset-all-css',
@@ -784,10 +824,10 @@
                 beforeSend: x => x.setRequestHeader('X-WP-Nonce', SSC.rest.nonce)
             }).done(() => {
                 window.sscToast && window.sscToast(translate('resetAllCssSuccess', 'CSS réinitialisé.'));
-                btn.text(translate('resetAllCssLabel', 'Réinitialiser tout le CSS')).prop('disabled', false);
+                btn.text(translate('resetAllCssLabel', 'Réinitialiser tout le CSS')).prop('disabled', false).attr('aria-busy', 'false');
             }).fail(() => {
                 window.sscToast && window.sscToast(translate('resetAllCssError', 'La réinitialisation a échoué.'));
-                btn.text(translate('resetAllCssLabel', 'Réinitialiser tout le CSS')).prop('disabled', false);
+                btn.text(translate('resetAllCssLabel', 'Réinitialiser tout le CSS')).prop('disabled', false).attr('aria-busy', 'false');
             });
         });
 

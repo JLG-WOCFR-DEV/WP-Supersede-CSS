@@ -1,6 +1,9 @@
 .ssc-token-layout {
     grid-template-columns: minmax(280px, 1fr) minmax(0, 2fr);
     transition: grid-template-columns 0.3s ease;
+    align-items: flex-start;
+    margin-top: var(--ssc-space-md);
+    gap: var(--ssc-space-md);
 }
 
 .ssc-token-layout.ssc-help-collapsed {
@@ -11,8 +14,22 @@
     grid-column: 1 / -1;
 }
 
-#ssc-token-help[hidden] {
+#ssc-token-help-content[hidden] {
     display: none !important;
+}
+
+.ssc-token-editor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ssc-space-md);
+}
+
+.ssc-token-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ssc-space-xs);
+    margin-bottom: var(--ssc-space-sm);
 }
 
 .ssc-token-help__header {
@@ -59,6 +76,62 @@
     --ssc-token-duplicate-border: color-mix(in srgb, var(--ssc-border) 70%, var(--ssc-text) 30%);
     --ssc-token-duplicate-outline: color-mix(in srgb, var(--ssc-border) 65%, transparent);
     --ssc-token-duplicate-focus-ring: color-mix(in srgb, var(--ssc-border) 45%, transparent);
+}
+
+@supports not (color-mix(in srgb, black 50%, white 50%)) {
+    .ssc-token-builder {
+        --ssc-token-duplicate-surface: var(--ssc-card);
+        --ssc-token-duplicate-border: var(--ssc-border);
+        --ssc-token-duplicate-outline: rgba(0, 0, 0, 0.04);
+        --ssc-token-duplicate-focus-ring: rgba(0, 0, 0, 0.08);
+    }
+
+    .ssc-token-status {
+        background: var(--ssc-card);
+        color: var(--ssc-text);
+    }
+
+    .ssc-token-status--draft {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .ssc-token-status--ready {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .ssc-token-status--deprecated {
+        background: #e5e7eb;
+        color: #374151;
+    }
+
+    .ssc-token-approval,
+    .ssc-token-approval--pending,
+    .ssc-token-approval--approved,
+    .ssc-token-approval--rejected {
+        background: var(--ssc-card);
+        color: var(--ssc-text);
+    }
+
+    .ssc-token-approval--pending {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .ssc-token-approval--approved {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .ssc-token-approval--rejected {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .ssc-token-status__dot {
+        background: currentColor;
+    }
 }
 
 .ssc-token-group {
