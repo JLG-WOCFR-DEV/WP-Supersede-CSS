@@ -117,10 +117,27 @@ final class Admin
         wp_enqueue_style('ssc-admin', SSC_PLUGIN_URL . 'assets/css/admin.css', ['ssc-foundation'], SSC_VERSION);
         wp_enqueue_script('ssc-ux', SSC_PLUGIN_URL . 'assets/js/ux.js', ['jquery'], SSC_VERSION, true);
 
-        // CodeMirror
-        wp_enqueue_style('ssc-codemirror-style', SSC_PLUGIN_URL . 'assets/codemirror/lib/codemirror.css', [], SSC_VERSION);
-        wp_enqueue_script('ssc-codemirror', SSC_PLUGIN_URL . 'assets/codemirror/lib/codemirror.js', [], SSC_VERSION, true);
-        wp_enqueue_script('ssc-codemirror-css', SSC_PLUGIN_URL . 'assets/codemirror/mode/css/css.js', ['ssc-codemirror'], SSC_VERSION, true);
+        // Register heavy assets so modules can request them when needed.
+        wp_register_style('ssc-codemirror-style', SSC_PLUGIN_URL . 'assets/codemirror/lib/codemirror.css', [], SSC_VERSION);
+        wp_register_script('ssc-codemirror', SSC_PLUGIN_URL . 'assets/codemirror/lib/codemirror.js', [], SSC_VERSION, true);
+        wp_register_script('ssc-codemirror-css', SSC_PLUGIN_URL . 'assets/codemirror/mode/css/css.js', ['ssc-codemirror'], SSC_VERSION, true);
+
+        $requires_codemirror = !empty($module['requires_codemirror']);
+
+        if (!$requires_codemirror) {
+            foreach ($module['assets']['scripts'] ?? [] as $script) {
+                if (!empty($script['requires_codemirror'])) {
+                    $requires_codemirror = true;
+                    break;
+                }
+            }
+        }
+
+        if ($requires_codemirror) {
+            wp_enqueue_style('ssc-codemirror-style');
+            wp_enqueue_script('ssc-codemirror');
+            wp_enqueue_script('ssc-codemirror-css');
+        }
 
         foreach ($module['assets']['scripts'] ?? [] as $script) {
             if (empty($script['path'])) {
