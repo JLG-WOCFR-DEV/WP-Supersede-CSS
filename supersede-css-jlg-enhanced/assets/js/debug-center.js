@@ -1164,131 +1164,612 @@
             triggerDownload(fileName, revision.css || '', 'text/css');
         });
 
-        const logRows = $('#ssc-log-table tbody tr');
-        const logEmptyState = $('#ssc-log-empty');
-        const logFilterBar = $('#ssc-log-filters');
-        const logData = parseJsonFromScript('#ssc-log-data');
+        const approvalsTableBody = $('#ssc-approvals-table tbody');
+        const approvalsEmptyState = $('#ssc-approvals-empty');
+        const approvalsFilter = $('#ssc-approvals-filter');
+        const approvalsRefreshButton = $('#ssc-approvals-refresh');
+        const approvalsPermissions = parseJsonFromScript('#ssc-approvals-permissions');
+        const approvalsInitialData = parseJsonFromScript('#ssc-approvals-data');
 
-        const getLogEntryByIndex = (index) => {
-            if (typeof index === 'undefined') {
-                return null;
-            }
-            const intIndex = parseInt(index, 10);
-            if (Number.isNaN(intIndex) || intIndex < 0 || intIndex >= logData.length) {
-                return null;
-            }
-            return logData[intIndex];
+        const approvalsState = {
+            entries: normalizeApprovals(approvalsInitialData),
+            currentStatus: approvalsFilter.val() || 'pending',
+            canReview: approvalsPermissions && approvalsPermissions.canReview,
         };
 
-        const applyLogFilters = () => {
-            const startValue = $('#ssc-log-date-start').val();
-            const endValue = $('#ssc-log-date-end').val();
-            const userValue = ($('#ssc-log-user').val() || '').toString().toLowerCase();
-            const actionValue = ($('#ssc-log-action').val() || '').toString().toLowerCase();
-
-            const startDate = parseDateValue(startValue);
-            const endDate = parseDateValue(endValue, true);
-
-            let visibleCount = 0;
-
-            logRows.each(function() {
-                const row = $(this);
-                const ts = row.attr('data-timestamp');
-                const user = (row.attr('data-user') || '').toLowerCase();
-                const action = (row.attr('data-action') || '').toLowerCase();
-
-                let isVisible = true;
-
-                if (startDate || endDate) {
-                    const rowDate = ts ? new Date(ts) : null;
-                    if (!rowDate || Number.isNaN(rowDate.getTime())) {
-                        isVisible = false;
-                    } else {
-                        if (startDate && rowDate < startDate) {
-                            isVisible = false;
-                        }
-                        if (endDate && rowDate > endDate) {
-                            isVisible = false;
-                        }
-                    }
-                }
-
-                if (isVisible && userValue) {
-                    isVisible = user.indexOf(userValue) !== -1;
-                }
-
-                if (isVisible && actionValue) {
-                    isVisible = action.indexOf(actionValue) !== -1;
-                }
-
-                row.toggle(isVisible);
-
-                if (isVisible) {
-                    visibleCount += 1;
-                }
-            });
-
-            const hasActiveFilter = Boolean(startValue || endValue || userValue || actionValue);
-            logFilterBar.toggleClass('is-active', hasActiveFilter);
-
-            if (logEmptyState.length) {
-                if (visibleCount === 0) {
-                    logEmptyState.removeAttr('hidden');
-                } else {
-                    logEmptyState.attr('hidden', 'hidden');
-                }
+        function createUserPlaceholder(id) {
+            if (typeof id !== 'number' || Number.isNaN(id) || id <= 0) {
+                return {
+                    id: 0,
+                    name: translate('approvalStatusUnknown', 'Statut inconnu'),
+                    avatar: '',
+                };
             }
-        };
 
-        if (logRows.length) {
-            $('#ssc-log-filters [data-filter]').on('change input', applyLogFilters);
-            applyLogFilters();
+            return {
+                id,
+                name: `#${id}`,
+                avatar: '',
+            };
         }
 
-        const getVisibleLogEntries = () => {
-            const visibleEntries = [];
-            logRows.each(function() {
-                const row = $(this);
-                if (!row.is(':visible')) {
+        function normalizeApprovals(raw) {
+            const list = Array.isArray(raw) ? raw : [];
+
+            return list.map((entry) => {
+                const normalized = { ...entry };
+                const requestedByUser = entry && entry.requested_by_user ? entry.requested_by_user : null;
+                const requestedById = typeof entry.requested_by === 'number' ? entry.requested_by : (requestedByUser && requestedByUser.id) || 0;
+
+                normalized.requested_by = requestedById;
+                if (requestedByUser && typeof requestedByUser === 'object') {
+                    normalized.requested_by_user = {
+                        id: requestedByUser.id || requestedById,
+                        name: requestedByUser.name || createUserPlaceholder(requestedById).name,
+                        avatar: requestedByUser.avatar || '',
+                    };
+                } else {
+                    normalized.requested_by_user = createUserPlaceholder(requestedById);
+                }
+
+                if (entry && entry.decision && typeof entry.decision === 'object') {
+                    const decisionUser = entry.decision_user && typeof entry.decision_user === 'object'
+                        ? entry.decision_user
+                        : (entry.decision.user ? entry.decision.user : null);
+
+                    normalized.decision = {
+                        user_id: typeof entry.decision.user_id === 'number' ? entry.decision.user_id : (decisionUser && decisionUser.id) || 0,
+                        comment: entry.decision.comment || '',
+                        decided_at: entry.decision.decided_at || '',
+                    };
+
+                    if (decisionUser && typeof decisionUser === 'object') {
+                        normalized.decision_user = {
+                            id: decisionUser.id || normalized.decision.user_id,
+                            name: decisionUser.name || createUserPlaceholder(normalized.decision.user_id).name,
+                            avatar: decisionUser.avatar || '',
+                        };
+                    } else {
+                        normalized.decision_user = normalized.decision.user_id
+                            ? createUserPlaceholder(normalized.decision.user_id)
+                            : null;
+                    }
+                } else {
+                    normalized.decision = null;
+                    normalized.decision_user = null;
+                }
+
+                normalized.status = (normalized.status || 'pending').toLowerCase();
+
+                return normalized;
+            });
+        }
+
+        function filterApprovalsByStatus(status) {
+            const normalizedStatus = (status || '').toLowerCase();
+            if (!normalizedStatus || normalizedStatus === 'all') {
+                return approvalsState.entries;
+            }
+
+            return approvalsState.entries.filter((entry) => (entry.status || 'pending') === normalizedStatus);
+        }
+
+        function buildApprovalRow(entry) {
+            const tokenName = entry.token && entry.token.name ? entry.token.name : '';
+            const tokenContext = entry.token && entry.token.context ? entry.token.context : '';
+            const status = (entry.status || 'pending').toLowerCase();
+            const statusLabelMap = {
+                pending: translate('approvalStatusPending', 'En attente'),
+                approved: translate('approvalStatusApproved', 'Approuvé'),
+                changes_requested: translate('approvalStatusChangesRequested', 'Changements demandés'),
+            };
+            const statusLabel = statusLabelMap[status] || translate('approvalStatusUnknown', 'Statut inconnu');
+            const statusClass = `ssc-approval-badge--${status.replace(/[^a-z0-9_-]/g, '')}`;
+            const requestedBy = entry.requested_by_user || { name: '', avatar: '' };
+            const requestedAt = formatDateTime(entry.requested_at || '');
+            const comment = entry.comment || '';
+            const decision = entry.decision || null;
+            const decisionUser = entry.decision_user || null;
+            const decisionComment = decision ? (decision.comment || '') : '';
+            const decisionAt = decision ? formatDateTime(decision.decided_at || '') : '';
+
+            const row = $('<tr>').attr('data-approval-id', entry.id || '');
+
+            const tokenCell = $('<td>');
+            const tokenWrapper = $('<div>').addClass('ssc-approval-token');
+            tokenWrapper.append($('<code>').text(tokenName));
+            if (tokenContext) {
+                tokenWrapper.append($('<span>').addClass('ssc-approval-context').text(tokenContext));
+            }
+            tokenCell.append(tokenWrapper);
+
+            const statusCell = $('<td>').append(
+                $('<span>').addClass(`ssc-approval-badge ${statusClass}`).text(statusLabel)
+            );
+
+            const requestedCell = $('<td>');
+            const metaWrapper = $('<div>').addClass('ssc-approval-meta');
+            if (requestedBy.avatar) {
+                metaWrapper.append($('<img>', {
+                    src: requestedBy.avatar,
+                    alt: '',
+                    class: 'ssc-approval-avatar',
+                }));
+            }
+            const metaText = $('<div>');
+            metaText.append($('<strong>').text(requestedBy.name || translate('approvalStatusUnknown', 'Statut inconnu')));
+            if (requestedAt) {
+                metaText.append($('<p>').addClass('description ssc-description--flush').text(
+                    translate('approvalsRequestedAt', 'Envoyé le %s').replace('%s', requestedAt)
+                ));
+            }
+            metaWrapper.append(metaText);
+            requestedCell.append(metaWrapper);
+
+            const commentCell = $('<td>');
+            if (comment) {
+                commentCell.append($('<p>').addClass('ssc-approval-comment').text(`“${comment}”`));
+            } else {
+                commentCell.append($('<p>').addClass('description ssc-description--flush').text(
+                    translate('approvalsNoComment', 'Aucun commentaire fourni lors de la demande.')
+                ));
+            }
+
+            if (decisionComment && decisionUser && decisionUser.name) {
+                const decisionBase = translate('approvalsDecisionBy', 'Décision : %1$s le %2$s');
+                const decisionLabel = decisionAt
+                    ? sprintf(decisionBase, decisionUser.name, decisionAt)
+                    : sprintf(decisionBase, decisionUser.name, '').replace(/\s+le\s*$/u, '').trim();
+                const decisionMessage = decisionLabel ? `${decisionLabel} : “${decisionComment}”` : `“${decisionComment}”`;
+                commentCell.append(
+                    $('<p>').addClass('ssc-approval-decision').text(decisionMessage)
+                );
+            }
+
+            const actionsCell = $('<td>');
+            if (status === 'pending' && approvalsState.canReview) {
+                const actionsWrapper = $('<div>').addClass('ssc-approval-actions');
+                actionsWrapper.append($('<button>', {
+                    type: 'button',
+                    class: 'button button-secondary ssc-approval-approve',
+                    text: translate('approvalsDecisionApprove', 'Approuver'),
+                    'data-approval-id': entry.id || '',
+                }));
+                actionsWrapper.append($('<button>', {
+                    type: 'button',
+                    class: 'button button-link-delete ssc-approval-request-changes',
+                    text: translate('approvalsDecisionRequestChanges', 'Demander des changements'),
+                    'data-approval-id': entry.id || '',
+                }));
+                actionsCell.append(actionsWrapper);
+            } else {
+                actionsCell.append($('<p>').addClass('description ssc-description--flush').text(
+                    translate('approvalsNoActions', 'Aucune action disponible.')
+                ));
+            }
+
+            row.append(tokenCell, statusCell, requestedCell, commentCell, actionsCell);
+            return row;
+        }
+
+        function renderApprovals() {
+            if (!approvalsTableBody.length) {
+                return;
+            }
+
+            const entries = filterApprovalsByStatus(approvalsState.currentStatus);
+            approvalsTableBody.empty();
+            setVisibility(approvalsEmptyState, entries.length === 0);
+
+            entries.forEach((entry) => {
+                approvalsTableBody.append(buildApprovalRow(entry));
+            });
+        }
+
+        function setApprovalsLoading(isLoading) {
+            if (!approvalsRefreshButton.length) {
+                return;
+            }
+
+            approvalsRefreshButton.prop('disabled', !!isLoading);
+            approvalsRefreshButton.attr('aria-busy', isLoading ? 'true' : 'false');
+        }
+
+        function fetchApprovals(status) {
+            if (!SSC || !SSC.rest || !SSC.rest.root) {
+                renderApprovals();
+                return;
+            }
+
+            const targetStatus = status || approvalsState.currentStatus || 'pending';
+            approvalsState.currentStatus = targetStatus;
+            setApprovalsLoading(true);
+
+            $.ajax({
+                url: SSC.rest.root + 'approvals',
+                method: 'GET',
+                data: { status: targetStatus },
+                beforeSend: (xhr) => xhr.setRequestHeader('X-WP-Nonce', SSC.rest.nonce),
+            }).done((response) => {
+                if (response && Array.isArray(response.approvals)) {
+                    approvalsState.entries = normalizeApprovals(response.approvals);
+                }
+                renderApprovals();
+            }).fail(() => {
+                window.sscToast && window.sscToast(translate('approvalsFetchError', 'Impossible de récupérer les demandes d’approbation.'));
+            }).always(() => {
+                setApprovalsLoading(false);
+            });
+        }
+
+        function handleApprovalDecision(event, decision) {
+            event.preventDefault();
+            const button = $(event.currentTarget);
+            const approvalId = button.attr('data-approval-id');
+
+            if (!approvalId) {
+                return;
+            }
+
+            if (!SSC || !SSC.rest || !SSC.rest.root) {
+                window.sscToast && window.sscToast(translate('approvalsDecisionError', 'Impossible d’enregistrer la décision.'));
+                return;
+            }
+
+            if (decision === 'approve') {
+                const confirmed = window.confirm(translate('approvalsDecisionConfirmApprove', 'Confirmez-vous l’approbation de ce token ?'));
+                if (!confirmed) {
                     return;
                 }
-                const index = row.attr('data-index');
-                const entry = getLogEntryByIndex(index);
-                if (entry) {
-                    visibleEntries.push(entry);
+            }
+
+            let comment = '';
+            if (decision === 'changes_requested') {
+                const confirmed = window.confirm(translate('approvalsDecisionConfirmChanges', 'Confirmez-vous la demande de changements ? Un commentaire est requis.'));
+                if (!confirmed) {
+                    return;
                 }
+                comment = window.prompt(translate('approvalsDecisionPromptComment', 'Précisez un commentaire pour guider l’auteur :')) || '';
+                if (!comment.trim()) {
+                    window.sscToast && window.sscToast(translate('approvalsDecisionCommentRequired', 'Un commentaire est obligatoire pour demander des changements.'));
+                    return;
+                }
+            }
+
+            button.prop('disabled', true).attr('aria-busy', 'true');
+
+            $.ajax({
+                url: `${SSC.rest.root}approvals/${encodeURIComponent(approvalId)}`,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ decision, comment }),
+                beforeSend: (xhr) => xhr.setRequestHeader('X-WP-Nonce', SSC.rest.nonce),
+            }).done(() => {
+                window.sscToast && window.sscToast(translate('approvalsDecisionSuccess', 'Décision enregistrée.'));
+                fetchApprovals(approvalsState.currentStatus);
+            }).fail(() => {
+                window.sscToast && window.sscToast(translate('approvalsDecisionError', 'Impossible d’enregistrer la décision.'));
+            }).always(() => {
+                button.prop('disabled', false).attr('aria-busy', 'false');
             });
-            return visibleEntries;
+        }
+
+        if (approvalsFilter.length) {
+            approvalsFilter.on('change', function() {
+                approvalsState.currentStatus = approvalsFilter.val() || 'pending';
+                fetchApprovals(approvalsState.currentStatus);
+            });
+        }
+
+        if (approvalsRefreshButton.length) {
+            approvalsRefreshButton.on('click', () => {
+                fetchApprovals(approvalsState.currentStatus);
+            });
+        }
+
+        approvalsTableBody.on('click', '.ssc-approval-approve', (event) => handleApprovalDecision(event, 'approve'));
+        approvalsTableBody.on('click', '.ssc-approval-request-changes', (event) => handleApprovalDecision(event, 'changes_requested'));
+
+        renderApprovals();
+
+        const activityTableBody = $('#ssc-activity-log-table tbody');
+        const activityEmptyState = $('#ssc-activity-empty');
+        const activitySummary = $('#ssc-activity-summary');
+        const activityPrev = $('#ssc-activity-prev');
+        const activityNext = $('#ssc-activity-next');
+        const activityIndicator = $('#ssc-activity-page-indicator');
+        const activityEventField = $('#ssc-activity-event');
+        const activityEntityField = $('#ssc-activity-entity');
+        const activityWindowField = $('#ssc-activity-window');
+        const activityPerPageField = $('#ssc-activity-per-page');
+        const activityApplyButton = $('#ssc-activity-apply');
+        const activityResetButton = $('#ssc-activity-reset');
+        const activityExportJson = $('#ssc-activity-export-json');
+        const activityExportCsv = $('#ssc-activity-export-csv');
+        const activityInitialData = parseJsonFromScript('#ssc-activity-log-data');
+
+        const activityLabels = {
+            date: translate('activityColumnDate', 'Date'),
+            event: translate('activityColumnEvent', 'Événement'),
+            entity: translate('activityColumnEntity', 'Entité'),
+            author: translate('activityColumnAuthor', 'Auteur'),
+            details: translate('activityColumnDetails', 'Détails'),
+            system: translate('activitySystemUser', 'Système'),
         };
 
-        $('#ssc-export-log-json').on('click', function() {
-            const entries = getVisibleLogEntries();
-            if (!entries.length) {
-                window.sscToast && window.sscToast(translate('emptySelectionMessage', 'Aucune donnée à exporter.'));
+        const activityState = {
+            entries: Array.isArray(activityInitialData.entries) ? activityInitialData.entries : [],
+            pagination: activityInitialData.pagination || { total: 0, total_pages: 1, page: 1 },
+            filters: {
+                event: activityInitialData.filters ? activityInitialData.filters.event || '' : '',
+                entity_type: activityInitialData.filters ? activityInitialData.filters.entity_type || '' : '',
+                window: activityInitialData.filters ? activityInitialData.filters.window || '' : '',
+                per_page: 20,
+            },
+        };
+
+        function updateActivityFormInputs() {
+            if (activityEventField.length) {
+                activityEventField.val(activityState.filters.event || '');
+            }
+            if (activityEntityField.length) {
+                activityEntityField.val(activityState.filters.entity_type || '');
+            }
+            if (activityWindowField.length) {
+                activityWindowField.val(activityState.filters.window || '');
+            }
+            if (activityPerPageField.length) {
+                activityPerPageField.val(String(activityState.filters.per_page || 20));
+            }
+        }
+
+        function renderActivityRows() {
+            if (!activityTableBody.length) {
                 return;
             }
 
-            triggerDownload('supersede-css-log.json', JSON.stringify(entries, null, 2), 'application/json');
-        });
+            activityTableBody.empty();
 
-        $('#ssc-export-log-csv').on('click', function() {
-            const entries = getVisibleLogEntries();
-            if (!entries.length) {
-                window.sscToast && window.sscToast(translate('emptySelectionMessage', 'Aucune donnée à exporter.'));
-                return;
-            }
+            activityState.entries.forEach((entry) => {
+                const createdAt = entry.created_at || '';
+                const formattedDate = formatDateTime(createdAt) || createdAt;
+                const eventName = entry.event || '';
+                const entityType = entry.entity_type || '';
+                const entityId = entry.entity_id || '';
+                const author = entry.created_by && entry.created_by.name ? entry.created_by.name : activityLabels.system;
+                const details = entry.details || {};
 
-            const csvHeader = ['date', 'user', 'action', 'data'];
-            const csvRows = entries.map(item => {
-                const rowData = [item.t || '', item.user || '', item.action || '', JSON.stringify(item.data || {})];
-                return rowData.map(value => {
-                    const safeValue = String(value).replace(/"/g, '""');
-                    return `"${safeValue}"`;
-                }).join(',');
+                const row = $('<tr>').attr('data-entry-id', entry.id || '');
+                row.append($('<td>').attr('data-label', activityLabels.date).append(
+                    $('<time>').attr('datetime', createdAt).text(formattedDate)
+                ));
+                row.append($('<td>').attr('data-label', activityLabels.event).append(
+                    $('<code>').text(eventName)
+                ));
+
+                const entityCell = $('<td>').attr('data-label', activityLabels.entity);
+                entityCell.append($('<span>').addClass('ssc-activity-entity').text(entityType));
+                if (entityId) {
+                    entityCell.append($('<p>').addClass('description ssc-description--flush').text(entityId));
+                }
+                row.append(entityCell);
+
+                row.append($('<td>').attr('data-label', activityLabels.author).text(author));
+
+                row.append(
+                    $('<td>').attr('data-label', activityLabels.details).append(
+                        $('<code>').text(JSON.stringify(details))
+                    )
+                );
+
+                activityTableBody.append(row);
             });
 
-            const csvContent = [csvHeader.join(','), ...csvRows].join('\n');
-            triggerDownload('supersede-css-log.csv', csvContent, 'text/csv');
-        });
+            setVisibility(activityEmptyState, activityState.entries.length === 0);
+        }
+
+        function updateActivitySummary() {
+            if (!activitySummary.length) {
+                return;
+            }
+
+            const total = activityState.pagination.total || 0;
+            const page = activityState.pagination.page || 1;
+            const totalPages = activityState.pagination.total_pages || 1;
+            activitySummary.text(
+                sprintf(translate('activityPaginationSummary', 'Page %1$s sur %2$s — %3$s entrée(s)'), page, totalPages, total)
+            );
+        }
+
+        function updateActivityPaginationControls() {
+            if (!activityPrev.length || !activityNext.length || !activityIndicator.length) {
+                return;
+            }
+
+            const page = activityState.pagination.page || 1;
+            const totalPages = activityState.pagination.total_pages || 1;
+
+            activityPrev.prop('disabled', page <= 1);
+            activityNext.prop('disabled', page >= totalPages);
+            activityIndicator.text(`${page} / ${totalPages}`);
+        }
+
+        function setActivityLoading(isLoading) {
+            if (activityApplyButton.length) {
+                activityApplyButton.prop('disabled', !!isLoading);
+                activityApplyButton.attr('aria-busy', isLoading ? 'true' : 'false');
+            }
+            if (activityExportJson.length) {
+                activityExportJson.prop('disabled', !!isLoading);
+            }
+            if (activityExportCsv.length) {
+                activityExportCsv.prop('disabled', !!isLoading);
+            }
+            if (activityPrev.length) {
+                activityPrev.prop('disabled', !!isLoading || (activityState.pagination.page || 1) <= 1);
+            }
+            if (activityNext.length) {
+                const totalPages = activityState.pagination.total_pages || 1;
+                activityNext.prop('disabled', !!isLoading || (activityState.pagination.page || 1) >= totalPages);
+            }
+            if (activitySummary.length) {
+                if (isLoading) {
+                    activitySummary.text(translate('activityLoading', 'Chargement du journal…'));
+                }
+            }
+        }
+
+        function fetchActivityLog(options = {}) {
+            if (!SSC || !SSC.rest || !SSC.rest.root) {
+                renderActivityRows();
+                updateActivitySummary();
+                updateActivityPaginationControls();
+                return;
+            }
+
+            const nextFilters = {
+                ...activityState.filters,
+                ...(options.filters || {}),
+            };
+
+            const nextPage = options.page || activityState.pagination.page || 1;
+            const perPage = parseInt(nextFilters.per_page, 10) || 20;
+
+            setActivityLoading(true);
+
+            $.ajax({
+                url: SSC.rest.root + 'activity-log',
+                method: 'GET',
+                data: {
+                    page: nextPage,
+                    per_page: perPage,
+                    event: nextFilters.event || undefined,
+                    entity_type: nextFilters.entity_type || undefined,
+                    window: nextFilters.window || undefined,
+                },
+                beforeSend: (xhr) => xhr.setRequestHeader('X-WP-Nonce', SSC.rest.nonce),
+            }).done((response) => {
+                if (response) {
+                    activityState.entries = Array.isArray(response.entries) ? response.entries : [];
+                    activityState.pagination = response.pagination || { total: 0, total_pages: 1, page: nextPage };
+                    activityState.filters = {
+                        event: nextFilters.event || '',
+                        entity_type: nextFilters.entity_type || '',
+                        window: nextFilters.window || '',
+                        per_page: perPage,
+                    };
+                }
+
+                renderActivityRows();
+                updateActivitySummary();
+                updateActivityPaginationControls();
+            }).fail(() => {
+                window.sscToast && window.sscToast(translate('activityFetchError', 'Impossible de charger le journal d’activité.'));
+            }).always(() => {
+                setActivityLoading(false);
+            });
+        }
+
+        function collectFiltersFromForm() {
+            return {
+                event: activityEventField.length ? (activityEventField.val() || '').toString().trim() : '',
+                entity_type: activityEntityField.length ? (activityEntityField.val() || '').toString().trim() : '',
+                window: activityWindowField.length ? (activityWindowField.val() || '').toString().trim() : '',
+                per_page: activityPerPageField.length ? parseInt(activityPerPageField.val(), 10) || 20 : 20,
+            };
+        }
+
+        if (activityApplyButton.length) {
+            activityApplyButton.on('click', () => {
+                fetchActivityLog({ page: 1, filters: collectFiltersFromForm() });
+            });
+        }
+
+        if (activityResetButton.length) {
+            activityResetButton.on('click', () => {
+                activityEventField.val('');
+                activityEntityField.val('');
+                activityWindowField.val('');
+                activityPerPageField.val('20');
+                window.sscToast && window.sscToast(translate('activityFiltersCleared', 'Filtres réinitialisés.'));
+                fetchActivityLog({ page: 1, filters: { event: '', entity_type: '', window: '', per_page: 20 } });
+            });
+        }
+
+        if (activityPrev.length) {
+            activityPrev.on('click', () => {
+                const currentPage = activityState.pagination.page || 1;
+                if (currentPage > 1) {
+                    fetchActivityLog({ page: currentPage - 1 });
+                }
+            });
+        }
+
+        if (activityNext.length) {
+            activityNext.on('click', () => {
+                const currentPage = activityState.pagination.page || 1;
+                const totalPages = activityState.pagination.total_pages || 1;
+                if (currentPage < totalPages) {
+                    fetchActivityLog({ page: currentPage + 1 });
+                }
+            });
+        }
+
+        function exportActivityLog(format) {
+            if (!SSC || !SSC.rest || !SSC.rest.root) {
+                window.sscToast && window.sscToast(translate('activityExportError', 'Impossible d’exporter le journal.'));
+                return;
+            }
+
+            const params = {
+                format,
+                event: activityState.filters.event || undefined,
+                entity_type: activityState.filters.entity_type || undefined,
+                window: activityState.filters.window || undefined,
+            };
+
+            setActivityLoading(true);
+            window.sscToast && window.sscToast(translate('activityExportPreparing', 'Préparation de l’export…'));
+
+            $.ajax({
+                url: SSC.rest.root + 'activity-log/export',
+                method: 'GET',
+                data: params,
+                dataType: format === 'csv' ? 'text' : 'json',
+                beforeSend: (xhr) => xhr.setRequestHeader('X-WP-Nonce', SSC.rest.nonce),
+            }).done((response, statusText, xhr) => {
+                if (format === 'csv') {
+                    const disposition = xhr.getResponseHeader('content-disposition') || '';
+                    const fallbackName = 'ssc-activity-log.csv';
+                    let downloadName = fallbackName;
+                    const match = disposition.match(/filename="?([^";]+)"?/i);
+                    if (match && match[1]) {
+                        downloadName = match[1];
+                    }
+                    triggerDownload(downloadName, response, 'text/csv');
+                } else {
+                    const payload = typeof response === 'string' ? response : JSON.stringify(response, null, 2);
+                    triggerDownload('ssc-activity-log.json', payload, 'application/json');
+                }
+                window.sscToast && window.sscToast(translate('activityExportReady', 'Export prêt.'));
+            }).fail(() => {
+                window.sscToast && window.sscToast(translate('activityExportError', 'Impossible d’exporter le journal.'));
+            }).always(() => {
+                setActivityLoading(false);
+            });
+        }
+
+        if (activityExportJson.length) {
+            activityExportJson.on('click', () => exportActivityLog('json'));
+        }
+
+        if (activityExportCsv.length) {
+            activityExportCsv.on('click', () => exportActivityLog('csv'));
+        }
+
+        updateActivityFormInputs();
+        renderActivityRows();
+        updateActivitySummary();
+        updateActivityPaginationControls();
     });
 })(jQuery);

@@ -1007,3 +1007,116 @@ body[class*="page_supersede-css-jlg"] .ssc-layout .ssc-main-content {
     background: color-mix(in srgb, var(--ssc-card) 80%, transparent);
     border-color: color-mix(in srgb, var(--ssc-border) 80%, transparent);
 }
+
+/* Approvals -------------------------------------------------------------- */
+.ssc-approvals-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--ssc-space-xs);
+    flex-wrap: wrap;
+}
+
+.ssc-approval-token {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ssc-approval-context {
+    display: inline-flex;
+    align-items: center;
+    font-size: var(--ssc-font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ssc-muted);
+}
+
+.ssc-approval-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 12px;
+    border-radius: var(--ssc-radius-pill);
+    font-size: var(--ssc-font-size-xs);
+    font-weight: var(--ssc-font-weight-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid var(--ssc-border-subtle);
+    background: color-mix(in srgb, var(--ssc-muted) 12%, var(--ssc-card) 88%);
+    color: color-mix(in srgb, var(--ssc-muted) 70%, var(--ssc-text) 30%);
+}
+
+.ssc-approval-badge--pending {
+    border-color: color-mix(in srgb, var(--ssc-warning) 35%, var(--ssc-border));
+    background: color-mix(in srgb, var(--ssc-warning) 18%, transparent);
+    color: color-mix(in srgb, var(--ssc-warning) 65%, var(--ssc-text) 35%);
+}
+
+.ssc-approval-badge--approved {
+    border-color: color-mix(in srgb, var(--ssc-success) 35%, var(--ssc-border));
+    background: color-mix(in srgb, var(--ssc-success) 18%, transparent);
+    color: color-mix(in srgb, var(--ssc-success) 70%, var(--ssc-text) 30%);
+}
+
+.ssc-approval-badge--changes_requested {
+    border-color: color-mix(in srgb, var(--ssc-danger) 35%, var(--ssc-border));
+    background: color-mix(in srgb, var(--ssc-danger) 18%, transparent);
+    color: color-mix(in srgb, var(--ssc-danger) 70%, var(--ssc-text) 30%);
+}
+
+.ssc-approval-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ssc-approval-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 0 0 1px var(--ssc-border-subtle);
+}
+
+.ssc-approval-comment {
+    margin: 0;
+}
+
+.ssc-approval-decision {
+    margin: var(--ssc-space-050) 0 0;
+    font-size: var(--ssc-font-size-sm);
+    color: var(--ssc-muted);
+}
+
+.ssc-approval-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ssc-approval-actions .button {
+    justify-content: flex-start;
+}
+
+/* Activity log ----------------------------------------------------------- */
+.ssc-activity-meta {
+    margin-bottom: var(--ssc-space-sm);
+}
+
+.ssc-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--ssc-space-xs);
+    margin-top: var(--ssc-space-sm);
+}
+
+.ssc-activity-page-indicator {
+    font-weight: var(--ssc-font-weight-semibold);
+    color: var(--ssc-muted);
+}
+
+.ssc-pagination .button[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
