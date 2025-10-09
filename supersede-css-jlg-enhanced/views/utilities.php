@@ -68,10 +68,22 @@ if (!defined('ABSPATH')) {
                 </div>
             </div>
         </div>
-        <button type="button" id="ssc-preview-toggle" class="button ssc-preview-toggle" data-show="<?php echo esc_attr__('Afficher l\'aperçu', 'supersede-css-jlg'); ?>" data-hide="<?php echo esc_attr__('Masquer l\'aperçu', 'supersede-css-jlg'); ?>" aria-expanded="false" aria-controls="ssc-preview-column">
+        <button
+            type="button"
+            id="ssc-preview-toggle"
+            class="button ssc-preview-toggle"
+            data-show="<?php echo esc_attr__('Afficher l\'aperçu', 'supersede-css-jlg'); ?>"
+            data-hide="<?php echo esc_attr__('Masquer l\'aperçu', 'supersede-css-jlg'); ?>"
+            data-announce-show="<?php echo esc_attr__('Colonne d\'aperçu affichée.', 'supersede-css-jlg'); ?>"
+            data-announce-hide="<?php echo esc_attr__('Colonne d\'aperçu masquée.', 'supersede-css-jlg'); ?>"
+            aria-expanded="false"
+            aria-controls="ssc-preview-column"
+            aria-label="<?php echo esc_attr__('Afficher l\'aperçu', 'supersede-css-jlg'); ?>"
+        >
             <?php echo esc_html__('Afficher l\'aperçu', 'supersede-css-jlg'); ?>
         </button>
-        <div class="ssc-preview-column" id="ssc-preview-column">
+        <p id="ssc-preview-visibility-status" class="screen-reader-text" role="status" aria-live="polite" aria-atomic="true"></p>
+        <div class="ssc-preview-column" id="ssc-preview-column" tabindex="-1" aria-hidden="false">
             <div class="ssc-preview-header">
                 <div class="ssc-url-bar">
                     <label class="screen-reader-text" for="ssc-preview-url"><?php esc_html_e('URL de l\'aperçu', 'supersede-css-jlg'); ?></label>
@@ -88,40 +100,96 @@ if (!defined('ABSPATH')) {
                     </button>
                 </div>
                 <p id="ssc-preview-url-help" class="screen-reader-text"><?php esc_html_e('Saisissez une URL du même domaine que l\'administration WordPress pour charger l\'aperçu.', 'supersede-css-jlg'); ?></p>
-                <div class="ssc-responsive-toggles">
+                <div class="ssc-responsive-toggles" role="group" aria-label="<?php echo esc_attr__('Basculer le viewport de l\'aperçu', 'supersede-css-jlg'); ?>">
                     <button
+                        type="button"
                         class="button button-primary"
                         data-vp="desktop"
+                        data-width="1440"
+                        data-label="<?php echo esc_attr__('Desktop', 'supersede-css-jlg'); ?>"
                         title="<?php echo esc_attr__('Desktop', 'supersede-css-jlg'); ?>"
                         aria-label="<?php echo esc_attr__('Desktop', 'supersede-css-jlg'); ?>"
+                        aria-pressed="true"
                     >
                         🖥️
                         <span class="screen-reader-text"><?php esc_html_e('Basculer vers la vue ordinateur', 'supersede-css-jlg'); ?></span>
                     </button>
                     <button
+                        type="button"
                         class="button"
                         data-vp="tablet"
+                        data-width="768"
+                        data-label="<?php echo esc_attr__('Tablette', 'supersede-css-jlg'); ?>"
                         title="<?php echo esc_attr__('Tablet', 'supersede-css-jlg'); ?>"
                         aria-label="<?php echo esc_attr__('Tablet', 'supersede-css-jlg'); ?>"
+                        aria-pressed="false"
                     >
                         📲
                         <span class="screen-reader-text"><?php esc_html_e('Basculer vers la vue tablette', 'supersede-css-jlg'); ?></span>
                     </button>
                     <button
+                        type="button"
                         class="button"
                         data-vp="mobile"
+                        data-width="375"
+                        data-label="<?php echo esc_attr__('Mobile', 'supersede-css-jlg'); ?>"
                         title="<?php echo esc_attr__('Mobile', 'supersede-css-jlg'); ?>"
                         aria-label="<?php echo esc_attr__('Mobile', 'supersede-css-jlg'); ?>"
+                        aria-pressed="false"
                     >
                         📱
                         <span class="screen-reader-text"><?php esc_html_e('Basculer vers la vue mobile', 'supersede-css-jlg'); ?></span>
                     </button>
                 </div>
+                <div id="ssc-viewport-status" class="screen-reader-text" role="status" aria-live="polite" aria-atomic="true"></div>
+                <div class="ssc-viewport-width-control">
+                    <label for="ssc-viewport-width"><?php esc_html_e('Largeur personnalisée de l\'aperçu (en pixels)', 'supersede-css-jlg'); ?></label>
+                    <p id="ssc-viewport-width-help" class="description"><?php esc_html_e('Ajustez la largeur pour simuler une taille d\'écran spécifique. Les boutons ci-dessus appliquent des largeurs préconfigurées.', 'supersede-css-jlg'); ?></p>
+                    <div class="ssc-viewport-width-inputs">
+                        <input
+                            type="range"
+                            id="ssc-viewport-width"
+                            min="320"
+                            max="1920"
+                            step="10"
+                            value="1024"
+                            aria-describedby="ssc-viewport-width-help"
+                        >
+                        <label class="screen-reader-text" for="ssc-viewport-width-number"><?php esc_html_e('Saisir une largeur personnalisée (en pixels)', 'supersede-css-jlg'); ?></label>
+                        <input
+                            type="number"
+                            id="ssc-viewport-width-number"
+                            min="320"
+                            max="1920"
+                            step="10"
+                            value="1024"
+                            inputmode="numeric"
+                            aria-describedby="ssc-viewport-width-help"
+                        >
+                    </div>
+                </div>
             </div>
             <div class="ssc-preview-frame-container">
-                <div id="ssc-picker-overlay"></div>
-                <div id="ssc-picker-tooltip"></div>
-                <iframe id="ssc-preview-frame" title="<?php echo esc_attr__('Aperçu en direct du CSS', 'supersede-css-jlg'); ?>" sandbox="allow-same-origin allow-forms allow-scripts"></iframe>
+                <div class="ssc-preview-frame-viewport">
+                    <div id="ssc-picker-overlay"></div>
+                    <div id="ssc-picker-tooltip"></div>
+                    <iframe id="ssc-preview-frame" title="<?php echo esc_attr__('Aperçu en direct du CSS', 'supersede-css-jlg'); ?>" sandbox="allow-same-origin allow-forms allow-scripts"></iframe>
+                    <div
+                        id="ssc-preview-resize-handle"
+                        class="ssc-preview-resize-handle"
+                        role="slider"
+                        tabindex="0"
+                        aria-label="<?php echo esc_attr__('Glisser pour redimensionner la largeur de l\'aperçu', 'supersede-css-jlg'); ?>"
+                        aria-describedby="ssc-viewport-width-help"
+                        aria-orientation="horizontal"
+                        aria-valuemin="320"
+                        aria-valuemax="1920"
+                        aria-valuenow="1024"
+                        aria-valuetext="<?php echo esc_attr__('1024 pixels', 'supersede-css-jlg'); ?>"
+                    >
+                        <span class="ssc-resize-grip" aria-hidden="true"></span>
+                    </div>
+                </div>
             </div>
             <div style="padding-top: 8px;">
                 <label><?php esc_html_e('Sélecteur Ciblé :', 'supersede-css-jlg'); ?></label>
