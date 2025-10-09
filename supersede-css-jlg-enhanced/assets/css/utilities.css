@@ -114,3 +114,66 @@
 .ssc-viewport-width-inputs input[type="number"] {
     width: 96px;
 }
+
+.ssc-preview-frame-container {
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    padding: 0 12px;
+    box-sizing: border-box;
+}
+
+.ssc-preview-frame-viewport {
+    --ssc-preview-width: 1024px;
+    position: relative;
+    width: min(100%, var(--ssc-preview-width, 1024px));
+    height: 100%;
+    margin: 0 auto;
+    transition: width 0.18s ease;
+}
+
+.ssc-preview-frame-viewport.is-resizing {
+    transition: none;
+}
+
+.ssc-preview-resize-handle {
+    position: absolute;
+    top: 0;
+    right: -12px;
+    width: 20px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: ew-resize;
+    touch-action: none;
+    border: none;
+    background: none;
+    padding: 0;
+    outline: none;
+    z-index: 5;
+}
+
+.ssc-preview-resize-handle:focus-visible {
+    outline: 2px solid var(--wp-admin-theme-color, #2271b1);
+    outline-offset: 2px;
+}
+
+.ssc-preview-resize-handle.is-dragging .ssc-resize-grip,
+.ssc-preview-resize-handle:focus-visible .ssc-resize-grip,
+.ssc-preview-resize-handle:hover .ssc-resize-grip {
+    background: var(--wp-admin-theme-color, #2271b1);
+}
+
+.ssc-resize-grip {
+    width: 6px;
+    height: 48px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ssc-text, #1d2327) 35%, transparent);
+    transition: background 0.2s ease;
+}
+
+body.ssc-resizing-preview {
+    cursor: ew-resize;
+    user-select: none;
+}

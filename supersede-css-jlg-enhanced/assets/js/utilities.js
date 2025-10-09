@@ -267,6 +267,8 @@
 
         const pickerToggle = $('#ssc-element-picker-toggle');
         const previewFrame = $('#ssc-preview-frame');
+        const previewViewport = $('.ssc-preview-frame-viewport');
+        const resizeHandle = $('#ssc-preview-resize-handle');
         const urlField = $('#ssc-preview-url');
         const previewToggleButton = $('#ssc-preview-toggle');
         const previewColumn = $('#ssc-preview-column');
@@ -407,10 +409,7 @@
             return Number.isNaN(coerced) ? Number.NaN : coerced;
         };
 
-        const clampWidth = (value) => {
-            if (Number.isNaN(value)) {
-                return Number.NaN;
-            }
+        const getWidthBounds = () => {
             let min = 320;
             let max = 1920;
             if (widthSlider.length) {
@@ -432,8 +431,51 @@
                     max = inputMax;
                 }
             }
+            return { min, max };
+        };
+
+        const clampWidth = (value) => {
+            if (Number.isNaN(value)) {
+                return Number.NaN;
+            }
+            const { min, max } = getWidthBounds();
             return Math.min(Math.max(value, min), max);
         };
+
+        const getCurrentWidthOrDefault = () => {
+            if (currentWidth !== null && !Number.isNaN(currentWidth)) {
+                return currentWidth;
+            }
+            const sliderValue = widthSlider.length ? parseWidthValue(widthSlider.val()) : Number.NaN;
+            if (!Number.isNaN(sliderValue)) {
+                return sliderValue;
+            }
+            const numberValue = widthNumber.length ? parseWidthValue(widthNumber.val()) : Number.NaN;
+            if (!Number.isNaN(numberValue)) {
+                return numberValue;
+            }
+            return 1024;
+        };
+
+        const getStepSize = () => {
+            const sliderStep = widthSlider.length ? parseWidthValue(widthSlider.attr('step')) : Number.NaN;
+            if (!Number.isNaN(sliderStep) && sliderStep > 0) {
+                return sliderStep;
+            }
+            const numberStep = widthNumber.length ? parseWidthValue(widthNumber.attr('step')) : Number.NaN;
+            if (!Number.isNaN(numberStep) && numberStep > 0) {
+                return numberStep;
+            }
+            return 10;
+        };
+
+        if (resizeHandle.length) {
+            const { min, max } = getWidthBounds();
+            resizeHandle.attr({
+                'aria-valuemin': String(min),
+                'aria-valuemax': String(max)
+            });
+        }
 
         const announceCustomWidth = (width) => {
             if (!viewportLiveRegion.length) {
@@ -452,25 +494,35 @@
                 return null;
             }
             const clamped = clampWidth(parsed);
-            currentWidth = clamped;
-            previewFrame.css('max-width', `${clamped}px`);
-            if (widthSlider.length && parseWidthValue(widthSlider.val()) !== clamped) {
-                widthSlider.val(String(clamped));
+            const normalized = Math.round(clamped);
+            currentWidth = normalized;
+            previewFrame.css('max-width', `${normalized}px`);
+            if (previewViewport.length) {
+                previewViewport.css('--ssc-preview-width', `${normalized}px`);
             }
-            if (widthNumber.length && parseWidthValue(widthNumber.val()) !== clamped) {
-                widthNumber.val(String(clamped));
+            if (widthSlider.length && parseWidthValue(widthSlider.val()) !== normalized) {
+                widthSlider.val(String(normalized));
+            }
+            if (widthNumber.length && parseWidthValue(widthNumber.val()) !== normalized) {
+                widthNumber.val(String(normalized));
+            }
+            if (resizeHandle.length) {
+                resizeHandle.attr({
+                    'aria-valuenow': String(normalized),
+                    'aria-valuetext': sprintf(__('%d pixels', 'supersede-css-jlg'), normalized)
+                });
             }
             if (persist && storageAvailable) {
                 try {
-                    window.localStorage.setItem(widthStorageKey, String(clamped));
+                    window.localStorage.setItem(widthStorageKey, String(normalized));
                 } catch (error) {
                     // Ignore storage failures
                 }
             }
             if (announce) {
-                announceCustomWidth(clamped);
+                announceCustomWidth(normalized);
             }
-            return clamped;
+            return normalized;
         };
 
         const setActiveViewport = ($button, announce = true) => {
@@ -660,6 +712,156 @@
                 }
                 if (currentWidth !== null) {
                     $(this).val(String(currentWidth));
+                }
+            });
+        }
+
+
+        if (resizeHandle.length && previewViewport.length) {
+            let isDragging = false;
+            let activePointerId = null;
+
+            const updateWidthFromPointer = (clientX) => {
+                if (typeof clientX !== 'number' || Number.isNaN(clientX)) {
+                    return null;
+                }
+                const viewportOffset = previewViewport.offset();
+                if (!viewportOffset) {
+                    return null;
+                }
+                const rawWidth = clientX - viewportOffset.left;
+                const applied = applyWidth(rawWidth, { announce: false, persist: false });
+                if (applied !== null) {
+                    setActiveViewport(null, false);
+                }
+                return applied;
+            };
+
+            const stopDragging = (commit) => {
+                if (!isDragging) {
+                    return;
+                }
+                isDragging = false;
+                const handleElement = resizeHandle.get(0);
+                if (handleElement && typeof handleElement.releasePointerCapture === 'function' && activePointerId !== null) {
+                    try {
+                        handleElement.releasePointerCapture(activePointerId);
+                    } catch (error) {
+                        // Ignore pointer capture release errors
+                    }
+                }
+                activePointerId = null;
+                resizeHandle.removeClass('is-dragging');
+                previewViewport.removeClass('is-resizing');
+                $('body').removeClass('ssc-resizing-preview');
+                if (commit && currentWidth !== null && !Number.isNaN(currentWidth)) {
+                    const applied = applyWidth(currentWidth, { announce: true, persist: true });
+                    if (applied !== null) {
+                        setActiveViewport(null, false);
+                    }
+                }
+            };
+
+            resizeHandle.on('pointerdown', function(event) {
+                if (typeof event.button === 'number' && event.button !== 0) {
+                    return;
+                }
+                isDragging = true;
+                activePointerId = typeof event.pointerId === 'number' ? event.pointerId : null;
+                const handleElement = this;
+                if (handleElement && typeof handleElement.setPointerCapture === 'function' && activePointerId !== null) {
+                    try {
+                        handleElement.setPointerCapture(activePointerId);
+                    } catch (error) {
+                        // Ignore pointer capture errors
+                    }
+                }
+                resizeHandle.addClass('is-dragging');
+                previewViewport.addClass('is-resizing');
+                $('body').addClass('ssc-resizing-preview');
+                resizeHandle.trigger('focus');
+                updateWidthFromPointer(event.clientX);
+                event.preventDefault();
+            });
+
+            resizeHandle.on('pointermove', function(event) {
+                if (!isDragging) {
+                    return;
+                }
+                if (activePointerId !== null && typeof event.pointerId === 'number' && event.pointerId !== activePointerId) {
+                    return;
+                }
+                updateWidthFromPointer(event.clientX);
+                event.preventDefault();
+            });
+
+            resizeHandle.on('pointerup pointercancel', function(event) {
+                if (!isDragging) {
+                    return;
+                }
+                if (activePointerId !== null && typeof event.pointerId === 'number' && event.pointerId !== activePointerId) {
+                    return;
+                }
+                if (typeof event.clientX === 'number') {
+                    updateWidthFromPointer(event.clientX);
+                }
+                stopDragging(event.type === 'pointerup');
+                event.preventDefault();
+            });
+
+            $(document).on('pointerup.sscPreviewResize pointercancel.sscPreviewResize', function(event) {
+                if (!isDragging) {
+                    return;
+                }
+                if (activePointerId !== null && typeof event.pointerId === 'number' && event.pointerId !== activePointerId) {
+                    return;
+                }
+                if (typeof event.clientX === 'number') {
+                    updateWidthFromPointer(event.clientX);
+                }
+                stopDragging(event.type === 'pointerup');
+            });
+
+            $(window).on('blur.sscPreviewResize', function() {
+                stopDragging(false);
+            });
+
+            resizeHandle.on('keydown', function(event) {
+                let handled = false;
+                const { min, max } = getWidthBounds();
+                const baseWidth = clampWidth(getCurrentWidthOrDefault());
+                const step = getStepSize();
+                const largeStep = step * 5;
+                let targetWidth = baseWidth;
+
+                if (event.key === 'ArrowLeft') {
+                    targetWidth = baseWidth - (event.shiftKey ? largeStep : step);
+                    handled = true;
+                } else if (event.key === 'ArrowRight') {
+                    targetWidth = baseWidth + (event.shiftKey ? largeStep : step);
+                    handled = true;
+                } else if (event.key === 'PageDown') {
+                    targetWidth = baseWidth - largeStep;
+                    handled = true;
+                } else if (event.key === 'PageUp') {
+                    targetWidth = baseWidth + largeStep;
+                    handled = true;
+                } else if (event.key === 'Home') {
+                    targetWidth = min;
+                    handled = true;
+                } else if (event.key === 'End') {
+                    targetWidth = max;
+                    handled = true;
+                }
+
+                if (!handled) {
+                    return;
+                }
+
+                event.preventDefault();
+                const applied = applyWidth(targetWidth, { announce: true, persist: true });
+                if (applied !== null) {
+                    setActiveViewport(null, false);
                 }
             });
         }

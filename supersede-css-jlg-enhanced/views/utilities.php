@@ -158,9 +158,26 @@ if (!defined('ABSPATH')) {
                 </div>
             </div>
             <div class="ssc-preview-frame-container">
-                <div id="ssc-picker-overlay"></div>
-                <div id="ssc-picker-tooltip"></div>
-                <iframe id="ssc-preview-frame" title="<?php echo esc_attr__('Aperçu en direct du CSS', 'supersede-css-jlg'); ?>" sandbox="allow-same-origin allow-forms allow-scripts"></iframe>
+                <div class="ssc-preview-frame-viewport">
+                    <div id="ssc-picker-overlay"></div>
+                    <div id="ssc-picker-tooltip"></div>
+                    <iframe id="ssc-preview-frame" title="<?php echo esc_attr__('Aperçu en direct du CSS', 'supersede-css-jlg'); ?>" sandbox="allow-same-origin allow-forms allow-scripts"></iframe>
+                    <div
+                        id="ssc-preview-resize-handle"
+                        class="ssc-preview-resize-handle"
+                        role="slider"
+                        tabindex="0"
+                        aria-label="<?php echo esc_attr__('Glisser pour redimensionner la largeur de l\'aperçu', 'supersede-css-jlg'); ?>"
+                        aria-describedby="ssc-viewport-width-help"
+                        aria-orientation="horizontal"
+                        aria-valuemin="320"
+                        aria-valuemax="1920"
+                        aria-valuenow="1024"
+                        aria-valuetext="<?php echo esc_attr__('1024 pixels', 'supersede-css-jlg'); ?>"
+                    >
+                        <span class="ssc-resize-grip" aria-hidden="true"></span>
+                    </div>
+                </div>
             </div>
             <div style="padding-top: 8px;">
                 <label><?php esc_html_e('Sélecteur Ciblé :', 'supersede-css-jlg'); ?></label>
