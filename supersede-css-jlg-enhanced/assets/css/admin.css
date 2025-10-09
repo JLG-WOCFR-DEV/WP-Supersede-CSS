@@ -120,6 +120,109 @@
     align-items: center;
     flex-wrap: wrap;
 }
+
+.ssc-table--flush {
+    margin: 0;
+}
+
+.ssc-description--flush {
+    margin: 0;
+}
+
+.description.ssc-description--spaced {
+    margin-bottom: var(--ssc-space-sm);
+}
+
+.ssc-health-panel {
+    margin-top: var(--ssc-space-sm);
+    display: grid;
+    gap: var(--ssc-space-sm);
+}
+
+.ssc-health-panel__top {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ssc-space-sm);
+    align-items: flex-start;
+    justify-content: space-between;
+}
+
+.ssc-health-panel__description {
+    flex: 1 1 240px;
+}
+
+.ssc-health-panel__actions {
+    flex-shrink: 0;
+}
+
+.ssc-health-error {
+    margin-top: var(--ssc-space-sm);
+    padding: var(--ssc-space-xs) var(--ssc-space-sm);
+    border-left: 4px solid var(--ssc-danger);
+    border-radius: var(--ssc-radius-sm);
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.ssc-health-summary {
+    margin-top: var(--ssc-space-sm);
+    display: grid;
+    gap: var(--ssc-space-xs);
+}
+
+.ssc-health-summary__meta {
+    margin: 0;
+    font-weight: 600;
+}
+
+.ssc-health-summary__generated {
+    margin: 0;
+    color: #334155;
+}
+
+.ssc-health-list {
+    margin: 0;
+    padding-left: var(--ssc-space-md);
+    list-style: disc;
+    display: grid;
+    gap: var(--ssc-space-2xs);
+}
+
+.ssc-list--indented {
+    margin: var(--ssc-space-xs) 0 0 var(--ssc-space-md);
+    padding: 0;
+    list-style: disc;
+}
+
+.ssc-health-details {
+    margin-top: var(--ssc-space-sm);
+}
+
+.ssc-code--scrollable {
+    max-height: 200px;
+}
+
+.button .ssc-button-icon {
+    margin-right: var(--ssc-space-2xs);
+    line-height: 1;
+}
+
+.button.button-destructive {
+    background: var(--ssc-danger);
+    border-color: var(--ssc-danger);
+    color: #fff;
+}
+
+.button.button-destructive:hover,
+.button.button-destructive:focus {
+    background: #b91c1c;
+    border-color: #7f1d1d;
+    color: #fff;
+}
+
+.button.button-destructive:focus {
+    box-shadow: 0 0 0 1px #fff, 0 0 0 3px rgba(185, 28, 28, 0.4);
+}
 .ssc-code {
     background: var(--ssc-card);
     color: var(--ssc-text);

@@ -134,7 +134,7 @@ if (function_exists('wp_localize_script')) {
         <p><?php esc_html_e('Cet outil vous aide à centraliser les valeurs fondamentales de votre design (couleurs, polices, espacements…) pour les réutiliser facilement et maintenir une cohérence parfaite sur votre site.', 'supersede-css-jlg'); ?></p>
     </div>
 
-    <div class="ssc-two ssc-token-layout" style="margin-top:16px; align-items: flex-start;">
+    <div class="ssc-two ssc-two--align-start ssc-token-layout">
         <div class="ssc-pane ssc-token-help" id="ssc-token-help">
             <div class="ssc-token-help__header">
                 <h3><?php esc_html_e('👨‍🏫 Qu\'est-ce qu\'un Token (ou Variable CSS) ?', 'supersede-css-jlg'); ?></h3>
@@ -144,13 +144,13 @@ if (function_exists('wp_localize_script')) {
                     class="button button-secondary ssc-token-help__toggle"
                     data-expanded-label="<?php esc_attr_e('Masquer l’aide pédagogique', 'supersede-css-jlg'); ?>"
                     data-collapsed-label="<?php esc_attr_e('Afficher l’aide pédagogique', 'supersede-css-jlg'); ?>"
-                    aria-controls="ssc-token-help"
+                    aria-controls="ssc-token-help-content"
                     aria-expanded="true"
                 >
                     <?php esc_html_e('Masquer l’aide pédagogique', 'supersede-css-jlg'); ?>
                 </button>
             </div>
-            <div class="ssc-token-help__content">
+            <div class="ssc-token-help__content" id="ssc-token-help-content" aria-hidden="false">
                 <p><?php printf(wp_kses_post(__('Imaginez que vous décidiez d\'utiliser une couleur bleue spécifique (%s) pour tous vos boutons et titres. Si un jour vous voulez changer ce bleu, vous devriez chercher et remplacer cette valeur partout dans votre code. C\'est long et risqué !', 'supersede-css-jlg')), '<code>#3498db</code>'); ?></p>
                 <p><?php printf(wp_kses_post(__('Un %1$s est un « raccourci ». Vous donnez un nom facile à retenir à votre couleur, comme %2$s. Ensuite, vous utilisez ce nom partout où vous avez besoin de ce bleu.', 'supersede-css-jlg')), '<strong>token</strong>', '<code>--couleur-principale</code>'); ?></p>
                 <p><?php echo wp_kses_post(__('<strong>Le jour où vous voulez changer de couleur, il suffit de modifier la valeur du token en un seul endroit, et la modification s\'applique partout !</strong>', 'supersede-css-jlg')); ?></p>
@@ -177,7 +177,7 @@ if (function_exists('wp_localize_script')) {
             <h3><?php esc_html_e('🎨 Éditeur Visuel de Tokens', 'supersede-css-jlg'); ?></h3>
             <p><?php esc_html_e('Gérez vos tokens sous forme de fiches structurées : nom technique, valeur, type de champ, description et groupe d\'appartenance. Chaque catégorie est listée séparément pour garder une vision claire de votre système de design.', 'supersede-css-jlg'); ?></p>
 
-            <div class="ssc-token-toolbar" style="margin-bottom:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <div class="ssc-token-toolbar">
                 <button id="ssc-token-add" class="button"><?php esc_html_e('+ Ajouter un Token', 'supersede-css-jlg'); ?></button>
                 <input
                     type="search"
@@ -209,7 +209,7 @@ if (function_exists('wp_localize_script')) {
             <h3><?php printf(wp_kses_post(__('📜 Code CSS généré (%s)', 'supersede-css-jlg')), '<code>:root</code>'); ?></h3>
             <p><?php esc_html_e('Le code ci-dessous est synchronisé automatiquement avec la configuration JSON. Il est proposé en lecture seule pour vérification ou copie rapide.', 'supersede-css-jlg'); ?></p>
             <textarea id="ssc-tokens" rows="10" class="large-text" readonly><?php echo esc_textarea($tokens_css); ?></textarea>
-            <div class="ssc-actions" style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+            <div class="ssc-actions ssc-mt-100">
                 <button id="ssc-tokens-save" class="button button-primary"><?php esc_html_e('Enregistrer les Tokens', 'supersede-css-jlg'); ?></button>
                 <button id="ssc-tokens-copy" class="button"><?php esc_html_e('Copier le CSS', 'supersede-css-jlg'); ?></button>
                 <button id="ssc-tokens-reload" class="button" type="button"><?php esc_html_e('Recharger', 'supersede-css-jlg'); ?></button>
@@ -217,7 +217,7 @@ if (function_exists('wp_localize_script')) {
         </div>
     </div>
 
-    <div class="ssc-panel ssc-device-lab-panel" style="margin-top:16px;">
+    <div class="ssc-panel ssc-device-lab-panel ssc-mt-200">
         <div class="ssc-panel-header">
             <div>
                 <h3><?php esc_html_e('🧪 Device Lab Responsive', 'supersede-css-jlg'); ?></h3>

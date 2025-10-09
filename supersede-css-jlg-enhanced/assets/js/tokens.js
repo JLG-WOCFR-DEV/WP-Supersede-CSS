@@ -2179,6 +2179,7 @@
     $(document).ready(function() {
         const tokenLayout = $('.ssc-token-layout');
         const helpPane = $('#ssc-token-help');
+        const helpContent = $('#ssc-token-help-content');
         const helpToggle = $('#ssc-token-help-toggle');
         const helpStorageKey = 'ssc-token-help-collapsed';
         const helpPaneElement = helpPane.get(0);
@@ -2217,12 +2218,17 @@
                 }
 
                 tokenLayout.toggleClass('ssc-help-collapsed', collapsed);
-                helpPane.attr('aria-hidden', collapsed ? 'true' : 'false');
 
-                if (collapsed) {
-                    helpPane.attr('hidden', 'hidden');
-                } else {
-                    helpPane.removeAttr('hidden');
+                const visibilityTarget = helpContent.length ? helpContent : helpPane;
+
+                if (visibilityTarget.length) {
+                    visibilityTarget.attr('aria-hidden', collapsed ? 'true' : 'false');
+
+                    if (collapsed) {
+                        visibilityTarget.attr('hidden', 'hidden');
+                    } else {
+                        visibilityTarget.removeAttr('hidden');
+                    }
                 }
 
                 helpToggle.attr('aria-expanded', collapsed ? 'false' : 'true');

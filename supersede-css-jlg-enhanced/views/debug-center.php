@@ -14,10 +14,10 @@ $css_revisions     = isset($css_revisions) && is_array($css_revisions) ? $css_re
     <h1><?php echo esc_html__('Supersede CSS — Debug Center', 'supersede-css-jlg'); ?></h1>
     <p><?php echo esc_html__('Un hub centralisé pour la santé du système, la gestion des modules et le journal d\'activité.', 'supersede-css-jlg'); ?></p>
 
-    <div class="ssc-two" style="align-items: flex-start; margin-top: 16px;">
+    <div class="ssc-two ssc-two--align-start ssc-mt-200">
         <div class="ssc-pane" data-ssc-debug-label="<?php echo esc_attr__('Système', 'supersede-css-jlg'); ?>">
             <h2><?php echo esc_html__('Informations Système', 'supersede-css-jlg'); ?></h2>
-            <table class="widefat striped" style="margin: 0;"><tbody>
+            <table class="widefat striped ssc-table--flush"><tbody>
                 <tr>
                     <td><strong><?php esc_html_e('Version du Plugin', 'supersede-css-jlg'); ?></strong></td>
                     <td><?php echo esc_html($plugin_version); ?></td>
@@ -39,9 +39,9 @@ $css_revisions     = isset($css_revisions) && is_array($css_revisions) ? $css_re
                     <?php esc_html_e('Lancer Health Check', 'supersede-css-jlg'); ?>
                 </button>
             </div>
-            <div id="ssc-health-panel" class="ssc-health-panel" style="margin-top:10px;" aria-live="polite">
-                <div class="ssc-health-panel__top" style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
-                    <p class="description" style="margin:0; flex:1;">
+            <div id="ssc-health-panel" class="ssc-health-panel" aria-live="polite">
+                <div class="ssc-health-panel__top">
+                    <p class="description ssc-description--flush ssc-health-panel__description">
                         <?php
                         $site_health_link = '<a href="' . esc_url(admin_url('site-health.php')) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Santé du site', 'supersede-css-jlg') . '</a>';
                         echo wp_kses_post(sprintf(
@@ -51,30 +51,30 @@ $css_revisions     = isset($css_revisions) && is_array($css_revisions) ? $css_re
                         ));
                         ?>
                     </p>
-                    <div class="ssc-health-panel__actions" style="display:flex; gap:8px;">
+                    <div class="ssc-health-panel__actions ssc-actions">
                         <button type="button" class="button button-secondary" id="ssc-health-copy" disabled>
                             <?php esc_html_e('Copier le JSON', 'supersede-css-jlg'); ?>
                         </button>
                     </div>
                 </div>
-                <div id="ssc-health-error" class="ssc-health-error" role="alert" aria-live="assertive" style="display:none; margin-top:10px; padding:8px 12px; border-left:4px solid #dc2626; background:#fef2f2; color:#991b1b;"></div>
-                <div id="ssc-health-summary" class="ssc-health-summary" style="margin-top:10px;" role="status" aria-live="polite">
-                    <p id="ssc-health-empty-state" class="description" style="margin:0;" aria-live="polite">
+                <div id="ssc-health-error" class="ssc-health-error" role="alert" aria-live="assertive" hidden></div>
+                <div id="ssc-health-summary" class="ssc-health-summary" role="status" aria-live="polite">
+                    <p id="ssc-health-empty-state" class="description ssc-description--flush" aria-live="polite">
                         <?php esc_html_e('Aucun diagnostic lancé pour le moment.', 'supersede-css-jlg'); ?>
                     </p>
-                    <p id="ssc-health-summary-meta" class="ssc-health-summary-meta" style="margin:6px 0 0; font-weight:600; display:none;"></p>
-                    <p id="ssc-health-summary-generated" class="ssc-health-summary-generated" style="margin:4px 0 0; color:#334155; display:none;"></p>
-                    <ul id="ssc-health-summary-list" class="ssc-health-list" style="margin:8px 0 0; padding-left:0; list-style:none; display:none;"></ul>
+                    <p id="ssc-health-summary-meta" class="ssc-health-summary__meta" hidden></p>
+                    <p id="ssc-health-summary-generated" class="ssc-health-summary__generated" hidden></p>
+                    <ul id="ssc-health-summary-list" class="ssc-health-list" hidden></ul>
                 </div>
-                <details id="ssc-health-details" class="ssc-health-details" style="margin-top:12px;" hidden>
+                <details id="ssc-health-details" class="ssc-health-details" hidden>
                     <summary><?php esc_html_e('Afficher le JSON brut', 'supersede-css-jlg'); ?></summary>
-                    <pre id="ssc-health-json-raw" class="ssc-code" style="max-height:200px; margin-top:8px;"></pre>
+                    <pre id="ssc-health-json-raw" class="ssc-code ssc-code--scrollable ssc-mt-100"></pre>
                 </details>
             </div>
         </div>
     </div>
 
-    <div class="ssc-panel" id="ssc-visual-debug-panel" data-ssc-debug-label="<?php echo esc_attr__('Débogage visuel', 'supersede-css-jlg'); ?>" style="margin-top: 16px;">
+    <div class="ssc-panel ssc-mt-200" id="ssc-visual-debug-panel" data-ssc-debug-label="<?php echo esc_attr__('Débogage visuel', 'supersede-css-jlg'); ?>">
         <h2><?php echo esc_html__('Assistant de débogage visuel', 'supersede-css-jlg'); ?></h2>
         <p class="description" id="ssc-visual-debug-description">
             <?php echo esc_html__('Activez les contours d’interface, les grilles et les repères d’espacement pour inspecter rapidement la mise en page après vos modifications CSS.', 'supersede-css-jlg'); ?>
@@ -108,10 +108,15 @@ $css_revisions     = isset($css_revisions) && is_array($css_revisions) ? $css_re
         </div>
     </div>
 
-    <div class="ssc-panel ssc-danger-zone" data-ssc-debug-label="<?php echo esc_attr__('Zone de danger', 'supersede-css-jlg'); ?>" style="margin-top: 16px;">
+    <div class="ssc-panel ssc-danger-zone ssc-mt-200" data-ssc-debug-label="<?php echo esc_attr__('Zone de danger', 'supersede-css-jlg'); ?>">
          <h2><?php echo esc_html__('🛑 Zone de Danger', 'supersede-css-jlg'); ?></h2>
-         <p id="ssc-danger-intro"><?php echo esc_html__('Les actions ci-dessous sont irréversibles. Soyez certain de vouloir continuer.', 'supersede-css-jlg'); ?></p>
-         <button id="ssc-reset-all-css" class="button" style="background: #dc2626; border-color: #991b1b; color: white;"><?php esc_html_e('Réinitialiser tout le CSS', 'supersede-css-jlg'); ?></button>
+         <p id="ssc-danger-intro" class="description">
+             <?php echo esc_html__('Les actions ci-dessous sont irréversibles. Soyez certain de vouloir continuer.', 'supersede-css-jlg'); ?>
+         </p>
+         <button id="ssc-reset-all-css" class="button button-destructive" aria-describedby="ssc-danger-desc">
+             <span class="dashicons dashicons-warning ssc-button-icon" aria-hidden="true"></span>
+             <?php esc_html_e('Réinitialiser tout le CSS', 'supersede-css-jlg'); ?>
+         </button>
          <?php
          $danger_desc = sprintf(
              /* translators: 1: Supersede CSS option name, 2: Supersede CSS option name. */
@@ -123,11 +128,11 @@ $css_revisions     = isset($css_revisions) && is_array($css_revisions) ? $css_re
          <p id="ssc-danger-desc" class="description"><?php echo wp_kses_post($danger_desc); ?></p>
     </div>
 
-    <div class="ssc-panel" data-ssc-debug-label="<?php echo esc_attr__('Révisions CSS', 'supersede-css-jlg'); ?>" style="margin-top: 16px;">
+    <div class="ssc-panel ssc-mt-200" data-ssc-debug-label="<?php echo esc_attr__('Révisions CSS', 'supersede-css-jlg'); ?>">
         <div class="ssc-panel-header">
             <div>
                 <h2><?php echo esc_html__('Révisions CSS enregistrées', 'supersede-css-jlg'); ?></h2>
-                <p class="description" style="margin-bottom: 12px;">
+                <p class="description ssc-description--spaced">
                     <?php echo esc_html__('Chaque sauvegarde conserve une version du CSS avec horodatage et auteur. Utilisez cette liste pour restaurer ou comparer des états précédents.', 'supersede-css-jlg'); ?>
                 </p>
             </div>
@@ -221,11 +226,11 @@ $css_revisions     = isset($css_revisions) && is_array($css_revisions) ? $css_re
                             <td>
                                 <details>
                                     <summary><?php echo esc_html(sprintf(__('Afficher le CSS (%d caractères)', 'supersede-css-jlg'), $css_length)); ?></summary>
-                                    <pre class="ssc-code" style="max-height:200px; overflow:auto; margin-top:8px;"><?php echo esc_html($css_source); ?></pre>
+                                    <pre class="ssc-code ssc-code--scrollable ssc-mt-100"><?php echo esc_html($css_source); ?></pre>
                                     <?php if ($hasSegments) : ?>
-                                        <div style="margin-top: 10px;">
+                                        <div class="ssc-mt-150">
                                             <strong><?php esc_html_e('Segments responsives', 'supersede-css-jlg'); ?>:</strong>
-                                            <ul style="margin: 6px 0 0 16px;">
+                                            <ul class="ssc-list--indented">
                                                 <?php
                                                 $segmentLabels = [
                                                     'desktop' => __('Bureau', 'supersede-css-jlg'),
@@ -296,11 +301,11 @@ $css_revisions     = isset($css_revisions) && is_array($css_revisions) ? $css_re
         <?php endif; ?>
     </div>
 
-    <div class="ssc-panel" data-ssc-debug-label="<?php echo esc_attr__('Journal d’activité', 'supersede-css-jlg'); ?>" style="margin-top: 16px;">
+    <div class="ssc-panel ssc-mt-200" data-ssc-debug-label="<?php echo esc_attr__('Journal d’activité', 'supersede-css-jlg'); ?>">
         <div class="ssc-panel-header">
             <div>
                 <h2><?php echo esc_html__('Journal d\'Activité Récent', 'supersede-css-jlg'); ?></h2>
-                <p class="description" style="margin-bottom: 12px;">
+                <p class="description ssc-description--spaced">
                     <?php echo esc_html__('Affinez le journal grâce aux filtres pour cibler les actions qui vous intéressent puis exportez les données au format souhaité.', 'supersede-css-jlg'); ?>
                 </p>
             </div>
