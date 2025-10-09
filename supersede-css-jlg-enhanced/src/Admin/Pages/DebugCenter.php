@@ -3,6 +3,9 @@
 namespace SSC\Admin\Pages;
 
 use SSC\Admin\AbstractPage;
+use SSC\Infra\Activity\ActivityLogRepository;
+use SSC\Infra\Approvals\TokenApprovalStore;
+use SSC\Infra\Capabilities\CapabilityManager;
 use SSC\Support\CssRevisions;
 
 if (!defined('ABSPATH')) {
@@ -13,7 +16,38 @@ class DebugCenter extends AbstractPage
 {
     public function render(): void
     {
-        $log_entries = class_exists('\\SSC\\Infra\\Logger') ? \SSC\Infra\Logger::all() : [];
+        $approvalStore = new TokenApprovalStore();
+        $activityRepository = null;
+        $activityLog = [
+            'entries' => [],
+            'pagination' => [
+                'total' => 0,
+                'total_pages' => 1,
+                'page' => 1,
+            ],
+            'filters' => [],
+        ];
+
+        try {
+            $activityRepository = new ActivityLogRepository();
+            $activityLog = $activityRepository->fetch(20, 1);
+        } catch (\Throwable $exception) {
+            // The activity log relies on the dedicated wp_ssc_activity_log table.
+            // If the table is missing (e.g. migrations not executed yet) we keep
+            // the UI functional by falling back to an empty dataset.
+            $activityLog = [
+                'entries' => [],
+                'pagination' => [
+                    'total' => 0,
+                    'total_pages' => 1,
+                    'page' => 1,
+                ],
+                'filters' => [],
+            ];
+        }
+
+        $approvals = $approvalStore->all();
+        $canReviewApprovals = current_user_can(CapabilityManager::getApprovalCapability());
 
         if (function_exists('wp_localize_script')) {
             wp_localize_script(
@@ -63,6 +97,40 @@ class DebugCenter extends AbstractPage
                         'visualDebugEnabledToast'        => __('Débogage visuel activé.', 'supersede-css-jlg'),
                         'visualDebugDisabledToast'       => __('Débogage visuel désactivé.', 'supersede-css-jlg'),
                         'visualDebugPersistedNotice'     => __('Préférence sauvegardée pour toutes les pages Supersede CSS.', 'supersede-css-jlg'),
+                        'approvalsEmptyState'            => __('Aucune demande d’approbation à afficher pour ce filtre.', 'supersede-css-jlg'),
+                        'approvalsRefreshLabel'          => __('Actualiser les demandes', 'supersede-css-jlg'),
+                        'approvalsDecisionApprove'       => __('Approuver', 'supersede-css-jlg'),
+                        'approvalsDecisionRequestChanges'=> __('Demander des changements', 'supersede-css-jlg'),
+                        'approvalsDecisionConfirmApprove'=> __('Confirmez-vous l’approbation de ce token ?', 'supersede-css-jlg'),
+                        'approvalsDecisionConfirmChanges'=> __('Confirmez-vous la demande de changements ? Un commentaire est requis.', 'supersede-css-jlg'),
+                        'approvalsDecisionPromptComment' => __('Précisez un commentaire pour guider l’auteur :', 'supersede-css-jlg'),
+                        'approvalsDecisionCommentRequired' => __('Un commentaire est obligatoire pour demander des changements.', 'supersede-css-jlg'),
+                        'approvalsDecisionSuccess'       => __('Décision enregistrée.', 'supersede-css-jlg'),
+                        'approvalsDecisionError'         => __('Impossible d’enregistrer la décision.', 'supersede-css-jlg'),
+                        'approvalsFetchError'            => __('Impossible de récupérer les demandes d’approbation.', 'supersede-css-jlg'),
+                        'approvalsNoComment'             => __('Aucun commentaire fourni lors de la demande.', 'supersede-css-jlg'),
+                        'approvalsNoActions'             => __('Aucune action disponible.', 'supersede-css-jlg'),
+                        'approvalStatusPending'          => __('En attente', 'supersede-css-jlg'),
+                        'approvalStatusApproved'         => __('Approuvé', 'supersede-css-jlg'),
+                        'approvalStatusChangesRequested' => __('Changements demandés', 'supersede-css-jlg'),
+                        'approvalStatusUnknown'          => __('Statut inconnu', 'supersede-css-jlg'),
+                        'approvalsRequestedBy'           => __('Demandé par %s', 'supersede-css-jlg'),
+                        'approvalsRequestedAt'           => __('Envoyé le %s', 'supersede-css-jlg'),
+                        'approvalsDecisionBy'            => __('Décision : %1$s le %2$s', 'supersede-css-jlg'),
+                        'activityLoading'                => __('Chargement du journal…', 'supersede-css-jlg'),
+                        'activityEmpty'                  => __('Aucune entrée ne correspond aux filtres appliqués.', 'supersede-css-jlg'),
+                        'activityFetchError'             => __('Impossible de charger le journal d’activité.', 'supersede-css-jlg'),
+                        'activityPaginationSummary'      => __('Page %1$s sur %2$s — %3$s entrée(s)', 'supersede-css-jlg'),
+                        'activityFiltersCleared'         => __('Filtres réinitialisés.', 'supersede-css-jlg'),
+                        'activityExportError'            => __('Impossible d’exporter le journal.', 'supersede-css-jlg'),
+                        'activityExportPreparing'        => __('Préparation de l’export…', 'supersede-css-jlg'),
+                        'activityExportReady'            => __('Export prêt.', 'supersede-css-jlg'),
+                        'activitySystemUser'             => __('Système', 'supersede-css-jlg'),
+                        'activityColumnDate'             => __('Date', 'supersede-css-jlg'),
+                        'activityColumnEvent'            => __('Événement', 'supersede-css-jlg'),
+                        'activityColumnEntity'           => __('Entité', 'supersede-css-jlg'),
+                        'activityColumnAuthor'           => __('Auteur', 'supersede-css-jlg'),
+                        'activityColumnDetails'          => __('Détails', 'supersede-css-jlg'),
                     ],
                 ]
             );
@@ -74,7 +142,9 @@ class DebugCenter extends AbstractPage
                 'wordpress_version' => get_bloginfo('version'),
                 'php_version'       => phpversion(),
             ],
-            'log_entries' => $log_entries,
+            'approvals' => $approvals,
+            'can_review_approvals' => $canReviewApprovals,
+            'activity_log' => $activityLog,
             'css_revisions' => CssRevisions::all(),
         ]);
     }

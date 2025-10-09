@@ -59,6 +59,8 @@ final class ApprovalsController extends BaseController
             ));
         }
 
+        $entries = array_map([$this, 'enrichEntry'], $entries);
+
         return new WP_REST_Response([
             'approvals' => $entries,
         ], 200);
@@ -104,6 +106,7 @@ final class ApprovalsController extends BaseController
         ]);
 
         $entry = $this->store->upsert($token['name'], $token['context'], $userId, $comment);
+        $entry = $this->enrichEntry($entry);
 
         EventRecorder::record('token.approval_requested', [
             'entity_type' => 'token',
@@ -225,7 +228,7 @@ final class ApprovalsController extends BaseController
         }
 
         return new WP_REST_Response([
-            'approval' => $updated,
+            'approval' => $this->enrichEntry($updated),
         ], 200);
     }
 
@@ -276,5 +279,53 @@ final class ApprovalsController extends BaseController
     private function buildEntityId(string $name, string $context): string
     {
         return strtolower($context . '|' . $name);
+    }
+
+    /**
+     * @param array<string, mixed> $entry
+     * @return array<string, mixed>
+     */
+    private function enrichEntry(array $entry): array
+    {
+        $requestedBy = isset($entry['requested_by']) ? (int) $entry['requested_by'] : 0;
+        $entry['requested_by_user'] = $this->normalizeUser($requestedBy);
+
+        if (isset($entry['decision']) && is_array($entry['decision'])) {
+            $userId = isset($entry['decision']['user_id']) ? (int) $entry['decision']['user_id'] : 0;
+            $entry['decision_user'] = $this->normalizeUser($userId);
+        } else {
+            $entry['decision_user'] = null;
+        }
+
+        return $entry;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function normalizeUser(int $userId): array
+    {
+        if ($userId <= 0) {
+            return [
+                'id' => 0,
+                'name' => __('Compte inconnu', 'supersede-css-jlg'),
+                'avatar' => '',
+            ];
+        }
+
+        $user = get_userdata($userId);
+        if ($user instanceof \WP_User) {
+            return [
+                'id' => $user->ID,
+                'name' => $user->display_name,
+                'avatar' => get_avatar_url($user->ID, ['size' => 64]),
+            ];
+        }
+
+        return [
+            'id' => $userId,
+            'name' => __('Compte inconnu', 'supersede-css-jlg'),
+            'avatar' => '',
+        ];
     }
 }
