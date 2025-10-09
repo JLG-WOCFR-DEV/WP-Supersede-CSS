@@ -1,6 +1,7 @@
 (function($) {
     const fallbackI18n = {
         __: (text) => text,
+        _n: (single, plural, number) => (Math.abs(number) === 1 ? single : plural),
         sprintf: (format, ...args) => {
             let index = 0;
             return format.replace(/%([0-9]+\$)?[sd]/g, (match, position) => {
@@ -16,7 +17,7 @@
     };
 
     const hasI18n = typeof window !== 'undefined' && window.wp && window.wp.i18n;
-    const { __, sprintf } = hasI18n ? window.wp.i18n : fallbackI18n;
+    const { __, sprintf, _n } = hasI18n ? window.wp.i18n : fallbackI18n;
 
     if (!hasI18n) {
         // eslint-disable-next-line no-console
@@ -52,6 +53,61 @@
 
         // --- EXPORTATION ---
         const moduleCheckboxes = $('input[name="ssc-modules[]"]');
+        const selectAllBtn = $('#ssc-modules-select-all');
+        const selectNoneBtn = $('#ssc-modules-select-none');
+        const summary = $('#ssc-modules-summary');
+
+        function updateModuleSummary() {
+            if (!summary.length) {
+                return;
+            }
+
+            const total = moduleCheckboxes.length;
+            const checked = moduleCheckboxes.filter(':checked').length;
+            let message;
+
+            if (total === 0) {
+                message = __('Aucun ensemble disponible pour le transfert.', 'supersede-css-jlg');
+            } else if (checked === 0) {
+                message = __('Aucun ensemble sélectionné.', 'supersede-css-jlg');
+            } else if (checked === total) {
+                message = __('Tous les ensembles sont sélectionnés.', 'supersede-css-jlg');
+            } else {
+                message = sprintf(
+                    _n('%1$d ensemble sélectionné sur %2$d.', '%1$d ensembles sélectionnés sur %2$d.', checked, 'supersede-css-jlg'),
+                    checked,
+                    total
+                );
+            }
+
+            summary.text(message);
+
+            if (selectAllBtn.length) {
+                selectAllBtn.prop('disabled', checked === total || total === 0);
+            }
+
+            if (selectNoneBtn.length) {
+                selectNoneBtn.prop('disabled', checked === 0);
+            }
+        }
+
+        if (moduleCheckboxes.length) {
+            moduleCheckboxes.on('change', updateModuleSummary);
+        }
+
+        if (selectAllBtn.length) {
+            selectAllBtn.on('click', () => {
+                moduleCheckboxes.prop('checked', true).trigger('change');
+            });
+        }
+
+        if (selectNoneBtn.length) {
+            selectNoneBtn.on('click', () => {
+                moduleCheckboxes.prop('checked', false).trigger('change');
+            });
+        }
+
+        updateModuleSummary();
 
         function getSelectedModules() {
             return moduleCheckboxes
