@@ -79,3 +79,24 @@ Ces pistes prolongent l’ambition « studio » en s’inspirant des workflows d
    - Offrir une gestion de layouts mémorisés : l’utilisateur choisit un preset « Designer », « Intégrateur », « QA » avec panneaux prédéfinis, ou sauvegarde son arrangement personnalisé synchronisé via user meta.
    - Ajouter une barre de statut en bas de l’écran avec logs en temps réel (dernière sauvegarde, erreurs de lint, recommandations d’accessibilité) pour sécuriser les workflows intensifs.
    - Implémenter un centre de notifications contextualisé (succès, erreurs, suggestions) avec historique et possibilité d’assigner des actions (ex. « Ajouter une version responsive ») pour rapprocher l’outil d’une suite collaborative moderne.
+
+6. **Organisation des modes Simple / Expert**
+   - Les réglages clés (onglets multi-device, viewport custom, picker, sliders) sont concentrés dans une seule vue, sans segmentation progressive : on passe directement du formulaire principal à des fonctions avancées dans la même colonne. 【F:supersede-css-jlg-enhanced/views/utilities.php†L11-L145】
+   - S’inspirer de Webflow et Figma qui proposent un mode « Quick actions » (propriétés essentielles visibles) et un panneau « Advanced » repliable : exposer par défaut un mode Simple (onglet Desktop + sauvegarde + presets) et masquer les réglages experts derrière un toggle global.
+   - Prévoir un chemin de montée en compétence : tooltip « Passer en mode Expert » avec aperçu des gains (breakpoints multiples, picker, viewport custom). Un badge « Beta » ou « Pro » permet d’aligner l’image du produit sur les standards SaaS premium.
+   - Côté IA et assistants, proposer un panneau « Suggestions instantanées » dans le mode simple (ex. trois variantes générées automatiquement) et réserver les règles personnalisées, breakpoints arbitraires et scripts de build au mode Expert.
+   - Garder la parité clavier/lecteur d’écran : le toggle Simple ↔ Expert doit être un vrai bouton `<button role="switch">` avec annonce ARIA, et mémoriser le choix utilisateur côté `user_meta` pour éviter un retour en Simple à chaque chargement.
+
+7. **Accessibilité et lecture avancée**
+   - Bien que les onglets soient déjà accessibles via `role="tab"` et navigation clavier, le focus est parfois perdu lors du rafraîchissement de CodeMirror, ce qui crée une rupture avec les lecteurs d’écran. 【F:supersede-css-jlg-enhanced/assets/js/utilities.js†L54-L108】
+   - Implémenter une gestion de focus persistante à la façon de Notion ou Linear : après changement d’onglet, replacer manuellement le focus dans l’éditeur et annoncer la ligne/colonne active via `aria-live`.
+   - Ajouter des tailles de police adaptatives (slider zoom ou raccourcis ⌘+ / ⌘-) comme le proposent VS Code et Webflow pour réduire la fatigue visuelle sur des sessions longues.
+   - Prévoir un mode contraste élevé et un thème clair/dark synchronisé avec `prefers-color-scheme`, plus des thèmes d’éditeur (clair, sombre, solaire) afin d’aligner l’outil avec les attentes professionnelles.
+   - Étendre le tutoriel `@media` en version audio/texte simplifié, téléchargeable, afin d’accompagner les profils non experts et renforcer la montée en compétence sans quitter l’écran principal.
+
+8. **Fiabilité et résilience produit**
+   - L’enregistrement repose sur une requête Ajax unique, avec fallback alert/console si `window.sscToast` n’est pas chargé, sans réessai ni file d’attente. 【F:supersede-css-jlg-enhanced/assets/js/utilities.js†L20-L90】【F:supersede-css-jlg-enhanced/assets/js/utilities.js†L208-L283】
+   - Mettre en place une file d’opérations inspirée de Notion : chaque sauvegarde est placée dans une queue, réessayée automatiquement (exponentiel backoff) et journalisée dans un panneau « Activité ». Afficher un état « Draft non synchronisé » pour renforcer la confiance.
+   - Ajouter un mode hors-ligne : stocker le CSS dans IndexedDB et afficher un badge « Hors connexion » avec compteur de diff, puis resynchroniser à la reconnexion comme le fait Figma.
+   - Diversifier les notifications : toasts pour les succès, bandeau sticky en cas de panne prolongée (API REST 500) et e-mails d’alerte pour les sites multi-utilisateurs. Utiliser `wp.a11y.speak` pour rendre les erreurs vocalisées par les lecteurs d’écran.
+   - Documenter ces scénarios dans les tests end-to-end (Playwright) en plus des tests manuels existants sur les erreurs réseau pour augmenter la couverture de fiabilité. 【F:supersede-css-jlg-enhanced/manual-tests/css-save-network-error.md†L1-L25】

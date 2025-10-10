@@ -3,6 +3,7 @@
 namespace SSC\Admin\Pages;
 
 use SSC\Admin\AbstractPage;
+use SSC\Support\UserPreferences;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -17,6 +18,7 @@ class Utilities extends AbstractPage
             'css_tablet'  => get_option('ssc_css_tablet', ''),
             'css_mobile'  => get_option('ssc_css_mobile', ''),
             'preview_url' => get_home_url(),
+            'editor_mode' => UserPreferences::getUtilitiesEditorMode(),
         ]);
     }
 }

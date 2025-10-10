@@ -3,17 +3,18 @@
 namespace SSC\Infra;
 
 use SSC\Infra\Import\Sanitizer;
+use SSC\Infra\Rest\ControllerInterface;
 use SSC\Infra\Rest\ActivityLogController;
 use SSC\Infra\Rest\ApprovalsController;
 use SSC\Infra\Rest\CssController;
+use SSC\Infra\Rest\ExportsController;
 use SSC\Infra\Rest\ImportExportController;
 use SSC\Infra\Rest\LogsController;
 use SSC\Infra\Rest\PresetsController;
 use SSC\Infra\Rest\SystemController;
-use SSC\Infra\Rest\ExportsController;
 use SSC\Infra\Rest\TokensController;
+use SSC\Infra\Rest\UserPreferencesController;
 use SSC\Infra\Rest\VisualEffectsPresetsController;
-use SSC\Infra\Rest\ControllerInterface;
 
 if (!class_exists('\\SSC\\Support\\CssRevisions') && is_readable(__DIR__ . '/../Support/CssRevisions.php')) {
     require_once __DIR__ . '/../Support/CssRevisions.php';
@@ -45,6 +46,7 @@ final class Routes
             new ApprovalsController(),
             new ActivityLogController(),
             new ExportsController(),
+            new UserPreferencesController(),
         ];
 
         add_action('rest_api_init', [$this, 'registerControllers']);

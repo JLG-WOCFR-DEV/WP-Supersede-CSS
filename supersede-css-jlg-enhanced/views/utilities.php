@@ -6,8 +6,9 @@ if (!defined('ABSPATH')) {
 /** @var string $css_tablet */
 /** @var string $css_mobile */
 /** @var string $preview_url */
+/** @var string $editor_mode */
 ?>
-<div class="ssc-wrap ssc-utilities-wrap">
+<div class="ssc-wrap ssc-utilities-wrap" data-editor-mode="<?php echo esc_attr($editor_mode); ?>">
     <div class="ssc-editor-layout">
         <div class="ssc-editor-column">
             <div class="ssc-editor-header">
@@ -16,26 +17,59 @@ if (!defined('ABSPATH')) {
                     <button id="ssc-save-css" class="button button-primary"><?php echo esc_html__('Enregistrer le CSS', 'supersede-css-jlg'); ?></button>
                 </div>
             </div>
+            <div class="ssc-mode-switch">
+                <div class="ssc-mode-switch__labels">
+                    <span class="ssc-mode-switch__title"><?php esc_html_e('Mode d\'édition', 'supersede-css-jlg'); ?></span>
+                    <span class="ssc-mode-switch__badge" data-mode-visibility="simple"><?php esc_html_e('Simple', 'supersede-css-jlg'); ?></span>
+                    <span class="ssc-mode-switch__badge" data-mode-visibility="expert"><?php esc_html_e('Expert', 'supersede-css-jlg'); ?></span>
+                </div>
+                <button
+                    type="button"
+                    id="ssc-editor-mode-toggle"
+                    class="ssc-mode-switch__button"
+                    role="switch"
+                    aria-checked="<?php echo $editor_mode === 'expert' ? 'true' : 'false'; ?>"
+                    aria-describedby="ssc-editor-mode-helper-simple ssc-editor-mode-helper-expert"
+                    data-label-simple="<?php echo esc_attr__('Mode Simple', 'supersede-css-jlg'); ?>"
+                    data-label-expert="<?php echo esc_attr__('Mode Expert', 'supersede-css-jlg'); ?>"
+                    data-toast-simple="<?php echo esc_attr__('Mode Simple activé : focus sur les réglages essentiels.', 'supersede-css-jlg'); ?>"
+                    data-toast-expert="<?php echo esc_attr__('Mode Expert activé : options avancées visibles.', 'supersede-css-jlg'); ?>"
+                >
+                    <span class="ssc-mode-switch__track" aria-hidden="true">
+                        <span class="ssc-mode-switch__thumb"></span>
+                    </span>
+                    <span class="ssc-mode-switch__text" id="ssc-editor-mode-label">
+                        <?php echo esc_html($editor_mode === 'expert' ? __('Mode Expert', 'supersede-css-jlg') : __('Mode Simple', 'supersede-css-jlg')); ?>
+                    </span>
+                </button>
+                <p class="ssc-mode-switch__helper" id="ssc-editor-mode-helper-simple" data-mode-visibility="simple">
+                    <?php esc_html_e('Gardez l\'essentiel sous la main : onglet Desktop, sauvegarde rapide et aperçu.', 'supersede-css-jlg'); ?>
+                </p>
+                <p class="ssc-mode-switch__helper" id="ssc-editor-mode-helper-expert" data-mode-visibility="expert">
+                    <?php esc_html_e('Activez les breakpoints supplémentaires, le picker d\'éléments et les contrôles avancés.', 'supersede-css-jlg'); ?>
+                </p>
+            </div>
+            <p id="ssc-editor-mode-status" class="screen-reader-text" role="status" aria-live="polite" aria-atomic="true"></p>
             <div class="ssc-editor-tabs" role="tablist" aria-label="<?php echo esc_attr__('Modes d\'édition CSS', 'supersede-css-jlg'); ?>">
                 <button type="button" class="ssc-editor-tab active" id="ssc-editor-tab-desktop" role="tab" aria-selected="true" aria-controls="ssc-editor-panel-desktop" data-tab="desktop"><?php esc_html_e('🖥️ Desktop', 'supersede-css-jlg'); ?></button>
-                <button type="button" class="ssc-editor-tab" id="ssc-editor-tab-tablet" role="tab" aria-selected="false" aria-controls="ssc-editor-panel-tablet" data-tab="tablet"><?php esc_html_e('📲 Tablette', 'supersede-css-jlg'); ?></button>
-                <button type="button" class="ssc-editor-tab" id="ssc-editor-tab-mobile" role="tab" aria-selected="false" aria-controls="ssc-editor-panel-mobile" data-tab="mobile"><?php esc_html_e('📱 Mobile', 'supersede-css-jlg'); ?></button>
-                <button type="button" class="ssc-editor-tab" id="ssc-editor-tab-tutorial" role="tab" aria-selected="false" aria-controls="ssc-editor-panel-tutorial" data-tab="tutorial"><?php esc_html_e('💡 Tutoriel @media queries', 'supersede-css-jlg'); ?></button>
+                <button type="button" class="ssc-editor-tab" id="ssc-editor-tab-tablet" role="tab" aria-selected="false" aria-controls="ssc-editor-panel-tablet" data-tab="tablet" data-mode-visibility="expert"><?php esc_html_e('📲 Tablette', 'supersede-css-jlg'); ?></button>
+                <button type="button" class="ssc-editor-tab" id="ssc-editor-tab-mobile" role="tab" aria-selected="false" aria-controls="ssc-editor-panel-mobile" data-tab="mobile" data-mode-visibility="expert"><?php esc_html_e('📱 Mobile', 'supersede-css-jlg'); ?></button>
+                <button type="button" class="ssc-editor-tab" id="ssc-editor-tab-tutorial" role="tab" aria-selected="false" aria-controls="ssc-editor-panel-tutorial" data-tab="tutorial" data-mode-visibility="expert"><?php esc_html_e('💡 Tutoriel @media queries', 'supersede-css-jlg'); ?></button>
             </div>
             <div class="ssc-editor-container">
                 <div id="ssc-editor-panel-desktop" class="ssc-editor-panel active" role="tabpanel" aria-labelledby="ssc-editor-tab-desktop" tabindex="0">
                     <label class="screen-reader-text" for="ssc-css-editor-desktop"><?php esc_html_e('CSS pour la vue ordinateur', 'supersede-css-jlg'); ?></label>
                     <textarea id="ssc-css-editor-desktop"><?php echo esc_textarea($css_desktop); ?></textarea>
                 </div>
-                <div id="ssc-editor-panel-tablet" class="ssc-editor-panel" role="tabpanel" aria-labelledby="ssc-editor-tab-tablet" tabindex="0" hidden>
+                <div id="ssc-editor-panel-tablet" class="ssc-editor-panel" role="tabpanel" aria-labelledby="ssc-editor-tab-tablet" tabindex="0" hidden data-mode-visibility="expert">
                     <label class="screen-reader-text" for="ssc-css-editor-tablet"><?php esc_html_e('CSS pour la vue tablette', 'supersede-css-jlg'); ?></label>
                     <textarea id="ssc-css-editor-tablet"><?php echo esc_textarea($css_tablet); ?></textarea>
                 </div>
-                <div id="ssc-editor-panel-mobile" class="ssc-editor-panel" role="tabpanel" aria-labelledby="ssc-editor-tab-mobile" tabindex="0" hidden>
+                <div id="ssc-editor-panel-mobile" class="ssc-editor-panel" role="tabpanel" aria-labelledby="ssc-editor-tab-mobile" tabindex="0" hidden data-mode-visibility="expert">
                     <label class="screen-reader-text" for="ssc-css-editor-mobile"><?php esc_html_e('CSS pour la vue mobile', 'supersede-css-jlg'); ?></label>
                     <textarea id="ssc-css-editor-mobile"><?php echo esc_textarea($css_mobile); ?></textarea>
                 </div>
-                <div id="ssc-editor-panel-tutorial" class="ssc-editor-panel ssc-tutorial-content" role="tabpanel" aria-labelledby="ssc-editor-tab-tutorial" tabindex="0" hidden>
+                <div id="ssc-editor-panel-tutorial" class="ssc-editor-panel ssc-tutorial-content" role="tabpanel" aria-labelledby="ssc-editor-tab-tutorial" tabindex="0" hidden data-mode-visibility="expert">
                     <details>
                         <summary><?php esc_html_e('Afficher le tutoriel complet sur les breakpoints', 'supersede-css-jlg'); ?></summary>
                         <h3><?php esc_html_e('Le Principe : "Desktop First" Simplifié', 'supersede-css-jlg'); ?></h3>
@@ -94,13 +128,14 @@ if (!defined('ABSPATH')) {
                         id="ssc-element-picker-toggle"
                         title="<?php echo esc_attr__('Cibler un élément', 'supersede-css-jlg'); ?>"
                         aria-label="<?php echo esc_attr__('Cibler un élément', 'supersede-css-jlg'); ?>"
+                        data-mode-visibility="expert"
                     >
                         🎯
                         <span class="screen-reader-text"><?php esc_html_e('Cibler un élément', 'supersede-css-jlg'); ?></span>
                     </button>
                 </div>
                 <p id="ssc-preview-url-help" class="screen-reader-text"><?php esc_html_e('Saisissez une URL du même domaine que l\'administration WordPress pour charger l\'aperçu.', 'supersede-css-jlg'); ?></p>
-                <div class="ssc-responsive-toggles" role="group" aria-label="<?php echo esc_attr__('Basculer le viewport de l\'aperçu', 'supersede-css-jlg'); ?>">
+                <div class="ssc-responsive-toggles" role="group" aria-label="<?php echo esc_attr__('Basculer le viewport de l\'aperçu', 'supersede-css-jlg'); ?>" data-mode-visibility="expert">
                     <button
                         type="button"
                         class="button button-primary"
@@ -142,7 +177,7 @@ if (!defined('ABSPATH')) {
                     </button>
                 </div>
                 <div id="ssc-viewport-status" class="screen-reader-text" role="status" aria-live="polite" aria-atomic="true"></div>
-                <div class="ssc-viewport-width-control">
+                <div class="ssc-viewport-width-control" data-mode-visibility="expert">
                     <label for="ssc-viewport-width"><?php esc_html_e('Largeur personnalisée de l\'aperçu (en pixels)', 'supersede-css-jlg'); ?></label>
                     <p id="ssc-viewport-width-help" class="description"><?php esc_html_e('Ajustez la largeur pour simuler une taille d\'écran spécifique. Les boutons ci-dessus appliquent des largeurs préconfigurées.', 'supersede-css-jlg'); ?></p>
                     <div class="ssc-viewport-width-inputs">
@@ -186,12 +221,13 @@ if (!defined('ABSPATH')) {
                         aria-valuemax="1920"
                         aria-valuenow="1024"
                         aria-valuetext="<?php echo esc_attr__('1024 pixels', 'supersede-css-jlg'); ?>"
+                        data-mode-visibility="expert"
                     >
                         <span class="ssc-resize-grip" aria-hidden="true"></span>
                     </div>
                 </div>
             </div>
-            <div style="padding-top: 8px;">
+            <div class="ssc-picked-selector" data-mode-visibility="expert">
                 <label><?php esc_html_e('Sélecteur Ciblé :', 'supersede-css-jlg'); ?></label>
                 <input type="text" id="ssc-picked-selector" readonly class="large-text" placeholder="<?php echo esc_attr__('Cliquez sur 🎯 puis sur un élément dans l\'aperçu.', 'supersede-css-jlg'); ?>">
             </div>
