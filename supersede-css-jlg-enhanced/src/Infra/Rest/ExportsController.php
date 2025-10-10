@@ -190,16 +190,27 @@ final class ExportsController extends BaseController
             $slug = preg_replace('/[^a-z0-9_]+/i', '_', preg_replace('/^-+/', '', $name) ?? $name) ?? $name;
             $slug = trim($slug, '_');
 
+            if ($slug === '') {
+                $slug = 'token';
+            }
+
+            if (!preg_match('/^[a-z]/i', $slug)) {
+                $slug = 'a_' . $slug;
+            }
+
             $value = (string) ($token['value'] ?? '');
             $type = (string) ($token['type'] ?? 'text');
 
+            $escapedSlug = htmlspecialchars($slug, ENT_QUOTES | ENT_XML1, 'UTF-8');
+            $escapedValue = htmlspecialchars($value, ENT_QUOTES | ENT_XML1, 'UTF-8');
+
             if ($type === 'color') {
-                $lines[] = sprintf('    <color name="%s">%s</color>', $slug, $value);
+                $lines[] = sprintf('    <color name="%s">%s</color>', $escapedSlug, $escapedValue);
                 continue;
             }
 
             if (in_array($type, ['spacing', 'dimension', 'number'], true)) {
-                $lines[] = sprintf('    <dimen name="%s">%s</dimen>', $slug, $value);
+                $lines[] = sprintf('    <dimen name="%s">%s</dimen>', $escapedSlug, $escapedValue);
             }
         }
 
