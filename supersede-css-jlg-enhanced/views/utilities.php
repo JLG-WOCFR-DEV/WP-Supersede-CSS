@@ -51,11 +51,58 @@ if (!defined('ABSPATH')) {
             </div>
             <p id="ssc-editor-mode-status" class="screen-reader-text" role="status" aria-live="polite" aria-atomic="true"></p>
             <div class="ssc-editor-tabs" role="tablist" aria-label="<?php echo esc_attr__('Modes d\'édition CSS', 'supersede-css-jlg'); ?>">
-                <button type="button" class="ssc-editor-tab active" id="ssc-editor-tab-desktop" role="tab" aria-selected="true" aria-controls="ssc-editor-panel-desktop" data-tab="desktop"><?php esc_html_e('🖥️ Desktop', 'supersede-css-jlg'); ?></button>
-                <button type="button" class="ssc-editor-tab" id="ssc-editor-tab-tablet" role="tab" aria-selected="false" aria-controls="ssc-editor-panel-tablet" data-tab="tablet" data-mode-visibility="expert"><?php esc_html_e('📲 Tablette', 'supersede-css-jlg'); ?></button>
-                <button type="button" class="ssc-editor-tab" id="ssc-editor-tab-mobile" role="tab" aria-selected="false" aria-controls="ssc-editor-panel-mobile" data-tab="mobile" data-mode-visibility="expert"><?php esc_html_e('📱 Mobile', 'supersede-css-jlg'); ?></button>
-                <button type="button" class="ssc-editor-tab" id="ssc-editor-tab-tutorial" role="tab" aria-selected="false" aria-controls="ssc-editor-panel-tutorial" data-tab="tutorial" data-mode-visibility="expert"><?php esc_html_e('💡 Tutoriel @media queries', 'supersede-css-jlg'); ?></button>
+                <button
+                    type="button"
+                    class="ssc-editor-tab active"
+                    id="ssc-editor-tab-desktop"
+                    role="tab"
+                    aria-selected="true"
+                    aria-controls="ssc-editor-panel-desktop"
+                    data-tab="desktop"
+                    data-announcement="<?php echo esc_attr__('Vue Desktop', 'supersede-css-jlg'); ?>"
+                >
+                    <?php esc_html_e('🖥️ Desktop', 'supersede-css-jlg'); ?>
+                </button>
+                <button
+                    type="button"
+                    class="ssc-editor-tab"
+                    id="ssc-editor-tab-tablet"
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="ssc-editor-panel-tablet"
+                    data-tab="tablet"
+                    data-mode-visibility="expert"
+                    data-announcement="<?php echo esc_attr__('Vue Tablette', 'supersede-css-jlg'); ?>"
+                >
+                    <?php esc_html_e('📲 Tablette', 'supersede-css-jlg'); ?>
+                </button>
+                <button
+                    type="button"
+                    class="ssc-editor-tab"
+                    id="ssc-editor-tab-mobile"
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="ssc-editor-panel-mobile"
+                    data-tab="mobile"
+                    data-mode-visibility="expert"
+                    data-announcement="<?php echo esc_attr__('Vue Mobile', 'supersede-css-jlg'); ?>"
+                >
+                    <?php esc_html_e('📱 Mobile', 'supersede-css-jlg'); ?>
+                </button>
+                <button
+                    type="button"
+                    class="ssc-editor-tab"
+                    id="ssc-editor-tab-tutorial"
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="ssc-editor-panel-tutorial"
+                    data-tab="tutorial"
+                    data-mode-visibility="expert"
+                >
+                    <?php esc_html_e('💡 Tutoriel @media queries', 'supersede-css-jlg'); ?>
+                </button>
             </div>
+            <p id="ssc-editor-focus-status" class="screen-reader-text" role="status" aria-live="polite" aria-atomic="true"></p>
             <div class="ssc-editor-container">
                 <div id="ssc-editor-panel-desktop" class="ssc-editor-panel active" role="tabpanel" aria-labelledby="ssc-editor-tab-desktop" tabindex="0">
                     <label class="screen-reader-text" for="ssc-css-editor-desktop"><?php esc_html_e('CSS pour la vue ordinateur', 'supersede-css-jlg'); ?></label>

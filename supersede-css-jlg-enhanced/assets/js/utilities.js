@@ -29,8 +29,135 @@
     let editors = {};
     let pickerActive = false;
     const editorViews = ['desktop', 'tablet', 'mobile'];
+    const viewLabels = {
+        desktop: __('Vue Desktop', 'supersede-css-jlg'),
+        tablet: __('Vue Tablette', 'supersede-css-jlg'),
+        mobile: __('Vue Mobile', 'supersede-css-jlg'),
+    };
+    let focusAnnouncer = null;
+    let focusAnnouncementTimeout = null;
+    let lastFocusedView = 'desktop';
     const codeMirrorAvailable = typeof window !== 'undefined' && typeof window.CodeMirror !== 'undefined';
     let codeMirrorWarningShown = false;
+
+    const getViewLabel = (view) => {
+        if (typeof viewLabels[view] === 'string' && viewLabels[view].trim() !== '') {
+            return viewLabels[view];
+        }
+
+        return view;
+    };
+
+    const getCodeMirrorCursor = (view) => {
+        const editor = editors[view];
+        if (!editor || typeof editor.getCursor !== 'function') {
+            return null;
+        }
+
+        const cursor = editor.getCursor();
+        const line = typeof cursor.line === 'number' ? cursor.line + 1 : 1;
+        const column = typeof cursor.ch === 'number' ? cursor.ch + 1 : 1;
+
+        return { line, column };
+    };
+
+    const getTextareaCursor = (view) => {
+        const textarea = document.getElementById(`ssc-css-editor-${view}`);
+        if (!textarea) {
+            return null;
+        }
+
+        const value = typeof textarea.value === 'string' ? textarea.value : '';
+        const selectionStart = typeof textarea.selectionStart === 'number'
+            ? textarea.selectionStart
+            : value.length;
+
+        const uptoSelection = value.slice(0, selectionStart);
+        const lines = uptoSelection.split('\n');
+        const line = lines.length;
+        const column = lines[lines.length - 1].length + 1;
+
+        return { line, column };
+    };
+
+    const getEditorCursorPosition = (view) => {
+        const codeMirrorCursor = getCodeMirrorCursor(view);
+        if (codeMirrorCursor) {
+            return codeMirrorCursor;
+        }
+
+        const textareaCursor = getTextareaCursor(view);
+        if (textareaCursor) {
+            return textareaCursor;
+        }
+
+        return { line: 1, column: 1 };
+    };
+
+    function announceEditorPosition(view, { immediate = false } = {}) {
+        if (!focusAnnouncer || !focusAnnouncer.length || !view) {
+            return;
+        }
+
+        const position = getEditorCursorPosition(view);
+        const label = getViewLabel(view);
+        const message = sprintf(
+            __('%1$s actif. Ligne %2$d, colonne %3$d.', 'supersede-css-jlg'),
+            label,
+            position.line,
+            position.column
+        );
+
+        if (immediate) {
+            if (focusAnnouncementTimeout) {
+                clearTimeout(focusAnnouncementTimeout);
+                focusAnnouncementTimeout = null;
+            }
+
+            focusAnnouncer.text(message);
+            return;
+        }
+
+        if (focusAnnouncementTimeout) {
+            clearTimeout(focusAnnouncementTimeout);
+        }
+
+        focusAnnouncementTimeout = setTimeout(() => {
+            focusAnnouncer.text(message);
+        }, 80);
+    }
+
+    function focusEditorView(view, { announce = false } = {}) {
+        if (!view || view === 'tutorial') {
+            return false;
+        }
+
+        const editor = editors[view];
+        if (editor && typeof editor.focus === 'function') {
+            editor.focus();
+            lastFocusedView = view;
+
+            if (announce) {
+                announceEditorPosition(view, { immediate: true });
+            }
+
+            return true;
+        }
+
+        const textarea = document.getElementById(`ssc-css-editor-${view}`);
+        if (textarea && typeof textarea.focus === 'function') {
+            textarea.focus();
+            lastFocusedView = view;
+
+            if (announce) {
+                announceEditorPosition(view, { immediate: true });
+            }
+
+            return true;
+        }
+
+        return false;
+    }
 
     function notifyCodeMirrorUnavailable() {
         if (codeMirrorWarningShown) return;
@@ -53,11 +180,37 @@
 
         editorViews.forEach(view => {
             const textarea = document.getElementById(`ssc-css-editor-${view}`);
-            if (textarea) {
-                editors[view] = CodeMirror.fromTextArea(textarea, {
-                    lineNumbers: true, mode: 'css', theme: 'material-darker', lineWrapping: true,
-                });
+            if (!textarea) {
+                return;
             }
+
+            const instance = CodeMirror.fromTextArea(textarea, {
+                lineNumbers: true,
+                mode: 'css',
+                theme: 'material-darker',
+                lineWrapping: true,
+            });
+
+            instance.on('focus', () => {
+                lastFocusedView = view;
+                announceEditorPosition(view, { immediate: true });
+            });
+
+            instance.on('blur', () => {
+                lastFocusedView = view;
+            });
+
+            instance.on('cursorActivity', () => {
+                const inputField = typeof instance.getInputField === 'function'
+                    ? instance.getInputField()
+                    : null;
+
+                if (inputField && document.activeElement === inputField) {
+                    announceEditorPosition(view);
+                }
+            });
+
+            editors[view] = instance;
         });
     }
 
@@ -111,7 +264,51 @@
     $(document).ready(function() {
         if (!$('.ssc-utilities-wrap').length) return;
 
+        focusAnnouncer = $('#ssc-editor-focus-status');
+
+        const updateViewLabelFromTab = (selector, view) => {
+            const $tab = $(selector);
+            if (!$tab.length) {
+                return;
+            }
+
+            const announcement = $tab.data('announcement');
+            if (typeof announcement === 'string' && announcement.trim() !== '') {
+                viewLabels[view] = announcement;
+            }
+        };
+
+        updateViewLabelFromTab('#ssc-editor-tab-desktop', 'desktop');
+        updateViewLabelFromTab('#ssc-editor-tab-tablet', 'tablet');
+        updateViewLabelFromTab('#ssc-editor-tab-mobile', 'mobile');
+
         initCodeMirrors();
+
+        editorViews.forEach((view) => {
+            if (editors[view]) {
+                return;
+            }
+
+            const textarea = $(`#ssc-css-editor-${view}`);
+            if (!textarea.length) {
+                return;
+            }
+
+            textarea.on('focus', () => {
+                lastFocusedView = view;
+                announceEditorPosition(view, { immediate: true });
+            });
+
+            textarea.on('blur', () => {
+                lastFocusedView = view;
+            });
+
+            textarea.on('keyup click', () => {
+                if (document.activeElement === textarea[0]) {
+                    announceEditorPosition(view);
+                }
+            });
+        });
 
         const $tabList = $('.ssc-editor-tabs');
         const $tabs = $tabList.find('.ssc-editor-tab');
@@ -276,28 +473,60 @@
                 tabindex: '0'
             });
 
-            if (focus) {
-                $newTab.trigger('focus');
-            }
-
             if ($panel.length) {
                 $panel.addClass('active').removeAttr('hidden');
             }
 
-            if (editors[tab]) {
+            if (tab && editors[tab] && typeof editors[tab].refresh === 'function') {
                 editors[tab].refresh();
+            }
+
+            if (!tab) {
+                if (focus) {
+                    $newTab.trigger('focus');
+                }
+                return;
+            }
+
+            if (tab === 'tutorial') {
+                if (focus) {
+                    $newTab.trigger('focus');
+                }
+                return;
+            }
+
+            const editorFocused = focusEditorView(tab, { announce: true });
+
+            if (!editorFocused && focus) {
+                $newTab.trigger('focus');
             }
         }
 
         $tabs.attr('tabindex', '-1');
         const $initialActive = $tabs.filter('.active').attr('tabindex', '0');
+        let initialView = 'desktop';
         if ($initialActive.length) {
             const initialPanelId = $initialActive.attr('aria-controls');
             if (initialPanelId) {
                 $panels.not(`#${initialPanelId}`).attr('hidden', true);
             }
+
+            const dataTab = $initialActive.data('tab');
+            if (typeof dataTab === 'string' && dataTab.trim() !== '') {
+                initialView = dataTab;
+            }
         } else if ($tabs.length) {
-            setActiveTab($tabs.eq(0));
+            const $firstTab = $tabs.eq(0);
+            setActiveTab($firstTab);
+            const dataTab = $firstTab.data('tab');
+            if (typeof dataTab === 'string' && dataTab.trim() !== '') {
+                initialView = dataTab;
+            }
+        }
+
+        if (initialView && initialView !== 'tutorial') {
+            lastFocusedView = initialView;
+            announceEditorPosition(initialView, { immediate: true });
         }
 
         $tabs.on('click', function() {
