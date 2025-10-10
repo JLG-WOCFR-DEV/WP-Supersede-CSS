@@ -153,6 +153,14 @@ This document lists families of design presets that could be bundled with Supers
 
 ### Next steps
 
-- 🛠️ Implémenter un endpoint `ssc/v1/presets/catalog` pour distribuer les bundles.
+- ✅ Implémenté : endpoint `GET /ssc/v1/presets/catalog` (JSON ou CSS) pour distribuer les bundles prêts à l’emploi.
 - 🧪 Ajouter des tests Playwright vérifiant le chargement d’un preset et la mise à jour des tokens.
 - 📦 Créer des packages ZIP exemple (Landing Marketing, SaaS Dashboard) intégrant tokens + presets + CSS utilitaires.
+
+#### Consommer le catalogue REST
+
+```bash
+curl -H "X-WP-Nonce: <nonce>" "https://exemple.test/wp-json/ssc/v1/presets/catalog"
+```
+
+La réponse contient les métadonnées professionnelles (famille, focus, hooks de personnalisation) et un hash `checksum` pour simplifier l’intégration dans vos pipelines. Pour récupérer uniquement la feuille de style agrégée, précisez `?format=css` : un téléchargement `text/css` prêt pour Storybook ou un prototype marketing.

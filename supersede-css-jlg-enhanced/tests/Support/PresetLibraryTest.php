@@ -42,4 +42,44 @@ final class PresetLibraryTest extends WP_UnitTestCase
 
         $this->assertSame($existing, get_option('ssc_presets'));
     }
+
+    public function test_catalog_entries_include_core_metadata(): void
+    {
+        $entries = PresetLibrary::getCatalogEntries();
+
+        $this->assertIsArray($entries);
+        $this->assertNotEmpty($entries);
+
+        $first = $entries[0];
+        $this->assertArrayHasKey('id', $first);
+        $this->assertArrayHasKey('css', $first);
+        $this->assertArrayHasKey('meta', $first);
+        $this->assertArrayHasKey('token_count', $first);
+
+        $this->assertIsArray($first['meta']);
+        $this->assertArrayHasKey('family', $first['meta']);
+        $this->assertArrayHasKey('token_priorities', $first['meta']);
+    }
+
+    public function test_render_catalog_stylesheet_concatenates_css(): void
+    {
+        $entries = [
+            [
+                'id' => 'demo',
+                'name' => 'Demo Preset',
+                'css' => ':root {\n    --color: #fff;\n}',
+            ],
+            [
+                'id' => 'empty',
+                'name' => 'Empty',
+                'css' => '',
+            ],
+        ];
+
+        $css = PresetLibrary::renderCatalogStylesheet($entries);
+
+        $this->assertStringContainsString('Demo Preset', $css);
+        $this->assertStringContainsString('--color: #fff;', $css);
+        $this->assertStringNotContainsString('Empty', $css);
+    }
 }

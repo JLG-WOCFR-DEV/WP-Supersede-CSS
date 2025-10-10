@@ -10,6 +10,7 @@ use SSC\Infra\Rest\CssController;
 use SSC\Infra\Rest\ExportsController;
 use SSC\Infra\Rest\ImportExportController;
 use SSC\Infra\Rest\LogsController;
+use SSC\Infra\Rest\PresetCatalogController;
 use SSC\Infra\Rest\PresetsController;
 use SSC\Infra\Rest\SystemController;
 use SSC\Infra\Rest\TokensController;
@@ -39,6 +40,7 @@ final class Routes
             new CssController($sanitizer),
             new TokensController(),
             new PresetsController(),
+            new PresetCatalogController(),
             new VisualEffectsPresetsController(),
             new ImportExportController($sanitizer),
             new LogsController(),
