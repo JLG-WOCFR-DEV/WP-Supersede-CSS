@@ -116,6 +116,142 @@
         const $tabList = $('.ssc-editor-tabs');
         const $tabs = $tabList.find('.ssc-editor-tab');
         const $panels = $('.ssc-editor-panel');
+        const $utilitiesWrap = $('.ssc-utilities-wrap');
+        const $modeToggle = $('#ssc-editor-mode-toggle');
+        const $modeLabel = $('#ssc-editor-mode-label');
+        const $modeStatus = $('#ssc-editor-mode-status');
+        let editorMode = normalizeMode($utilitiesWrap.attr('data-editor-mode'));
+
+        function normalizeMode(value) {
+            return value === 'expert' ? 'expert' : 'simple';
+        }
+
+        function getModeLabel(mode) {
+            if (!$modeToggle.length) {
+                return mode === 'expert'
+                    ? __('Mode Expert', 'supersede-css-jlg')
+                    : __('Mode Simple', 'supersede-css-jlg');
+            }
+
+            const dataKey = mode === 'expert' ? 'labelExpert' : 'labelSimple';
+            const stored = $modeToggle.data(dataKey);
+
+            if (typeof stored === 'string' && stored.trim() !== '') {
+                return stored;
+            }
+
+            return mode === 'expert'
+                ? __('Mode Expert', 'supersede-css-jlg')
+                : __('Mode Simple', 'supersede-css-jlg');
+        }
+
+        function getToastMessage(mode) {
+            if (!$modeToggle.length) {
+                return '';
+            }
+
+            const dataKey = mode === 'expert' ? 'toastExpert' : 'toastSimple';
+            const stored = $modeToggle.data(dataKey);
+
+            return typeof stored === 'string' ? stored : '';
+        }
+
+        function showToast(message) {
+            if (!message) {
+                return;
+            }
+
+            if (typeof window !== 'undefined' && typeof window.sscToast === 'function') {
+                window.sscToast(message);
+            } else if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+                window.alert(message);
+            } else {
+                console.log(message); // eslint-disable-line no-console
+            }
+        }
+
+        function applyEditorMode(mode, options = {}) {
+            const { announce = true, notify = false } = options;
+            const normalized = normalizeMode(mode);
+
+            editorMode = normalized;
+
+            if ($utilitiesWrap.length) {
+                $utilitiesWrap.attr('data-editor-mode', normalized);
+            }
+
+            if ($modeToggle.length) {
+                $modeToggle.attr('aria-checked', normalized === 'expert' ? 'true' : 'false');
+                $modeToggle.toggleClass('is-expert', normalized === 'expert');
+            }
+
+            if ($modeLabel.length) {
+                $modeLabel.text(getModeLabel(normalized));
+            }
+
+            if (normalized === 'simple') {
+                const $desktopTab = $('#ssc-editor-tab-desktop');
+                if ($desktopTab.length && !$desktopTab.hasClass('active')) {
+                    setActiveTab($desktopTab);
+                }
+            }
+
+            if ($modeStatus.length && announce) {
+                const announcement = normalized === 'expert'
+                    ? __('Mode Expert activé.', 'supersede-css-jlg')
+                    : __('Mode Simple activé.', 'supersede-css-jlg');
+                $modeStatus.text(announcement);
+            }
+
+            if (notify) {
+                const toastMessage = getToastMessage(normalized);
+                if (toastMessage) {
+                    showToast(toastMessage);
+                }
+            }
+
+            return normalized;
+        }
+
+        function persistEditorMode(mode, previousMode) {
+            if (typeof window === 'undefined' || typeof window.SSC === 'undefined') {
+                return;
+            }
+
+            const restConfig = window.SSC.rest || {};
+
+            if (!restConfig.root || !restConfig.nonce) {
+                return;
+            }
+
+            $.ajax({
+                url: restConfig.root + 'user-preferences',
+                method: 'POST',
+                data: {
+                    utilities_editor_mode: mode,
+                    _wpnonce: restConfig.nonce,
+                },
+                beforeSend: (xhr) => {
+                    xhr.setRequestHeader('X-WP-Nonce', restConfig.nonce);
+                }
+            }).fail(() => {
+                showToast(__('Impossible de sauvegarder le mode sélectionné. Réessayez.', 'supersede-css-jlg'));
+                if (previousMode && previousMode !== mode) {
+                    applyEditorMode(previousMode, { announce: false, notify: false });
+                }
+            });
+        }
+
+        applyEditorMode(editorMode, { announce: false });
+
+        if ($modeToggle.length) {
+            $modeToggle.on('click', () => {
+                const previousMode = editorMode;
+                const targetMode = editorMode === 'expert' ? 'simple' : 'expert';
+                const appliedMode = applyEditorMode(targetMode, { notify: true });
+                persistEditorMode(appliedMode, previousMode);
+            });
+        }
 
         function setActiveTab($newTab, focus = false) {
             if (!$newTab.length) return;
@@ -189,16 +325,6 @@
                 setActiveTab($targetTab, true);
             }
         });
-
-        const showToast = (message) => {
-            if (typeof window !== 'undefined' && typeof window.sscToast === 'function') {
-                window.sscToast(message);
-            } else if (typeof window !== 'undefined' && typeof window.alert === 'function') {
-                window.alert(message);
-            } else {
-                console.log(message); // eslint-disable-line no-console
-            }
-        };
 
         const extractApiMessage = (payload, fallbackMessage) => {
             if (!payload) {
