@@ -112,6 +112,342 @@
         });
     };
 
+    const commandPalette = (() => {
+        const sources = new Map();
+        let overlay = null;
+        let searchInput = null;
+        let resultsList = null;
+        let emptyStateEl = null;
+        let results = [];
+        let activeIndex = -1;
+        let isPaletteOpen = false;
+        let lastFocusedElement = null;
+        let config = {
+            title: 'Command palette',
+            searchPlaceholder: 'Search…',
+            searchLabel: 'Command palette search',
+            emptyState: 'No results',
+            announce: (count) => `${count} result(s)`,
+        };
+
+        const speak = (message) => {
+            if (!message) {
+                return;
+            }
+            if (window.wp && window.wp.a11y && typeof window.wp.a11y.speak === 'function') {
+                window.wp.a11y.speak(message, 'polite');
+            }
+        };
+
+        const setActiveIndex = (index) => {
+            activeIndex = index;
+            if (!resultsList) {
+                return;
+            }
+            resultsList.children().removeClass('is-active').attr('aria-selected', 'false');
+            if (activeIndex >= 0) {
+                const item = resultsList.children().eq(activeIndex);
+                item.addClass('is-active').attr('aria-selected', 'true');
+                if (searchInput && item.length) {
+                    searchInput.attr('aria-activedescendant', item.attr('id'));
+                }
+            } else if (searchInput) {
+                searchInput.removeAttr('aria-activedescendant');
+            }
+        };
+
+        const executeCommand = (index) => {
+            if (index < 0 || index >= results.length) {
+                return;
+            }
+            const item = results[index];
+            close();
+
+            if (item.perform && typeof item.perform === 'function') {
+                item.perform();
+                return;
+            }
+
+            if (item.href) {
+                window.location.href = item.href;
+            }
+        };
+
+        const onInputKeyDown = (event) => {
+            if (!isPaletteOpen) {
+                return;
+            }
+
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                if (results.length) {
+                    const nextIndex = activeIndex >= results.length - 1 ? 0 : activeIndex + 1;
+                    setActiveIndex(nextIndex);
+                }
+            } else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                if (results.length) {
+                    const nextIndex = activeIndex <= 0 ? results.length - 1 : activeIndex - 1;
+                    setActiveIndex(nextIndex);
+                }
+            } else if (event.key === 'Enter') {
+                event.preventDefault();
+                if (results.length) {
+                    executeCommand(activeIndex >= 0 ? activeIndex : 0);
+                }
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                close();
+            }
+        };
+
+        const collectResults = (query) => {
+            const aggregated = [];
+            sources.forEach((factory) => {
+                try {
+                    const items = factory();
+                    if (!Array.isArray(items)) {
+                        return;
+                    }
+                    items.forEach((item) => {
+                        if (!item || typeof item !== 'object') {
+                            return;
+                        }
+                        aggregated.push(item);
+                    });
+                } catch (error) {
+                    // ignore faulty sources
+                }
+            });
+
+            const normalized = (query || '').trim().toLowerCase();
+            if (!normalized) {
+                return aggregated;
+            }
+
+            return aggregated.filter((item) => {
+                const haystack = [item.title, item.subtitle]
+                    .concat(Array.isArray(item.keywords) ? item.keywords : [])
+                    .filter(Boolean)
+                    .join(' ')
+                    .toLowerCase();
+                return haystack.indexOf(normalized) !== -1;
+            });
+        };
+
+        const renderResults = () => {
+            if (!resultsList) {
+                return;
+            }
+
+            resultsList.empty();
+
+            if (!results.length) {
+                if (emptyStateEl) {
+                    emptyStateEl.removeAttr('hidden');
+                }
+                setActiveIndex(-1);
+                return;
+            }
+
+            if (emptyStateEl) {
+                emptyStateEl.attr('hidden', 'hidden');
+            }
+
+            results.forEach((item, index) => {
+                const listItem = $('<li>', {
+                    class: 'ssc-command-palette__item',
+                    role: 'option',
+                    id: `ssc-command-palette-item-${index}`,
+                    'data-index': index,
+                });
+
+                listItem.append($('<span>', {
+                    class: 'ssc-command-palette__item-title',
+                    text: item.title || '',
+                }));
+
+                if (item.subtitle) {
+                    listItem.append($('<span>', {
+                        class: 'ssc-command-palette__item-subtitle',
+                        text: item.subtitle,
+                    }));
+                }
+
+                listItem.on('mousedown', (event) => {
+                    event.preventDefault();
+                    executeCommand(index);
+                });
+
+                listItem.on('mouseenter', () => {
+                    setActiveIndex(index);
+                });
+
+                resultsList.append(listItem);
+            });
+
+            setActiveIndex(results.length ? Math.max(0, Math.min(activeIndex, results.length - 1)) : -1);
+        };
+
+        const updateResults = (query) => {
+            results = collectResults(query);
+            renderResults();
+            if (typeof config.announce === 'function') {
+                const announcement = config.announce(results.length);
+                speak(announcement);
+            }
+        };
+
+        const ensureOverlay = () => {
+            if (overlay) {
+                return;
+            }
+
+            overlay = $('<div>', {
+                class: 'ssc-command-palette',
+                id: 'ssc-cmdp',
+                hidden: 'hidden',
+            });
+            const backdrop = $('<div>', {
+                class: 'ssc-command-palette__backdrop',
+                tabindex: '-1',
+            });
+            const dialog = $('<div>', {
+                class: 'ssc-command-palette__dialog',
+                role: 'dialog',
+                'aria-modal': 'true',
+                'aria-labelledby': 'ssc-command-palette-title',
+            });
+            const header = $('<div>', { class: 'ssc-command-palette__header' });
+            const title = $('<h2>', {
+                class: 'ssc-command-palette__title',
+                id: 'ssc-command-palette-title',
+                text: config.title,
+            });
+            header.append(title);
+            searchInput = $('<input>', {
+                type: 'search',
+                class: 'ssc-command-palette__search',
+                id: 'ssc-cmdp-search',
+                placeholder: config.searchPlaceholder,
+                'aria-label': config.searchLabel,
+                autocomplete: 'off',
+                'aria-controls': 'ssc-cmdp-results',
+                'aria-autocomplete': 'list',
+            });
+            resultsList = $('<ul>', {
+                class: 'ssc-command-palette__results',
+                role: 'listbox',
+                id: 'ssc-cmdp-results',
+                'aria-live': 'polite',
+            });
+            emptyStateEl = $('<p>', {
+                class: 'ssc-command-palette__empty',
+                id: 'ssc-cmdp-empty',
+                text: config.emptyState,
+                hidden: 'hidden',
+            });
+
+            dialog.append(header, searchInput, resultsList, emptyStateEl);
+            overlay.append(backdrop, dialog);
+            $('body').append(overlay);
+
+            overlay.on('click', (event) => {
+                if ($(event.target).hasClass('ssc-command-palette__backdrop')) {
+                    close();
+                }
+            });
+
+            searchInput.on('input', function() {
+                updateResults($(this).val() || '');
+            });
+
+            searchInput.on('keydown', onInputKeyDown);
+        };
+
+        const open = (initialQuery = '') => {
+            ensureOverlay();
+
+            if (isPaletteOpen) {
+                updateResults(initialQuery);
+                searchInput.val(initialQuery);
+                setActiveIndex(results.length ? 0 : -1);
+                return;
+            }
+
+            lastFocusedElement = document.activeElement;
+            overlay.removeAttr('hidden');
+            $('body').addClass('ssc-command-palette-open');
+            isPaletteOpen = true;
+            searchInput.val(initialQuery);
+            updateResults(initialQuery);
+            setActiveIndex(results.length ? 0 : -1);
+            setTimeout(() => {
+                searchInput.trigger('focus');
+            }, 0);
+        };
+
+        const close = () => {
+            if (!overlay || !isPaletteOpen) {
+                return;
+            }
+            overlay.attr('hidden', 'hidden');
+            $('body').removeClass('ssc-command-palette-open');
+            isPaletteOpen = false;
+            activeIndex = -1;
+            if (searchInput) {
+                searchInput.val('').removeAttr('aria-activedescendant');
+            }
+            if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+                lastFocusedElement.focus();
+            }
+        };
+
+        const configure = (options = {}) => {
+            if (!options || typeof options !== 'object') {
+                return;
+            }
+            config = {
+                ...config,
+                ...options,
+            };
+
+            if (overlay) {
+                overlay.find('.ssc-command-palette__title').text(config.title);
+                if (searchInput) {
+                    searchInput.attr('placeholder', config.searchPlaceholder);
+                    searchInput.attr('aria-label', config.searchLabel);
+                }
+                if (emptyStateEl) {
+                    emptyStateEl.text(config.emptyState);
+                }
+            }
+        };
+
+        const registerSource = (id, factory) => {
+            if (typeof id !== 'string' || !id.trim() || typeof factory !== 'function') {
+                return;
+            }
+            sources.set(id, factory);
+        };
+
+        return {
+            configure,
+            registerSource,
+            open,
+            close,
+            isOpen: () => isPaletteOpen,
+        };
+    })();
+
+    window.sscCommandPalette = {
+        configure: commandPalette.configure,
+        registerSource: commandPalette.registerSource,
+        open: commandPalette.open,
+        close: commandPalette.close,
+        isOpen: commandPalette.isOpen,
+    };
+
     $(document).ready(function() {
         const localizedData = (typeof window !== 'undefined' && typeof window.SSC !== 'undefined' && window.SSC)
             ? window.SSC
@@ -385,356 +721,234 @@
 
         // --- Command Palette (⌘K) ---
         const cmdkButton = $('#ssc-cmdk');
-        const cmdkPanelHtml = `
-            <div id="ssc-cmdp" role="dialog" aria-modal="true" aria-hidden="true" aria-label="${commandPaletteTitle}" tabindex="-1">
-                <div class="panel" role="document">
-                    <label for="ssc-cmdp-search" class="screen-reader-text">${commandPaletteSearchLabel}</label>
-                    <input
-                        type="search"
-                        id="ssc-cmdp-search"
-                        class="ssc-cmdp-search"
-                        placeholder="${commandPaletteSearchPlaceholder}"
-                        autocomplete="off"
-                        autocapitalize="none"
-                        spellcheck="false"
-                        aria-controls="ssc-cmdp-results"
-                        aria-autocomplete="list"
-                    >
-                    <div id="ssc-cmdp-status" class="screen-reader-text" role="status" aria-live="polite" aria-atomic="true"></div>
-                    <ul id="ssc-cmdp-results" role="listbox" aria-live="polite"></ul>
-                </div>
-            </div>`;
-        $('body').append(cmdkPanelHtml);
-
-        const cmdp = $('#ssc-cmdp');
-        const searchInput = $('#ssc-cmdp-search');
-        const resultsList = $('#ssc-cmdp-results');
-        const resultsStatus = $('#ssc-cmdp-status');
-        const backgroundElementsSelector = 'body > *:not(#ssc-cmdp)';
-        let commands = [];
-        let previouslyFocusedCommandElement = null;
-        let paletteFocusableElements = $();
-        let isCommandPaletteOpen = false;
-        let optionElements = [];
-        let activeOptionIndex = -1;
-        let optionIdCounter = 0;
-
-        const updatePaletteFocusableElements = () => {
-            const focusable = cmdp.find(focusableSelectors).filter(':visible');
-            paletteFocusableElements = focusable.length ? focusable : cmdp;
-        };
-
-        const setBackgroundTreeState = (hidden) => {
-            $(backgroundElementsSelector).each(function() {
-                const $element = $(this);
-
-                if (hidden) {
-                    if (typeof $element.data('sscCmdpOriginalAriaHidden') === 'undefined') {
-                        const originalAriaHidden = $element.attr('aria-hidden');
-                        $element.data('sscCmdpOriginalAriaHidden', typeof originalAriaHidden === 'undefined' ? null : originalAriaHidden);
-                    }
-
-                    if (typeof $element.data('sscCmdpOriginalInert') === 'undefined') {
-                        $element.data('sscCmdpOriginalInert', this.hasAttribute('inert'));
-                    }
-
-                    $element.attr('aria-hidden', 'true');
-                    this.setAttribute('inert', '');
-                } else {
-                    if (typeof $element.data('sscCmdpOriginalAriaHidden') !== 'undefined') {
-                        const originalAriaHidden = $element.data('sscCmdpOriginalAriaHidden');
-                        if (originalAriaHidden === null) {
-                            $element.removeAttr('aria-hidden');
-                        } else {
-                            $element.attr('aria-hidden', originalAriaHidden);
-                        }
-                        $element.removeData('sscCmdpOriginalAriaHidden');
-                    }
-
-                    if (typeof $element.data('sscCmdpOriginalInert') !== 'undefined') {
-                        if ($element.data('sscCmdpOriginalInert')) {
-                            this.setAttribute('inert', '');
-                        } else {
-                            this.removeAttribute('inert');
-                        }
-                        $element.removeData('sscCmdpOriginalInert');
-                    }
-                }
-            });
-        };
-
-        const openCommandPalette = () => {
-            if (isCommandPaletteOpen) {
-                searchInput.trigger('focus');
-                return;
-            }
-
-            previouslyFocusedCommandElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-            isCommandPaletteOpen = true;
-            cmdp.addClass('active');
-            cmdp.attr('aria-hidden', 'false');
-            cmdkButton.attr('aria-expanded', 'true');
-            setBackgroundTreeState(true);
-            renderResults();
-            searchInput.val('').trigger('focus');
-            updatePaletteFocusableElements();
-        };
-
-        const closeCommandPalette = () => {
-            if (!isCommandPaletteOpen) {
-                return;
-            }
-
-            isCommandPaletteOpen = false;
-            cmdp.removeClass('active');
-            cmdp.attr('aria-hidden', 'true');
-            cmdkButton.attr('aria-expanded', 'false');
-            setBackgroundTreeState(false);
-            paletteFocusableElements = $();
-            if (cmdkButton.length) {
-                cmdkButton.trigger('focus');
-            } else if (previouslyFocusedCommandElement) {
-                $(previouslyFocusedCommandElement).trigger('focus');
-            }
-            previouslyFocusedCommandElement = null;
-        };
-
-        cmdkButton.attr({
-            'aria-haspopup': 'dialog',
-            'aria-expanded': 'false'
-        });
-
-        // Collect navigation links
-        $('.ssc-sidebar a').each(function() {
-            commands.push({
-                name: "Nav: " + $(this).text().trim(),
-                type: 'link',
-                handler: $(this).attr('href')
-            });
-        });
-
-        // Add actions
-        commands.push(
-            { name: 'Action: Basculer le thème (Clair/Sombre)', type: 'action', handler: () => $('#ssc-theme').click() },
-            { name: 'Action: Vider le journal d\'activité', type: 'action', handler: () => {
-                if ($('#ssc-clear-log').length) {
-                    $('#ssc-clear-log').click();
-                } else {
-                    window.sscToast('Action non disponible sur cette page.');
-                }
-            }}
+        const paletteApi = (typeof window !== 'undefined' && typeof window.sscCommandPalette === 'object')
+            ? window.sscCommandPalette
+            : null;
+        const hasPaletteModule = !!(
+            paletteApi
+            && typeof paletteApi.configure === 'function'
+            && typeof paletteApi.registerSource === 'function'
+            && typeof paletteApi.open === 'function'
+            && typeof paletteApi.close === 'function'
+            && typeof paletteApi.isOpen === 'function'
         );
 
-        const setActiveOption = (index, { scrollIntoView = false } = {}) => {
-            if (!optionElements.length || index < 0) {
-                activeOptionIndex = -1;
-                optionElements.forEach(option => {
-                    option.attr('aria-selected', 'false');
-                    option.removeClass('is-active');
-                });
-                resultsList.removeAttr('aria-activedescendant');
-                return;
+        const shouldIgnorePaletteShortcut = (target) => {
+            if (!target) {
+                return false;
             }
+            const element = target instanceof HTMLElement ? target : null;
+            if (!element) {
+                return false;
+            }
+            if (element.isContentEditable) {
+                return true;
+            }
+            const tagName = element.tagName ? element.tagName.toLowerCase() : '';
+            if (tagName === 'input') {
+                const type = (element.getAttribute('type') || '').toLowerCase();
+                const passthroughTypes = ['button', 'checkbox', 'color', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit'];
+                if (passthroughTypes.indexOf(type) === -1) {
+                    return true;
+                }
+            }
+            if (tagName === 'textarea' || tagName === 'select') {
+                return true;
+            }
+            return false;
+        };
 
-            const boundedIndex = Math.max(0, Math.min(index, optionElements.length - 1));
-            activeOptionIndex = boundedIndex;
-
-            optionElements.forEach((option, idx) => {
-                const isActive = idx === activeOptionIndex;
-                option.attr('aria-selected', isActive ? 'true' : 'false');
-                option.toggleClass('is-active', isActive);
+        if (hasPaletteModule) {
+            paletteApi.configure({
+                title: commandPaletteTitle,
+                searchPlaceholder: commandPaletteSearchPlaceholder,
+                searchLabel: commandPaletteSearchLabel,
+                emptyState: commandPaletteEmptyState,
+                announce: (count) => getCommandPaletteResultsAnnouncement(count),
             });
 
-            const activeOption = optionElements[activeOptionIndex];
-            if (activeOption && activeOption.length) {
-                resultsList.attr('aria-activedescendant', activeOption.attr('id'));
-                if (scrollIntoView && typeof activeOption[0].scrollIntoView === 'function') {
-                    activeOption[0].scrollIntoView({ block: 'nearest' });
-                }
-            }
-        };
-
-        const activateOption = (index) => {
-            if (index < 0 || index >= optionElements.length) {
-                return;
-            }
-            optionElements[index].trigger('click');
-        };
-
-        function renderResults(query = '') {
-            resultsList.empty();
-            optionElements = [];
-            resultsList.attr('aria-busy', 'true');
-            const filtered = query
-                ? commands.filter(c => c.name.toLowerCase().includes(query.toLowerCase()))
-                : commands;
-
-            if (!filtered.length) {
-                resultsList.append(
-                    $('<li class="ssc-cmdp-empty" role="presentation"></li>').text(commandPaletteEmptyState)
-                );
-            } else {
-                filtered.forEach(c => {
-                    const optionId = `ssc-cmdp-option-${++optionIdCounter}`;
-                    const link = $(`<a href="#">${c.name}</a>`).attr({
-                        role: 'option',
-                        id: optionId,
-                        'aria-selected': 'false'
+            paletteApi.registerSource('primary-navigation', () => {
+                const items = [];
+                $('.ssc-sidebar a').each(function() {
+                    const link = $(this);
+                    const text = (link.text() || '').trim();
+                    if (!text) {
+                        return;
+                    }
+                    const href = link.attr('href') || '';
+                    const description = link.attr('aria-label') || link.attr('title') || '';
+                    items.push({
+                        title: text,
+                        subtitle: description || href,
+                        href,
+                        keywords: [text, description, 'navigation'].filter(Boolean),
                     });
-                    link.on('click', (e) => {
-                        e.preventDefault();
-                        closeCommandPalette();
-                        if (c.type === 'link') {
-                            window.location.href = c.handler;
-                        } else {
-                            c.handler();
-                        }
-                    });
-                    optionElements.push(link);
-                    const listItem = $('<li role="presentation"></li>').append(link);
-                    resultsList.append(listItem);
                 });
-            }
-            const resultCount = filtered.length;
-            setActiveOption(resultCount ? 0 : -1);
-            if (typeof window !== 'undefined' && window.wp && wp.a11y && typeof wp.a11y.speak === 'function') {
-                const announcement = getCommandPaletteResultsAnnouncement(resultCount);
-                if (announcement) {
-                    wp.a11y.speak(announcement, 'polite');
+                return items;
+            });
+
+            paletteApi.registerSource('global-actions', () => {
+                const actions = [];
+                if (themeToggle.length) {
+                    actions.push({
+                        title: 'Action: Basculer le thème (Clair/Sombre)',
+                        keywords: ['thème', 'clair', 'sombre', 'mode'],
+                        perform: () => themeToggle.trigger('click'),
+                    });
                 }
-            }
-            if (resultsStatus && resultsStatus.length) {
-                const announcement = getCommandPaletteResultsAnnouncement(resultCount);
-                resultsStatus.text(announcement);
-            }
-            resultsList.attr('aria-busy', 'false');
-            updatePaletteFocusableElements();
-        }
-
-        cmdkButton.on('click', () => {
-            openCommandPalette();
-        });
-
-        cmdp.on('click', function(e) {
-            if ($(e.target).is(cmdp)) {
-                closeCommandPalette();
-            }
-        });
-
-        searchInput.on('input', () => renderResults(searchInput.val()));
-
-        searchInput.on('keydown', function(e) {
-            const key = e.key;
-            if (!['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter'].includes(key)) {
-                return;
-            }
-
-            if (key === 'Enter') {
-                if (activeOptionIndex >= 0) {
-                    e.preventDefault();
-                    activateOption(activeOptionIndex);
+                const clearLogButton = $('#ssc-clear-log');
+                if (clearLogButton.length) {
+                    actions.push({
+                        title: 'Action: Vider le journal d\'activité',
+                        keywords: ['journal', 'activité', 'debug'],
+                        perform: () => {
+                            if (clearLogButton.length) {
+                                clearLogButton.trigger('click');
+                            } else if (typeof window.sscToast === 'function') {
+                                window.sscToast('Action non disponible sur cette page.');
+                            }
+                        },
+                    });
                 }
-                return;
-            }
+                return actions;
+            });
 
-            if (!optionElements.length) {
-                return;
-            }
+            if (cmdkButton.length) {
+                cmdkButton.attr({
+                    'aria-haspopup': 'dialog',
+                    'aria-expanded': paletteApi.isOpen() ? 'true' : 'false',
+                });
+                cmdkButton.on('click', function(event) {
+                    event.preventDefault();
+                    paletteApi.open();
+                });
 
-            e.preventDefault();
-
-            if (key === 'ArrowDown') {
-                const nextIndex = activeOptionIndex < 0 ? 0 : activeOptionIndex + 1;
-                setActiveOption(nextIndex, { scrollIntoView: true });
-            } else if (key === 'ArrowUp') {
-                const previousIndex = activeOptionIndex <= 0 ? 0 : activeOptionIndex - 1;
-                setActiveOption(previousIndex, { scrollIntoView: true });
-            } else if (key === 'Home') {
-                setActiveOption(0, { scrollIntoView: true });
-            } else if (key === 'End') {
-                setActiveOption(optionElements.length - 1, { scrollIntoView: true });
-            }
-        });
-
-        $(document).on('keydown', function(e) {
-            const key = typeof e.key === 'string' ? e.key.toLowerCase() : e.key;
-
-            if ((e.metaKey || e.ctrlKey) && key === 'k') {
-                e.preventDefault();
-                openCommandPalette();
-            }
-
-            if (key === 'escape') {
-                if (isCommandPaletteOpen) {
-                    e.preventDefault();
-                    closeCommandPalette();
-                }
-                if (shell.hasClass('ssc-shell--menu-open')) {
-                    closeMobileMenu();
+                if (typeof MutationObserver === 'function') {
+                    const observer = new MutationObserver(() => {
+                        cmdkButton.attr('aria-expanded', paletteApi.isOpen() ? 'true' : 'false');
+                    });
+                    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
                 }
             }
 
-            if (isCommandPaletteOpen && key === 'tab') {
-                const focusable = paletteFocusableElements;
-                const elements = focusable.toArray();
+            const getPaletteContainer = () => $('.ssc-command-palette').filter(function() {
+                return !this.hasAttribute('hidden');
+            }).first();
 
-                if (!elements.length) {
-                    e.preventDefault();
-                    cmdp.trigger('focus');
+            const focusPalette = () => {
+                const container = getPaletteContainer();
+                if (!container.length) {
                     return;
                 }
-
-                const first = elements[0];
-                const last = elements[elements.length - 1];
-                const activeElement = document.activeElement;
-
-                if (!e.shiftKey && activeElement === last) {
-                    e.preventDefault();
-                    $(first).trigger('focus');
-                } else if (e.shiftKey && activeElement === first) {
-                    e.preventDefault();
-                    $(last).trigger('focus');
+                const searchField = container.find('.ssc-command-palette__search');
+                if (searchField.length) {
+                    searchField.trigger('focus');
+                    return;
                 }
-                return;
-            }
+                container.trigger('focus');
+            };
 
-            if (shell.hasClass('ssc-shell--menu-open') && key === 'tab') {
-                const focusable = sidebar.find(focusableSelectors).filter(':visible');
+            const trapFocusInPalette = (event) => {
+                const container = getPaletteContainer();
+                if (!container.length) {
+                    return;
+                }
+                const focusable = container.find(focusableSelectors).filter(':visible');
                 if (!focusable.length) {
+                    event.preventDefault();
+                    focusPalette();
                     return;
                 }
-
                 const first = focusable.get(0);
                 const last = focusable.get(focusable.length - 1);
                 const activeElement = document.activeElement;
-
-                if (!e.shiftKey && activeElement === last) {
-                    e.preventDefault();
+                if (!event.shiftKey && activeElement === last) {
+                    event.preventDefault();
                     $(first).trigger('focus');
-                } else if (e.shiftKey && activeElement === first) {
-                    e.preventDefault();
+                } else if (event.shiftKey && activeElement === first) {
+                    event.preventDefault();
                     $(last).trigger('focus');
                 }
-            }
-        });
+            };
 
-        $(document).on('focusin', function(e) {
-            if (isCommandPaletteOpen && $(e.target).closest('#ssc-cmdp').length === 0) {
-                if (paletteFocusableElements.length) {
-                    $(paletteFocusableElements.get(0)).trigger('focus');
-                } else {
-                    cmdp.trigger('focus');
+            $(document).on('keydown.sscCommandPalette', function(event) {
+                if (event.defaultPrevented) {
+                    return;
                 }
-                return;
-            }
+                const rawKey = event.key;
+                const key = typeof rawKey === 'string' ? rawKey.toLowerCase() : rawKey;
 
-            if (!shell.hasClass('ssc-shell--menu-open') || !isMobileViewport()) {
-                return;
-            }
+                if ((event.metaKey || event.ctrlKey) && key === 'k') {
+                    if (shouldIgnorePaletteShortcut(event.target)) {
+                        return;
+                    }
+                    event.preventDefault();
+                    paletteApi.open();
+                    return;
+                }
 
-            if ($(e.target).closest('#ssc-sidebar, #ssc-mobile-menu').length === 0) {
-                focusSidebar();
-            }
-        });
+                if (key === 'escape') {
+                    if (paletteApi.isOpen()) {
+                        event.preventDefault();
+                        paletteApi.close();
+                        return;
+                    }
+                    if (shell.hasClass('ssc-shell--menu-open')) {
+                        event.preventDefault();
+                        closeMobileMenu();
+                    }
+                    return;
+                }
+
+                if (key === 'tab') {
+                    if (paletteApi.isOpen()) {
+                        trapFocusInPalette(event);
+                        return;
+                    }
+
+                    if (shell.hasClass('ssc-shell--menu-open')) {
+                        const focusable = sidebar.find(focusableSelectors).filter(':visible');
+                        if (!focusable.length) {
+                            return;
+                        }
+                        const first = focusable.get(0);
+                        const last = focusable.get(focusable.length - 1);
+                        const activeElement = document.activeElement;
+                        if (!event.shiftKey && activeElement === last) {
+                            event.preventDefault();
+                            $(first).trigger('focus');
+                        } else if (event.shiftKey && activeElement === first) {
+                            event.preventDefault();
+                            $(last).trigger('focus');
+                        }
+                    }
+                }
+            });
+
+            $(document).on('focusin.sscCommandPalette', function(event) {
+                if (paletteApi.isOpen()) {
+                    const container = getPaletteContainer();
+                    if (container.length && !$(event.target).closest('.ssc-command-palette__dialog').length) {
+                        const focusable = container.find(focusableSelectors).filter(':visible');
+                        const fallback = focusable.length
+                            ? focusable.get(0)
+                            : container.find('.ssc-command-palette__search').get(0);
+                        if (fallback) {
+                            $(fallback).trigger('focus');
+                        }
+                        return;
+                    }
+                }
+
+                if (!shell.hasClass('ssc-shell--menu-open') || !isMobileViewport()) {
+                    return;
+                }
+
+                if ($(event.target).closest('#ssc-sidebar, #ssc-mobile-menu').length === 0) {
+                    focusSidebar();
+                }
+            });
+        }
+
     });
 })(jQuery);

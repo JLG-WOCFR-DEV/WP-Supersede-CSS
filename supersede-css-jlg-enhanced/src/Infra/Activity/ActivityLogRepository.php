@@ -28,7 +28,7 @@ final class ActivityLogRepository
     }
 
     /**
-     * @param array{event?: string, entity_type?: string, window?: string} $filters
+     * @param array{event?: string, entity_type?: string, entity_id?: string, window?: string} $filters
      * @return array{entries: array<int, array<string, mixed>>, pagination: array{total: int, total_pages: int, page: int}}
      */
     public function fetch(int $perPage, int $page, array $filters = []): array
@@ -79,7 +79,7 @@ final class ActivityLogRepository
     }
 
     /**
-     * @param array{event?: string, entity_type?: string, window?: string} $filters
+     * @param array{event?: string, entity_type?: string, entity_id?: string, window?: string} $filters
      * @return array<int, array<string, mixed>>
      */
     public function all(array $filters = []): array
@@ -104,6 +104,7 @@ final class ActivityLogRepository
     }
 
     /**
+     * @param array{event?: string, entity_type?: string, entity_id?: string, window?: string} $filters
      * @return array{0: string, 1: array<int, mixed>}
      */
     private function buildWhere(array $filters): array
@@ -119,6 +120,11 @@ final class ActivityLogRepository
         if (isset($filters['entity_type']) && $filters['entity_type'] !== '') {
             $clauses[] = 'entity_type = %s';
             $params[] = $filters['entity_type'];
+        }
+
+        if (isset($filters['entity_id']) && $filters['entity_id'] !== '') {
+            $clauses[] = 'entity_id = %s';
+            $params[] = $filters['entity_id'];
         }
 
         if (isset($filters['window']) && $filters['window'] !== '') {

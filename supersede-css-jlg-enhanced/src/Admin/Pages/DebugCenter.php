@@ -129,6 +129,7 @@ class DebugCenter extends AbstractPage
                         'activityColumnDate'             => __('Date', 'supersede-css-jlg'),
                         'activityColumnEvent'            => __('Événement', 'supersede-css-jlg'),
                         'activityColumnEntity'           => __('Entité', 'supersede-css-jlg'),
+                        'activityColumnResource'         => __('Ressource', 'supersede-css-jlg'),
                         'activityColumnAuthor'           => __('Auteur', 'supersede-css-jlg'),
                         'activityColumnDetails'          => __('Détails', 'supersede-css-jlg'),
                     ],

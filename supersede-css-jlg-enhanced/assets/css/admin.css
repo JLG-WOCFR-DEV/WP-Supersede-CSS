@@ -1544,6 +1544,17 @@ body[class*="page_supersede-css-jlg"] .ssc-layout .ssc-main-content {
     margin-bottom: var(--ssc-space-sm);
 }
 
+.ssc-activity-resource-label {
+    font-weight: var(--ssc-font-weight-semibold);
+    margin-right: 4px;
+}
+
+.ssc-activity-resource {
+    font-family: var(--ssc-font-family-mono, Menlo, Consolas, monospace);
+    font-size: var(--ssc-font-size-sm);
+    color: var(--ssc-muted);
+}
+
 .ssc-pagination {
     display: flex;
     align-items: center;

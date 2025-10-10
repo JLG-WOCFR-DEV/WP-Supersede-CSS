@@ -113,6 +113,11 @@ final class ActivityLogController extends BaseController
             $filters['entity_type'] = preg_replace('/[^a-z0-9._-]/i', '', $entityType) ?? $entityType;
         }
 
+        $entityId = (string) $request->get_param('entity_id');
+        if ($entityId !== '') {
+            $filters['entity_id'] = sanitize_text_field($entityId);
+        }
+
         $window = (string) $request->get_param('window');
         if ($window !== '') {
             $filters['window'] = strtolower($window);

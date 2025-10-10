@@ -1480,6 +1480,7 @@
         const activityIndicator = $('#ssc-activity-page-indicator');
         const activityEventField = $('#ssc-activity-event');
         const activityEntityField = $('#ssc-activity-entity');
+        const activityResourceField = $('#ssc-activity-resource');
         const activityWindowField = $('#ssc-activity-window');
         const activityPerPageField = $('#ssc-activity-per-page');
         const activityApplyButton = $('#ssc-activity-apply');
@@ -1492,6 +1493,7 @@
             date: translate('activityColumnDate', 'Date'),
             event: translate('activityColumnEvent', 'Événement'),
             entity: translate('activityColumnEntity', 'Entité'),
+            resource: translate('activityColumnResource', 'Ressource'),
             author: translate('activityColumnAuthor', 'Auteur'),
             details: translate('activityColumnDetails', 'Détails'),
             system: translate('activitySystemUser', 'Système'),
@@ -1503,8 +1505,9 @@
             filters: {
                 event: activityInitialData.filters ? activityInitialData.filters.event || '' : '',
                 entity_type: activityInitialData.filters ? activityInitialData.filters.entity_type || '' : '',
+                entity_id: activityInitialData.filters ? activityInitialData.filters.entity_id || '' : '',
                 window: activityInitialData.filters ? activityInitialData.filters.window || '' : '',
-                per_page: 20,
+                per_page: activityInitialData.filters ? activityInitialData.filters.per_page || 20 : 20,
             },
         };
 
@@ -1514,6 +1517,9 @@
             }
             if (activityEntityField.length) {
                 activityEntityField.val(activityState.filters.entity_type || '');
+            }
+            if (activityResourceField.length) {
+                activityResourceField.val(activityState.filters.entity_id || '');
             }
             if (activityWindowField.length) {
                 activityWindowField.val(activityState.filters.window || '');
@@ -1550,7 +1556,14 @@
                 const entityCell = $('<td>').attr('data-label', activityLabels.entity);
                 entityCell.append($('<span>').addClass('ssc-activity-entity').text(entityType));
                 if (entityId) {
-                    entityCell.append($('<p>').addClass('description ssc-description--flush').text(entityId));
+                    const resourceRow = $('<p>').addClass('description ssc-description--flush');
+                    resourceRow.append(
+                        $('<span>').addClass('ssc-activity-resource-label').text(`${activityLabels.resource}: `)
+                    );
+                    resourceRow.append(
+                        $('<span>').addClass('ssc-activity-resource').text(entityId)
+                    );
+                    entityCell.append(resourceRow);
                 }
                 row.append(entityCell);
 
@@ -1645,6 +1658,7 @@
                     per_page: perPage,
                     event: nextFilters.event || undefined,
                     entity_type: nextFilters.entity_type || undefined,
+                    entity_id: nextFilters.entity_id || undefined,
                     window: nextFilters.window || undefined,
                 },
                 beforeSend: (xhr) => xhr.setRequestHeader('X-WP-Nonce', SSC.rest.nonce),
@@ -1655,6 +1669,7 @@
                     activityState.filters = {
                         event: nextFilters.event || '',
                         entity_type: nextFilters.entity_type || '',
+                        entity_id: nextFilters.entity_id || '',
                         window: nextFilters.window || '',
                         per_page: perPage,
                     };
@@ -1674,6 +1689,7 @@
             return {
                 event: activityEventField.length ? (activityEventField.val() || '').toString().trim() : '',
                 entity_type: activityEntityField.length ? (activityEntityField.val() || '').toString().trim() : '',
+                entity_id: activityResourceField.length ? (activityResourceField.val() || '').toString().trim() : '',
                 window: activityWindowField.length ? (activityWindowField.val() || '').toString().trim() : '',
                 per_page: activityPerPageField.length ? parseInt(activityPerPageField.val(), 10) || 20 : 20,
             };
@@ -1689,10 +1705,11 @@
             activityResetButton.on('click', () => {
                 activityEventField.val('');
                 activityEntityField.val('');
+                activityResourceField.val('');
                 activityWindowField.val('');
                 activityPerPageField.val('20');
                 window.sscToast && window.sscToast(translate('activityFiltersCleared', 'Filtres réinitialisés.'));
-                fetchActivityLog({ page: 1, filters: { event: '', entity_type: '', window: '', per_page: 20 } });
+                fetchActivityLog({ page: 1, filters: { event: '', entity_type: '', entity_id: '', window: '', per_page: 20 } });
             });
         }
 
