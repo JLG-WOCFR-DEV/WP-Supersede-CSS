@@ -2,7 +2,7 @@
 
 Ce document détaille les évolutions à apporter à Supersede CSS JLG (Enhanced) pour aligner la gestion des design tokens et le Debug Center sur les standards professionnels rencontrés dans des outils comme Figma, Design Tokens Studio ou Webflow.
 
-> **Statut (déc. 2024)** : cadrage fonctionnel validé, contrôleurs REST et journal d’activité livrés (`ssc/v1/approvals`, `ssc/v1/activity-log`, `ssc/v1/exports`, table `wp_ssc_activity_log`). Les maquettes UI restent en cours pour brancher ces endpoints côté interface.
+> **Statut (janv. 2025)** : cadrage fonctionnel validé, contrôleurs REST et journal d’activité livrés (`ssc/v1/approvals`, `ssc/v1/activity-log`, `ssc/v1/exports`, table `wp_ssc_activity_log`). L’interface du Debug Center consomme désormais les exports multi-plateformes et le gestionnaire de tokens pilote les demandes d’approbation.
 
 ## 1. Gestionnaire de tokens : métadonnées et contraintes avancées
 
@@ -91,7 +91,7 @@ Les formats Style Dictionary/Android/iOS sont servis par `GET /ssc/v1/exports` e
 #### Déclenchement
 - ✅ Webhook REST `GET /ssc/v1/exports` permettant aux CI de récupérer la dernière version approuvée (formats `style-dictionary`, `json`, `android`, `ios`).
 - ✅ Historisation des exports réalisés dans le journal (`export.generated`).
-- Bouton "Exporter" dans le Debug Center avec options de format et portée (`ready`, `deprecated` inclus ou non).
+- ✅ Bouton "Exporter" dans le Debug Center avec options de format et portée (`ready`, `deprecated` inclus ou non).
 
 ## 3. Sécurité et performances
 
@@ -113,5 +113,5 @@ Ces améliorations renforceront la traçabilité, la collaboration et la conform
 
 - ✅ RFC validée côté produit et tech.
 - ✅ Migrations + contrôleurs REST (`ApprovalsController`, `ActivityLogController`, `ExportsController`) livrés.
-- 🛠️ À faire : intégrer le Debug Center aux nouveaux endpoints (le Tokens Manager déclenche déjà les demandes d’approbation).
+- ✅ Intégration du Debug Center aux nouveaux endpoints (exports multi-plateformes et approbations).
 - 🧪 À planifier : tests d’acceptation Playwright couvrant le workflow d’approbation et les exports multi-plateformes.

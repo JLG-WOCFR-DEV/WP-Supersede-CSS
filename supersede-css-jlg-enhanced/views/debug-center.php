@@ -7,6 +7,7 @@ if (!defined('ABSPATH')) {
 /** @var bool $can_review_approvals */
 /** @var array{entries: array<int,array<string,mixed>>, pagination: array<string,int>, filters: array<string,string>} $activity_log */
 /** @var array<int,array<string,mixed>> $css_revisions */
+$can_export_tokens = isset($can_export_tokens) ? (bool) $can_export_tokens : false;
 $plugin_version    = $system_info['plugin_version'] ?? __('N/A', 'supersede-css-jlg');
 $wordpress_version = $system_info['wordpress_version'] ?? '';
 $php_version       = $system_info['php_version'] ?? '';
@@ -185,6 +186,48 @@ $format_datetime = static function (string $iso): string {
                 <?php echo esc_html__('Points d’interaction', 'supersede-css-jlg'); ?>
             </span>
         </div>
+    </div>
+
+    <div class="ssc-panel ssc-mt-200" id="ssc-token-exports-panel" data-ssc-debug-label="<?php echo esc_attr__('Exports', 'supersede-css-jlg'); ?>">
+        <div class="ssc-panel-header">
+            <div>
+                <h2><?php echo esc_html__('Exports multi-plateformes', 'supersede-css-jlg'); ?></h2>
+                <p class="description ssc-description--spaced">
+                    <?php echo esc_html__('Générez un bundle de tokens approuvés pour Style Dictionary, Android ou iOS afin de synchroniser vos équipes.', 'supersede-css-jlg'); ?>
+                </p>
+            </div>
+        </div>
+        <?php if (!$can_export_tokens) : ?>
+            <div class="notice notice-warning inline">
+                <p><?php esc_html_e('Vous n’avez pas la permission d’exporter les tokens. Contactez un administrateur.', 'supersede-css-jlg'); ?></p>
+            </div>
+        <?php endif; ?>
+        <div class="ssc-filter-bar ssc-filter-bar--compact" id="ssc-token-export-controls">
+            <div class="ssc-filter">
+                <label for="ssc-token-export-format"><?php esc_html_e('Format', 'supersede-css-jlg'); ?></label>
+                <select id="ssc-token-export-format" <?php disabled(!$can_export_tokens); ?>>
+                    <option value="style-dictionary"><?php esc_html_e('Style Dictionary (JSON hiérarchique)', 'supersede-css-jlg'); ?></option>
+                    <option value="json"><?php esc_html_e('JSON brut', 'supersede-css-jlg'); ?></option>
+                    <option value="android"><?php esc_html_e('Android XML', 'supersede-css-jlg'); ?></option>
+                    <option value="ios"><?php esc_html_e('iOS JSON', 'supersede-css-jlg'); ?></option>
+                </select>
+            </div>
+            <div class="ssc-filter">
+                <label for="ssc-token-export-scope"><?php esc_html_e('Portée', 'supersede-css-jlg'); ?></label>
+                <select id="ssc-token-export-scope" <?php disabled(!$can_export_tokens); ?>>
+                    <option value="ready"><?php esc_html_e('Tokens approuvés (ready)', 'supersede-css-jlg'); ?></option>
+                    <option value="deprecated"><?php esc_html_e('Tokens dépréciés uniquement', 'supersede-css-jlg'); ?></option>
+                    <option value="all"><?php esc_html_e('Tous les tokens', 'supersede-css-jlg'); ?></option>
+                </select>
+            </div>
+            <div class="ssc-actions">
+                <button type="button" class="button button-primary" id="ssc-token-export-run" data-can-export="<?php echo $can_export_tokens ? '1' : '0'; ?>" <?php disabled(!$can_export_tokens); ?>>
+                    <?php esc_html_e('Générer l’export', 'supersede-css-jlg'); ?>
+                </button>
+            </div>
+        </div>
+        <p class="description" id="ssc-token-export-status" aria-live="polite" hidden></p>
+        <script type="application/json" id="ssc-exports-permissions"><?php echo wp_json_encode(['canExport' => $can_export_tokens]); ?></script>
     </div>
 
     <div class="ssc-panel ssc-danger-zone ssc-mt-200" data-ssc-debug-label="<?php echo esc_attr__('Zone de danger', 'supersede-css-jlg'); ?>">

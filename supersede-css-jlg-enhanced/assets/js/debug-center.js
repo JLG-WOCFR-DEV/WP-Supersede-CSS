@@ -1063,17 +1063,220 @@
         });
 
         const triggerDownload = (filename, content, mime = 'text/plain') => {
-            const blob = new Blob([content], { type: mime });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            setTimeout(() => {
-                URL.revokeObjectURL(link.href);
-                document.body.removeChild(link);
-            }, 0);
+            try {
+                const blob = new Blob([content], { type: mime });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                setTimeout(() => {
+                    URL.revokeObjectURL(link.href);
+                    if (link.parentNode) {
+                        link.parentNode.removeChild(link);
+                    }
+                }, 0);
+
+                return true;
+            } catch (error) {
+                if (window.console && typeof window.console.error === 'function') {
+                    console.error('Supersede CSS — download error', error);
+                }
+
+                return false;
+            }
         };
+
+        const exportPermissionsNode = document.querySelector('#ssc-exports-permissions');
+        let exportPermissions = null;
+
+        if (exportPermissionsNode) {
+            try {
+                exportPermissions = JSON.parse(exportPermissionsNode.textContent || '{}');
+            } catch (error) {
+                if (window.console && typeof window.console.error === 'function') {
+                    console.error('Supersede CSS — unable to parse export permissions', error);
+                }
+            }
+        }
+
+        const exportFormatSelect = $('#ssc-token-export-format');
+        const exportScopeSelect = $('#ssc-token-export-scope');
+        const exportRunButton = $('#ssc-token-export-run');
+        const exportStatusMessage = $('#ssc-token-export-status');
+
+        const exportsState = {
+            canExport: (() => {
+                if (exportPermissions && typeof exportPermissions === 'object' && !Array.isArray(exportPermissions)) {
+                    return !!exportPermissions.canExport;
+                }
+
+                if (exportRunButton.length) {
+                    const dataAttr = exportRunButton.data('can-export');
+                    return dataAttr === true || dataAttr === 1 || dataAttr === '1';
+                }
+
+                return false;
+            })(),
+            isRunning: false,
+        };
+
+        const setExportsRunning = (running) => {
+            exportsState.isRunning = !!running;
+
+            if (!exportRunButton.length) {
+                return;
+            }
+
+            const shouldDisable = !!running || !exportsState.canExport;
+            exportRunButton.prop('disabled', shouldDisable);
+            exportRunButton.attr('aria-busy', running ? 'true' : 'false');
+        };
+
+        const updateExportStatus = (message, state = 'info') => {
+            if (!exportStatusMessage.length) {
+                return;
+            }
+
+            if (!message) {
+                exportStatusMessage.text('');
+                exportStatusMessage.attr('hidden', 'hidden');
+                exportStatusMessage.removeAttr('data-state');
+                return;
+            }
+
+            exportStatusMessage.text(message);
+            exportStatusMessage.attr('data-state', state);
+            exportStatusMessage.removeAttr('hidden');
+        };
+
+        const resolveExportFilename = (format, scope) => {
+            const safeFormat = (format || 'style-dictionary').toString();
+            const safeScope = (scope || 'ready').toString();
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const extension = safeFormat === 'android' ? 'xml' : 'json';
+
+            return `supersede-tokens-${safeFormat}-${safeScope}-${timestamp}.${extension}`;
+        };
+
+        const handleExportSuccess = (format, scope, payload, contentType) => {
+            let data = payload;
+            let mimeType = contentType || 'application/octet-stream';
+
+            if (typeof data !== 'string' && (mimeType.includes('json') || format !== 'android')) {
+                data = JSON.stringify(data, null, 2);
+                mimeType = 'application/json';
+            }
+
+            if (typeof data !== 'string') {
+                data = String(data);
+            }
+
+            const filename = resolveExportFilename(format, scope);
+            const downloadOk = triggerDownload(filename, data, mimeType);
+
+            if (!downloadOk) {
+                updateExportStatus(translate('exportsDownloadError', 'Le fichier n’a pas pu être téléchargé. Réessayez.'), 'error');
+                return;
+            }
+
+            updateExportStatus(translate('exportsSuccess', 'Export prêt. Le téléchargement va démarrer.'), 'success');
+
+            if (typeof window.sscToast === 'function') {
+                window.sscToast(translate('exportsSuccess', 'Export prêt. Le téléchargement va démarrer.'));
+            }
+        };
+
+        const handleExportError = (code, error) => {
+            if (code === 'forbidden') {
+                exportsState.canExport = false;
+                updateExportStatus(translate('exportsForbidden', 'Vous n’avez pas les droits nécessaires pour exporter.'), 'error');
+                if (typeof window.sscToast === 'function') {
+                    window.sscToast(translate('exportsForbidden', 'Vous n’avez pas les droits nécessaires pour exporter.'));
+                }
+                return;
+            }
+
+            updateExportStatus(translate('exportsError', 'Impossible de générer l’export.'), 'error');
+
+            if (window.console && typeof window.console.error === 'function') {
+                console.error('Supersede CSS — export error', error);
+            }
+        };
+
+        const requestTokenExport = (format, scope) => {
+            if (typeof SSC === 'undefined' || !SSC.rest || !SSC.rest.root || !SSC.rest.nonce) {
+                updateExportStatus(translate('exportsUnavailable', 'Export indisponible : API REST injoignable.'), 'error');
+                return;
+            }
+
+            setExportsRunning(true);
+            updateExportStatus(translate('exportsPreparing', 'Préparation de l’export…'), 'info');
+
+            const params = new URLSearchParams({
+                format,
+                scope,
+            });
+
+            fetch(`${SSC.rest.root}exports?${params.toString()}`, {
+                method: 'GET',
+                headers: {
+                    'X-WP-Nonce': SSC.rest.nonce,
+                },
+                credentials: 'same-origin',
+            })
+                .then((response) => {
+                    if (!response.ok) {
+                        const error = new Error('http_error');
+                        error.code = response.status === 403 ? 'forbidden' : 'http_error';
+                        throw error;
+                    }
+
+                    const contentType = (response.headers.get('content-type') || '').toLowerCase();
+
+                    if (contentType.indexOf('application/json') !== -1) {
+                        return response.json().then((json) => ({ payload: json, contentType }));
+                    }
+
+                    return response.text().then((text) => ({ payload: text, contentType }));
+                })
+                .then(({ payload, contentType }) => {
+                    handleExportSuccess(format, scope, payload, contentType);
+                })
+                .catch((error) => {
+                    handleExportError(error && error.code ? error.code : 'http_error', error);
+                })
+                .finally(() => {
+                    setExportsRunning(false);
+                });
+        };
+
+        const handleTokenExport = () => {
+            if (exportsState.isRunning) {
+                return;
+            }
+
+            if (!exportsState.canExport) {
+                if (typeof window.sscToast === 'function') {
+                    window.sscToast(translate('exportsForbidden', 'Vous n’avez pas les droits nécessaires pour exporter.'));
+                }
+                return;
+            }
+
+            const format = (exportFormatSelect.val() || 'style-dictionary').toString();
+            const scope = (exportScopeSelect.val() || 'ready').toString();
+
+            requestTokenExport(format, scope);
+        };
+
+        if (exportRunButton.length) {
+            if (!exportsState.canExport) {
+                exportRunButton.prop('disabled', true);
+            }
+
+            exportRunButton.on('click', handleTokenExport);
+        }
 
         const updateVisualDebugUi = (enabled, { silent = false } = {}) => {
             const isEnabled = !!enabled;

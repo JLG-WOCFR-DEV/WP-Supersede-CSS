@@ -48,6 +48,7 @@ class DebugCenter extends AbstractPage
 
         $approvals = $approvalStore->all();
         $canReviewApprovals = current_user_can(CapabilityManager::getApprovalCapability());
+        $canExportTokens = current_user_can(CapabilityManager::getExportCapability());
 
         if (function_exists('wp_localize_script')) {
             wp_localize_script(
@@ -132,6 +133,12 @@ class DebugCenter extends AbstractPage
                         'activityColumnResource'         => __('Ressource', 'supersede-css-jlg'),
                         'activityColumnAuthor'           => __('Auteur', 'supersede-css-jlg'),
                         'activityColumnDetails'          => __('Détails', 'supersede-css-jlg'),
+                        'exportsPreparing'               => __('Préparation de l’export…', 'supersede-css-jlg'),
+                        'exportsSuccess'                 => __('Export prêt. Le téléchargement va démarrer.', 'supersede-css-jlg'),
+                        'exportsError'                   => __('Impossible de générer l’export.', 'supersede-css-jlg'),
+                        'exportsForbidden'               => __('Vous n’avez pas les droits nécessaires pour exporter.', 'supersede-css-jlg'),
+                        'exportsUnavailable'             => __('Export indisponible : API REST injoignable.', 'supersede-css-jlg'),
+                        'exportsDownloadError'           => __('Le fichier n’a pas pu être téléchargé. Réessayez.', 'supersede-css-jlg'),
                     ],
                 ]
             );
@@ -145,6 +152,7 @@ class DebugCenter extends AbstractPage
             ],
             'approvals' => $approvals,
             'can_review_approvals' => $canReviewApprovals,
+            'can_export_tokens' => $canExportTokens,
             'activity_log' => $activityLog,
             'css_revisions' => CssRevisions::all(),
         ]);
