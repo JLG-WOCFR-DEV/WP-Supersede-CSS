@@ -7,6 +7,7 @@ use SSC\Infra\Rest\ControllerInterface;
 use SSC\Infra\Rest\ActivityLogController;
 use SSC\Infra\Rest\ApprovalsController;
 use SSC\Infra\Rest\CssController;
+use SSC\Infra\Rest\CommentsController;
 use SSC\Infra\Rest\ExportsController;
 use SSC\Infra\Rest\ImportExportController;
 use SSC\Infra\Rest\LogsController;
@@ -49,6 +50,7 @@ final class Routes
             new ActivityLogController(),
             new ExportsController(),
             new UserPreferencesController(),
+            new CommentsController(),
         ];
 
         add_action('rest_api_init', [$this, 'registerControllers']);

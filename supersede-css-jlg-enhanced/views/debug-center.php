@@ -521,6 +521,10 @@ $format_datetime = static function (string $iso): string {
                 <input type="search" id="ssc-activity-entity" placeholder="<?php esc_attr_e('token, preset…', 'supersede-css-jlg'); ?>" />
             </div>
             <div class="ssc-filter">
+                <label for="ssc-activity-resource"><?php esc_html_e('Ressource', 'supersede-css-jlg'); ?></label>
+                <input type="search" id="ssc-activity-resource" placeholder="<?php esc_attr_e('Identifiant, slug…', 'supersede-css-jlg'); ?>" />
+            </div>
+            <div class="ssc-filter">
                 <label for="ssc-activity-window"><?php esc_html_e('Période', 'supersede-css-jlg'); ?></label>
                 <select id="ssc-activity-window">
                     <option value=""><?php esc_html_e('Toutes', 'supersede-css-jlg'); ?></option>

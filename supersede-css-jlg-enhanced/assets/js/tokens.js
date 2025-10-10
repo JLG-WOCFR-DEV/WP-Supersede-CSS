@@ -141,6 +141,16 @@
     let hasLocalChanges = false;
     let beforeUnloadHandler = null;
     const tokenTypes = $.extend(true, {}, defaultTokenTypes, localized.types || {});
+    const collaborators = Array.isArray(localized.collaborators) ? localized.collaborators : [];
+    const permissions = (localized.permissions && typeof localized.permissions === 'object') ? localized.permissions : {};
+    const features = (localized.features && typeof localized.features === 'object') ? localized.features : {};
+    const commentsEnabled = !!features.comments;
+    const readModeAvailable = !!features.readMode;
+    const canComment = !!permissions.canComment;
+    const canEdit = !!permissions.canEdit;
+    let readMode = false;
+    const tokenCommentMap = new Map();
+    let commentsPrimed = false;
 
     function speak(message, politeness) {
         if (!message) {
@@ -169,6 +179,46 @@
     };
 
     tokens = normalizeRegistryTokens(tokens);
+
+    function computeTokenKey(token) {
+        if (!token || typeof token !== 'object') {
+            return '';
+        }
+        const name = (token.name || '').toString().trim();
+        const context = (token.context || defaultContext).toString().trim() || defaultContext;
+        return `${name}@@${context}`;
+    }
+
+    function escapeCssSelector(value) {
+        if (window.CSS && typeof window.CSS.escape === 'function') {
+            return window.CSS.escape(value);
+        }
+        return String(value).replace(/([!"#$%&'()*+,./:;<=>?@[\]^`{|}~])/g, '\\$1');
+    }
+
+    function getCommentsForKey(key) {
+        if (!key || !tokenCommentMap.has(key)) {
+            return [];
+        }
+        return tokenCommentMap.get(key) || [];
+    }
+
+    function setCommentsForKey(key, comments) {
+        if (!key) {
+            return;
+        }
+        const normalized = Array.isArray(comments) ? comments : [];
+        tokenCommentMap.set(key, normalized);
+    }
+
+    function appendCommentToKey(key, comment) {
+        if (!key) {
+            return;
+        }
+        const existing = getCommentsForKey(key).slice();
+        existing.push(comment);
+        setCommentsForKey(key, existing);
+    }
 
     function getUnsavedChangesMessage() {
         return i18n.reloadConfirm || 'Des modifications locales non enregistrées seront perdues. Continuer ?';
@@ -221,6 +271,8 @@
     }
 
     const builder = $('#ssc-token-builder');
+    const addButton = $('#ssc-token-add');
+    const readModeToggle = $('#ssc-token-readmode');
     const cssTextarea = $('#ssc-tokens');
     const reloadButton = $('#ssc-tokens-reload');
     const previewStyle = $('#ssc-tokens-preview-style');
@@ -1607,7 +1659,12 @@
     }
 
     function createTokenRow(token, index, highlights) {
+        const tokenKey = computeTokenKey(token);
         const row = $('<div>', { class: 'ssc-token-row', 'data-index': index });
+        if (tokenKey) {
+            row.attr('data-token-key', tokenKey);
+            row.data('tokenKey', tokenKey);
+        }
         const typeOptions = Object.keys(tokenTypes);
         const resolvedType = (token && typeof token.type === 'string' && tokenTypes[token.type])
             ? token.type
@@ -1721,6 +1778,16 @@
             text: i18n.deleteLabel || 'Supprimer',
         });
 
+        const tokenKey = computeTokenKey(token);
+        if (tokenKey) {
+            row.attr('data-token-key', tokenKey);
+        }
+        if (tokenKey && !tokenCommentMap.has(tokenKey)) {
+            tokenCommentMap.set(tokenKey, []);
+        }
+
+        const isReadMode = readModeAvailable && readMode;
+
         token.status = normalizeStatusValue(token.status);
         const statusInfo = getStatusInfo(token.status);
         const statusLabelText = (statusInfo && statusInfo.label) ? statusInfo.label : translate('statusUnknown', 'Statut inconnu');
@@ -1808,6 +1875,14 @@
         }
 
         metaActions.append(deleteButton);
+        if (isReadMode) {
+            deleteButton.hide();
+            metaActions.find('button').prop('disabled', true);
+            metaActions.append($('<span>', {
+                class: 'ssc-token-readmode',
+                text: translate('readModeBadge', 'Lecture seule'),
+            }));
+        }
         metaBar.append(metaActions);
         row.append(metaBar);
 
@@ -1832,6 +1907,16 @@
         row.append(groupField);
         row.append(contextField);
         row.append(descriptionField);
+
+        if (isReadMode) {
+            row.addClass('ssc-token-row--readonly');
+            nameInput.prop('readonly', true);
+            valueInput.prop('disabled', true);
+            typeSelect.prop('disabled', true);
+            groupInput.prop('readonly', true);
+            contextSelect.prop('disabled', true);
+            descriptionInput.prop('disabled', true);
+        }
 
         if (Array.isArray(highlights) && highlights.length) {
             row.addClass('ssc-token-row--matches');
@@ -1865,7 +1950,243 @@
             row.append(highlightContainer);
         }
 
+        if (commentsEnabled) {
+            row.append(buildCommentsSection(token, tokenKey));
+        }
+
         return row;
+    }
+
+    function renderTokenComments(listElement, comments, countElement) {
+        const safeComments = Array.isArray(comments) ? comments : [];
+        if (countElement && countElement.length) {
+            countElement.text(safeComments.length);
+        }
+
+        listElement.empty();
+
+        if (!safeComments.length) {
+            listElement.append($('<li>', {
+                class: 'ssc-token-comments__empty',
+                text: translate('commentsEmpty', 'Aucun commentaire pour ce token pour le moment.'),
+            }));
+            return;
+        }
+
+        safeComments.forEach((comment) => {
+            if (!comment || typeof comment !== 'object') {
+                return;
+            }
+
+            const item = $('<li>', { class: 'ssc-token-comments__item' });
+            const body = $('<div>', { class: 'ssc-token-comments__body' });
+
+            const author = comment.created_by && typeof comment.created_by === 'object' ? comment.created_by : null;
+            const mentions = Array.isArray(comment.mentions) ? comment.mentions : [];
+            const message = typeof comment.message === 'string' ? comment.message : '';
+            const createdAt = typeof comment.created_at === 'string' ? comment.created_at : '';
+            const formattedDate = formatDateTimeValue(createdAt) || createdAt;
+
+            const header = $('<div>', { class: 'ssc-token-comments__meta' });
+            if (author && author.avatar) {
+                header.append($('<img>', {
+                    src: author.avatar,
+                    alt: '',
+                    class: 'ssc-token-comments__avatar',
+                    loading: 'lazy',
+                }));
+            }
+
+            const authorLine = $('<p>', { class: 'ssc-token-comments__author' });
+            const authorName = author && author.name ? author.name : translate('activitySystemUser', 'Système');
+            authorLine.text(authorName);
+            header.append(authorLine);
+
+            const metaLine = $('<p>', { class: 'ssc-token-comments__meta-line' });
+            if (formattedDate) {
+                metaLine.append($('<span>', {
+                    text: sprintf(translate('commentsCreatedAt', 'Publié le %s'), formattedDate),
+                }));
+            }
+            if (author && author.name) {
+                if (formattedDate) {
+                    metaLine.append($('<span>', { text: ' · ' }));
+                }
+                metaLine.append($('<span>', {
+                    text: sprintf(translate('commentsCreatedBy', 'par %s'), author.name),
+                }));
+            }
+            if (metaLine.text()) {
+                header.append(metaLine);
+            }
+
+            item.append(header);
+
+            const messageElement = $('<p>', {
+                class: 'ssc-token-comments__message',
+                text: message,
+            });
+            body.append(messageElement);
+
+            if (mentions.length) {
+                const mentionsList = $('<ul>', { class: 'ssc-token-comments__mentions' });
+                mentions.forEach((mention) => {
+                    if (!mention || typeof mention !== 'object') {
+                        return;
+                    }
+                    const mentionItem = $('<li>', { class: 'ssc-token-comments__mention' });
+                    if (mention.avatar) {
+                        mentionItem.append($('<img>', {
+                            src: mention.avatar,
+                            alt: '',
+                            loading: 'lazy',
+                        }));
+                    }
+                    mentionItem.append($('<span>', { text: mention.name || '' }));
+                    mentionsList.append(mentionItem);
+                });
+                body.append(mentionsList);
+            }
+
+            item.append(body);
+            listElement.append(item);
+        });
+    }
+
+    function buildCommentMentionSelect() {
+        const select = $('<select>', { class: 'ssc-token-comment-mention-select' });
+        select.append($('<option>', {
+            value: '',
+            text: translate('commentsMentionsLabel', 'Mentionner un collaborateur'),
+        }));
+        collaborators.forEach((collaborator) => {
+            if (!collaborator || typeof collaborator !== 'object') {
+                return;
+            }
+            select.append($('<option>', {
+                value: collaborator.id,
+                text: collaborator.name,
+            }));
+        });
+
+        return select;
+    }
+
+    function updateMentionChips(form) {
+        const mentions = form.data('mentions') || [];
+        const container = form.find('.ssc-token-comment-mentions');
+        container.empty();
+
+        if (!mentions.length) {
+            container.attr('hidden', 'hidden');
+            return;
+        }
+
+        container.removeAttr('hidden');
+
+        mentions.forEach((id) => {
+            const collaborator = collaborators.find((entry) => Number(entry.id) === Number(id));
+            if (!collaborator) {
+                return;
+            }
+            const chip = $('<span>', {
+                class: 'ssc-token-comment-mention-chip',
+                'data-id': collaborator.id,
+            });
+            chip.append($('<span>', {
+                class: 'ssc-token-comment-mention-name',
+                text: collaborator.name,
+            }));
+            chip.append($('<button>', {
+                type: 'button',
+                class: 'ssc-token-comment-mention-remove',
+                'data-id': collaborator.id,
+                'aria-label': sprintf(translate('commentsRemoveMention', 'Retirer'), collaborator.name),
+                text: '×',
+            }));
+            container.append(chip);
+        });
+    }
+
+    function buildCommentsSection(token, tokenKey) {
+        const section = $('<section>', {
+            class: 'ssc-token-comments',
+            'data-token-key': tokenKey,
+        });
+
+        const header = $('<header>', { class: 'ssc-token-comments__header' });
+        header.append($('<h4>', { text: translate('commentsPanelTitle', 'Commentaires') }));
+        const count = $('<span>', { class: 'ssc-token-comments__count' });
+        header.append(count);
+        section.append(header);
+
+        const listElement = $('<ul>', { class: 'ssc-token-comments__list' });
+        section.append(listElement);
+
+        renderTokenComments(listElement, getCommentsForKey(tokenKey), count);
+
+        if (canComment && restRoot) {
+            const form = $('<form>', {
+                class: 'ssc-token-comment-form',
+                'data-token-key': tokenKey,
+            });
+            form.data('mentions', []);
+
+            if (collaborators.length) {
+                const mentionRow = $('<div>', { class: 'ssc-token-comment-form__row' });
+                mentionRow.append(buildCommentMentionSelect());
+                mentionRow.append($('<div>', {
+                    class: 'ssc-token-comment-mentions',
+                    hidden: 'hidden',
+                    'aria-live': 'polite',
+                }));
+                form.append(mentionRow);
+            } else {
+                form.append($('<p>', {
+                    class: 'description ssc-token-comment-mentions-empty',
+                    text: translate('commentsMentionsEmpty', 'Aucun collaborateur disponible à mentionner.'),
+                }));
+            }
+
+            const textarea = $('<textarea>', {
+                class: 'ssc-token-comment-input',
+                rows: 3,
+                placeholder: translate('commentsPlaceholder', 'Ajouter un commentaire…'),
+            });
+            form.append(textarea);
+
+            const actions = $('<div>', { class: 'ssc-token-comment-actions' });
+            actions.append($('<button>', {
+                type: 'submit',
+                class: 'button button-primary',
+                text: translate('commentsSubmitLabel', 'Publier'),
+            }));
+            form.append(actions);
+
+            section.append(form);
+        }
+
+        return section;
+    }
+
+    function refreshCommentPanelForKey(key) {
+        if (!key) {
+            return;
+        }
+        const selector = `.ssc-token-comments[data-token-key="${escapeCssSelector(key)}"]`;
+        const section = builder.find(selector);
+        if (!section.length) {
+            return;
+        }
+        const list = section.find('.ssc-token-comments__list');
+        const count = section.find('.ssc-token-comments__count');
+        renderTokenComments(list, getCommentsForKey(key), count);
+    }
+
+    function refreshAllCommentPanels() {
+        tokenCommentMap.forEach((comments, key) => {
+            refreshCommentPanelForKey(key);
+        });
     }
 
     function renderTokens() {
@@ -1883,6 +2204,10 @@
         const normalizedQuery = normalizeSearchTerm(rawQuery);
 
         builder.empty();
+        builder.toggleClass('ssc-token-builder--readonly', readModeAvailable && readMode);
+        if (addButton.length) {
+            addButton.prop('disabled', readModeAvailable && readMode);
+        }
 
         const seenGroups = new Set();
         const allGroups = [];
@@ -2060,6 +2385,58 @@
         });
     }
 
+    function primeComments(comments) {
+        if (!Array.isArray(comments)) {
+            return;
+        }
+        const grouped = {};
+        comments.forEach((comment) => {
+            if (!comment || typeof comment !== 'object') {
+                return;
+            }
+            const key = typeof comment.entity_id === 'string' ? comment.entity_id : '';
+            if (!key) {
+                return;
+            }
+            if (!grouped[key]) {
+                grouped[key] = [];
+            }
+            grouped[key].push(comment);
+        });
+
+        Object.keys(grouped).forEach((key) => {
+            setCommentsForKey(key, grouped[key]);
+        });
+    }
+
+    function fetchTokenComments() {
+        if (!commentsEnabled || commentsPrimed || !restRoot) {
+            return;
+        }
+
+        commentsPrimed = true;
+
+        $.ajax({
+            url: restRoot + 'comments',
+            method: 'GET',
+            data: {
+                entity_type: 'token',
+            },
+            beforeSend: function(xhr) {
+                if (restNonce) {
+                    xhr.setRequestHeader('X-WP-Nonce', restNonce);
+                }
+            },
+        }).done(function(response) {
+            if (response && Array.isArray(response.comments)) {
+                primeComments(response.comments);
+                refreshAllCommentPanels();
+            }
+        }).fail(function() {
+            commentsPrimed = false;
+        });
+    }
+
     function fetchTokensFromServer() {
         if (!restRoot) {
             return;
@@ -2088,6 +2465,7 @@
                 refreshCssFromTokens();
             }
             fetchApprovals();
+            fetchTokenComments();
         });
     }
 
@@ -2274,6 +2652,111 @@
 
         initializeDeviceLab();
 
+        const paletteApi = (typeof window !== 'undefined' && typeof window.sscCommandPalette === 'object')
+            ? window.sscCommandPalette
+            : null;
+        const paletteSupportsTokens = !!(paletteApi && typeof paletteApi.registerSource === 'function');
+        const highlightClassName = 'ssc-token-row--highlight';
+        let highlightTimeoutId = null;
+
+        const highlightTokenRowByKey = function(tokenKey) {
+            if (!tokenKey) {
+                return;
+            }
+
+            const filters = getFilterState();
+            if (filters.query || filters.type) {
+                updateFilters({ query: '', type: '' });
+                syncFilterControls();
+                renderTokens();
+            }
+
+            const builderRoot = builder.length ? builder : $('#ssc-token-builder');
+            if (!builderRoot.length) {
+                return;
+            }
+
+            const targetRow = builderRoot.find('.ssc-token-row').filter(function() {
+                return $(this).data('tokenKey') === tokenKey;
+            });
+
+            if (!targetRow.length) {
+                return;
+            }
+
+            if (highlightTimeoutId) {
+                window.clearTimeout(highlightTimeoutId);
+                highlightTimeoutId = null;
+            }
+
+            builderRoot.find(`.${highlightClassName}`).removeClass(highlightClassName);
+            targetRow.addClass(highlightClassName);
+
+            highlightTimeoutId = window.setTimeout(function() {
+                targetRow.removeClass(highlightClassName);
+                highlightTimeoutId = null;
+            }, 2400);
+
+            const element = targetRow.get(0);
+            if (element && typeof element.scrollIntoView === 'function') {
+                element.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            }
+
+            targetRow.attr('tabindex', '-1');
+            targetRow.trigger('focus');
+            targetRow.removeAttr('tabindex');
+
+            const tokenName = targetRow.find('.token-name').val() || tokenKey.split('@@')[0] || tokenKey;
+            speak(sprintf(translate('commandPaletteTokenFocused', 'Token sélectionné : %s'), tokenName), 'polite');
+        };
+
+        if (paletteSupportsTokens) {
+            paletteApi.registerSource('tokens', function() {
+                if (!Array.isArray(tokens) || !tokens.length) {
+                    return [];
+                }
+
+                return tokens.map(function(token) {
+                    const tokenKey = computeTokenKey(token);
+                    if (!tokenKey) {
+                        return null;
+                    }
+
+                    const rawName = token && typeof token.name === 'string' ? token.name : '';
+                    const tokenName = rawName && rawName.trim() ? rawName.trim() : translate('unnamedToken', 'Token sans nom');
+                    const rawContext = token && typeof token.context === 'string' ? token.context : '';
+                    const contextLabel = rawContext && rawContext.trim() ? rawContext.trim() : defaultContext;
+                    const rawGroup = token && typeof token.group === 'string' ? token.group : '';
+                    const groupLabel = rawGroup && rawGroup.trim() ? rawGroup.trim() : defaultGroupName;
+                    const typeMeta = token && typeof token.type === 'string' ? tokenTypes[token.type] : null;
+                    const typeLabel = typeMeta && typeMeta.label ? typeMeta.label : (token.type || '');
+                    const keywords = [
+                        tokenName,
+                        contextLabel,
+                        groupLabel,
+                        typeLabel,
+                        tokenKey,
+                    ];
+
+                    if (token && typeof token.value === 'string' && token.value.trim()) {
+                        keywords.push(token.value.trim());
+                    }
+                    if (token && typeof token.description === 'string' && token.description.trim()) {
+                        keywords.push(token.description.trim());
+                    }
+
+                    return {
+                        title: tokenName,
+                        subtitle: `${contextLabel} · ${groupLabel}`,
+                        keywords: keywords.filter(Boolean),
+                        perform: function() {
+                            highlightTokenRowByKey(tokenKey);
+                        },
+                    };
+                }).filter(Boolean);
+            });
+        }
+
         if (!builder.length || !cssTextarea.length) {
             return;
         }
@@ -2323,6 +2806,29 @@
         refreshCssFromTokens();
         fetchTokensFromServer();
         fetchApprovals();
+
+        if (readModeToggle.length) {
+            if (readModeAvailable) {
+                readModeToggle.text(translate('readModeToggleOn', 'Activer le mode lecture'));
+                readModeToggle.on('click', function(event) {
+                    event.preventDefault();
+                    readMode = !readMode;
+                    readModeToggle.attr('aria-pressed', readMode ? 'true' : 'false');
+                    readModeToggle.text(readMode
+                        ? translate('readModeToggleOff', 'Quitter le mode lecture')
+                        : translate('readModeToggleOn', 'Activer le mode lecture'));
+                    if (typeof window.sscToast === 'function') {
+                        window.sscToast(readMode
+                            ? translate('readModeActivated', 'Mode lecture activé — modifications désactivées.')
+                            : translate('readModeDeactivated', 'Mode lecture désactivé.')
+                        );
+                    }
+                    renderTokens();
+                });
+            } else {
+                readModeToggle.hide();
+            }
+        }
 
         $('#ssc-token-add').on('click', function(event) {
             event.preventDefault();
@@ -2477,6 +2983,91 @@
                 }
             }).always(function() {
                 button.removeClass('is-busy');
+            });
+        });
+
+        builder.on('change', '.ssc-token-comment-mention-select', function() {
+            const select = $(this);
+            const rawValue = select.val();
+            const mentionId = parseInt(rawValue, 10);
+            if (!mentionId) {
+                return;
+            }
+            const form = select.closest('form');
+            const mentions = form.data('mentions') || [];
+            if (mentions.indexOf(mentionId) === -1) {
+                mentions.push(mentionId);
+                form.data('mentions', mentions);
+                updateMentionChips(form);
+                const collaborator = collaborators.find((entry) => Number(entry.id) === mentionId);
+                if (collaborator && typeof window.sscToast === 'function') {
+                    window.sscToast(sprintf(translate('commentsMentionAdded', 'Mention ajoutée : %s'), collaborator.name));
+                }
+            }
+            select.val('');
+        });
+
+        builder.on('click', '.ssc-token-comment-mention-remove', function() {
+            const button = $(this);
+            const mentionId = parseInt(button.data('id'), 10);
+            const form = button.closest('form');
+            const mentions = form.data('mentions') || [];
+            const nextMentions = mentions.filter((value) => Number(value) !== mentionId);
+            form.data('mentions', nextMentions);
+            updateMentionChips(form);
+        });
+
+        builder.on('submit', '.ssc-token-comment-form', function(event) {
+            event.preventDefault();
+            if (!canComment || !restRoot) {
+                return;
+            }
+
+            const form = $(this);
+            const tokenKey = form.data('token-key');
+            const textarea = form.find('.ssc-token-comment-input');
+            const message = (textarea.val() || '').toString().trim();
+
+            if (!message) {
+                textarea.focus();
+                return;
+            }
+
+            const submitButton = form.find('button[type="submit"]');
+            submitButton.prop('disabled', true).addClass('is-busy');
+
+            $.ajax({
+                url: restRoot + 'comments',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    entity_type: 'token',
+                    entity_id: tokenKey,
+                    message: message,
+                    mentions: form.data('mentions') || [],
+                }),
+                beforeSend: function(xhr) {
+                    if (restNonce) {
+                        xhr.setRequestHeader('X-WP-Nonce', restNonce);
+                    }
+                },
+            }).done(function(response) {
+                if (response && response.comment) {
+                    appendCommentToKey(tokenKey, response.comment);
+                    refreshCommentPanelForKey(tokenKey);
+                    textarea.val('');
+                    form.data('mentions', []);
+                    updateMentionChips(form);
+                    if (typeof window.sscToast === 'function') {
+                        window.sscToast(translate('commentsSendSuccess', 'Commentaire publié.'));
+                    }
+                }
+            }).fail(function() {
+                if (typeof window.sscToast === 'function') {
+                    window.sscToast(translate('commentsSendError', 'Impossible d’enregistrer le commentaire.'));
+                }
+            }).always(function() {
+                submitButton.prop('disabled', false).removeClass('is-busy');
             });
         });
     });

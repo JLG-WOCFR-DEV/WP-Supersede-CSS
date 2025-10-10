@@ -9,6 +9,8 @@ if (!defined('ABSPATH')) {
 /** @var string $default_context */
 /** @var array<int, array{value: string, label: string, description: string}> $token_statuses */
 /** @var array<int, array<string, mixed>> $token_approvals */
+/** @var array<int, array{id: int, name: string, avatar: string}> $collaborators */
+/** @var bool $can_manage_tokens */
 
 if (function_exists('wp_localize_script')) {
     $localized_types = [];
@@ -45,6 +47,15 @@ if (function_exists('wp_localize_script')) {
         'defaultContext' => $default_context,
         'statuses' => $token_statuses,
         'approvals' => $token_approvals,
+        'collaborators' => $collaborators,
+        'permissions' => [
+            'canEdit' => $can_manage_tokens,
+            'canComment' => $can_manage_tokens,
+        ],
+        'features' => [
+            'comments' => true,
+            'readMode' => true,
+        ],
         'i18n' => [
             'addToken' => __('Ajouter un token', 'supersede-css-jlg'),
             'emptyState' => __('Aucun token pour le moment. Utilisez le bouton ci-dessous pour commencer.', 'supersede-css-jlg'),
@@ -124,6 +135,23 @@ if (function_exists('wp_localize_script')) {
             'approvalTooltipComment' => __('Commentaire', 'supersede-css-jlg'),
             'approvalTooltipRequestedAt' => __('Envoyée le %s', 'supersede-css-jlg'),
             'approvalUnavailableLabel' => __('Les demandes d’approbation nécessitent des droits supplémentaires.', 'supersede-css-jlg'),
+            'commentsPanelTitle' => __('Commentaires', 'supersede-css-jlg'),
+            'commentsEmpty' => __('Aucun commentaire pour ce token pour le moment.', 'supersede-css-jlg'),
+            'commentsPlaceholder' => __('Ajouter un commentaire…', 'supersede-css-jlg'),
+            'commentsSubmitLabel' => __('Publier', 'supersede-css-jlg'),
+            'commentsMentionsLabel' => __('Mentionner un collaborateur', 'supersede-css-jlg'),
+            'commentsMentionsEmpty' => __('Aucun collaborateur disponible à mentionner.', 'supersede-css-jlg'),
+            'commentsMentionAdded' => __('Mention ajoutée : %s', 'supersede-css-jlg'),
+            'commentsCreatedAt' => __('Publié le %s', 'supersede-css-jlg'),
+            'commentsCreatedBy' => __('par %s', 'supersede-css-jlg'),
+            'commentsSendError' => __('Impossible d’enregistrer le commentaire.', 'supersede-css-jlg'),
+            'commentsSendSuccess' => __('Commentaire publié.', 'supersede-css-jlg'),
+            'commentsRemoveMention' => __('Retirer', 'supersede-css-jlg'),
+            'readModeToggleOn' => __('Activer le mode lecture', 'supersede-css-jlg'),
+            'readModeToggleOff' => __('Quitter le mode lecture', 'supersede-css-jlg'),
+            'readModeActivated' => __('Mode lecture activé — modifications désactivées.', 'supersede-css-jlg'),
+            'readModeDeactivated' => __('Mode lecture désactivé.', 'supersede-css-jlg'),
+            'readModeBadge' => __('Lecture seule', 'supersede-css-jlg'),
         ],
     ]);
 }
@@ -198,6 +226,15 @@ if (function_exists('wp_localize_script')) {
                     <?php endforeach; ?>
                 </select>
                 <span id="ssc-token-results-count" class="ssc-token-results-count" aria-live="polite"></span>
+                <button
+                    type="button"
+                    id="ssc-token-readmode"
+                    class="button button-secondary"
+                    data-mode="edit"
+                    aria-pressed="false"
+                >
+                    <?php esc_html_e('Mode lecture', 'supersede-css-jlg'); ?>
+                </button>
             </div>
 
             <div id="ssc-token-builder" class="ssc-token-builder" aria-live="polite">
