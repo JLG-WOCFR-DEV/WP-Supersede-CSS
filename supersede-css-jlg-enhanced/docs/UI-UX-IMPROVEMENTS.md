@@ -21,6 +21,7 @@
 3. **Améliorer les aperçus et le feedback utilisateur**
    - Remplacer les placeholders génériques par des scénarios réels (ex. un avatar + halo animé pour l’Animation Studio) avec la possibilité de basculer entre plusieurs surfaces (mobile/tablette/desktop).
    - Ajouter des micro-feedbacks : toasts de confirmation après « Copier CSS », skeleton loaders dans les prévisualisations, et états vides explicites quand aucune donnée n’est configurée.
+   - ✅ *(jan. 2025)* Le **Grid Editor** propose désormais trois scènes contextualisées (cartes éditoriales, équipe, plans tarifaires) avec bascule clair/sombre, métriques dynamiques et annonces ARIA pour chaque ajustement de colonnes/espacement.
 
 4. **Accessibilité et clarté**
    - Augmenter le contraste texte/fond (objectif AA 4.5:1) et prévoir un toggle clair/sombre accessible globalement plutôt que des surcharges ponctuelles (`.ssc-dark`). 【F:supersede-css-jlg-enhanced/assets/css/admin.css†L61-L72】
