@@ -1,11 +1,24 @@
-#ssc-typo-preview {
+.ssc-typo-preview {
+    font-size: clamp(1rem, 3vw, 3rem);
+    font-weight: var(--ssc-font-weight-semibold);
+    line-height: var(--ssc-line-height-snug);
+    color: var(--ssc-text);
     transition: font-size 0.1s linear;
 }
 
 .ssc-typo-vp-slider-container {
     width: 100%;
-    background: var(--ssc-bg);
-    padding: 10px;
-    border-radius: 8px;
-    margin-top: 10px;
+    display: grid;
+    gap: var(--ssc-space-2xs);
+    align-items: center;
+    background: var(--ssc-card);
+    padding: var(--ssc-space-sm);
+    border-radius: var(--ssc-radius-md);
+    border: 1px solid var(--ssc-border);
+    margin-top: var(--ssc-space-sm);
+}
+
+.ssc-dark .ssc-typo-vp-slider-container {
+    background: color-mix(in srgb, var(--ssc-card) 85%, transparent 15%);
+    border-color: color-mix(in srgb, var(--ssc-border) 70%, transparent 30%);
 }
