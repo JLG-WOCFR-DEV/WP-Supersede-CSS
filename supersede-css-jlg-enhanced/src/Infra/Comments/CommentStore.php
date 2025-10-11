@@ -41,7 +41,12 @@ final class CommentStore
             }
         }
 
-        return array_map([$this, 'hydrateComment'], $comments);
+        $users = $this->preloadUsers($comments);
+
+        return array_map(
+            fn(array $comment): array => $this->hydrateComment($comment, $users),
+            $comments
+        );
     }
 
     /**
@@ -103,7 +108,9 @@ final class CommentStore
             ],
         ]);
 
-        return $this->hydrateComment($newComment);
+        $users = $this->preloadUsers([$newComment]);
+
+        return $this->hydrateComment($newComment, $users);
     }
 
     /**
@@ -142,15 +149,19 @@ final class CommentStore
 
     /**
      * @param array<string, mixed> $raw
+     * @param array<int, WP_User> $users
      * @return array<string, mixed>
      */
-    private function hydrateComment(array $raw): array
+    private function hydrateComment(array $raw, array $users = []): array
     {
         $author = null;
         $userId = isset($raw['created_by']) ? (int) $raw['created_by'] : 0;
 
         if ($userId > 0) {
-            $user = get_userdata($userId);
+            $user = $users[$userId] ?? null;
+            if (!$user instanceof WP_User) {
+                $user = get_userdata($userId);
+            }
             if ($user instanceof WP_User) {
                 $author = [
                     'id' => $user->ID,
@@ -167,7 +178,10 @@ final class CommentStore
                 if ($mentionId <= 0) {
                     continue;
                 }
-                $user = get_userdata($mentionId);
+                $user = $users[$mentionId] ?? null;
+                if (!$user instanceof WP_User) {
+                    $user = get_userdata($mentionId);
+                }
                 if ($user instanceof WP_User) {
                     $mentions[] = [
                         'id' => $user->ID,
@@ -208,6 +222,52 @@ final class CommentStore
         }
 
         return array_values(array_unique($sanitized));
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $comments
+     * @return array<int, WP_User>
+     */
+    private function preloadUsers(array $comments): array
+    {
+        $ids = [];
+
+        foreach ($comments as $comment) {
+            if (isset($comment['created_by'])) {
+                $ids[] = (int) $comment['created_by'];
+            }
+
+            if (isset($comment['mentions']) && is_array($comment['mentions'])) {
+                foreach ($comment['mentions'] as $mentionId) {
+                    $ids[] = (int) $mentionId;
+                }
+            }
+        }
+
+        $ids = array_values(array_unique(array_filter(
+            $ids,
+            static fn(int $id): bool => $id > 0
+        )));
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $users = get_users([
+            'include' => $ids,
+            'orderby' => 'include',
+            'number' => count($ids),
+            'fields' => 'all',
+        ]);
+
+        $map = [];
+        foreach ($users as $user) {
+            if ($user instanceof WP_User) {
+                $map[(int) $user->ID] = $user;
+            }
+        }
+
+        return $map;
     }
 
     private function generateId(string $entityType, string $entityId): string
