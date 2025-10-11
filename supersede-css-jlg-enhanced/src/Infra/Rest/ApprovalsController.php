@@ -98,6 +98,7 @@ final class ApprovalsController extends BaseController
         }
 
         $comment = isset($payload['comment']) ? sanitize_textarea_field((string) $payload['comment']) : '';
+        $priority = isset($payload['priority']) ? TokenApprovalStore::sanitizePriority((string) $payload['priority']) : TokenApprovalStore::sanitizePriority('');
         $userId = get_current_user_id();
         $userId = is_int($userId) ? $userId : 0;
 
@@ -105,7 +106,7 @@ final class ApprovalsController extends BaseController
             'status' => 'draft',
         ]);
 
-        $entry = $this->store->upsert($token['name'], $token['context'], $userId, $comment);
+        $entry = $this->store->upsert($token['name'], $token['context'], $userId, $comment, $priority);
         $entry = $this->enrichEntry($entry);
 
         EventRecorder::record('token.approval_requested', [
@@ -115,6 +116,7 @@ final class ApprovalsController extends BaseController
                 'name' => $token['name'],
                 'context' => $token['context'],
                 'comment' => $comment,
+                'priority' => $entry['priority'],
             ],
         ]);
 
@@ -202,6 +204,7 @@ final class ApprovalsController extends BaseController
                     'name' => $token['name'],
                     'context' => $token['context'],
                     'comment' => $comment,
+                    'priority' => TokenApprovalStore::sanitizePriority($requestEntry['priority'] ?? ''),
                 ],
             ]);
         } else {
@@ -215,6 +218,7 @@ final class ApprovalsController extends BaseController
                     'name' => $token['name'],
                     'context' => $token['context'],
                     'comment' => $comment,
+                    'priority' => TokenApprovalStore::sanitizePriority($requestEntry['priority'] ?? ''),
                 ],
             ]);
         }
@@ -296,6 +300,10 @@ final class ApprovalsController extends BaseController
         } else {
             $entry['decision_user'] = null;
         }
+
+        $entry['priority'] = isset($entry['priority'])
+            ? TokenApprovalStore::sanitizePriority((string) $entry['priority'])
+            : TokenApprovalStore::sanitizePriority('');
 
         return $entry;
     }

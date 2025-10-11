@@ -57,6 +57,41 @@
         }
     }
 
+    function normalizeApprovalPriority(value) {
+        const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+
+        if (normalized && approvalPriorityMap[normalized]) {
+            return normalized;
+        }
+
+        return defaultApprovalPriority;
+    }
+
+    function getApprovalPriorityLabel(value) {
+        const normalized = normalizeApprovalPriority(value);
+        const meta = approvalPriorityMap[normalized];
+
+        if (meta && meta.label) {
+            return meta.label;
+        }
+
+        if (normalized === 'low') {
+            return translate('approvalPriorityLow', 'Faible');
+        }
+        if (normalized === 'normal') {
+            return translate('approvalPriorityNormal', 'Normale');
+        }
+        if (normalized === 'high') {
+            return translate('approvalPriorityHigh', 'Haute');
+        }
+
+        return translate('approvalPriorityUnknown', 'Priorité inconnue');
+    }
+
+    function getApprovalPriorityClass(value) {
+        return `ssc-approval-priority--${normalizeApprovalPriority(value).replace(/[^a-z0-9_-]/g, '')}`;
+    }
+
     const browserLocale = (document.documentElement && document.documentElement.lang)
         ? document.documentElement.lang
         : ((navigator.language || navigator.userLanguage || 'en-US'));
@@ -64,6 +99,47 @@
         ? new Intl.DateTimeFormat(browserLocale, { dateStyle: 'medium', timeStyle: 'short' })
         : null;
     const initialApprovals = Array.isArray(localized.approvals) ? localized.approvals : [];
+    const approvalPriorityDefinitions = Array.isArray(localized.approvalPriorities) ? localized.approvalPriorities : [];
+    const approvalPriorityMap = Object.create(null);
+    const approvalPriorityOptions = [];
+    let defaultApprovalPriority = 'normal';
+
+    approvalPriorityDefinitions.forEach((definition) => {
+        if (!definition || typeof definition !== 'object') {
+            return;
+        }
+
+        const value = typeof definition.value === 'string' ? definition.value.trim().toLowerCase() : '';
+        if (!value) {
+            return;
+        }
+
+        const label = typeof definition.label === 'string' && definition.label.length
+            ? definition.label
+            : value;
+
+        approvalPriorityMap[value] = {
+            value,
+            label,
+            description: typeof definition.description === 'string' ? definition.description : '',
+        };
+
+        approvalPriorityOptions.push({ value, label });
+
+        if (definition.default === true) {
+            defaultApprovalPriority = value;
+        }
+    });
+
+    if (!approvalPriorityMap[defaultApprovalPriority]) {
+        if (approvalPriorityMap.normal) {
+            defaultApprovalPriority = 'normal';
+        } else if (approvalPriorityOptions.length) {
+            defaultApprovalPriority = approvalPriorityOptions[0].value;
+        } else {
+            defaultApprovalPriority = 'normal';
+        }
+    }
     let approvalsIndex = Object.create(null);
     let approvalsAvailable = true;
     const defaultTokenTypes = {
@@ -1390,7 +1466,9 @@
             if (!key) {
                 return;
             }
-            approvalsIndex[key] = entry;
+            const normalizedEntry = { ...entry };
+            normalizedEntry.priority = normalizeApprovalPriority(entry.priority);
+            approvalsIndex[key] = normalizedEntry;
         });
     }
 
@@ -1440,6 +1518,10 @@
             if (formatted) {
                 pieces.push(sprintf(translate('approvalTooltipRequestedAt', 'Envoyée le %s'), formatted));
             }
+        }
+        const priorityLabel = getApprovalPriorityLabel(approval.priority);
+        if (priorityLabel) {
+            pieces.push(`${translate('approvalTooltipPriority', 'Priorité')}: ${priorityLabel}`);
         }
         return pieces.join('\n');
     }
@@ -1820,6 +1902,14 @@
                 approvalBadge.attr('title', tooltip);
             }
             metaPrimary.append(approvalBadge);
+            const approvalPriorityLabel = getApprovalPriorityLabel(approval.priority);
+            if (approvalPriorityLabel) {
+                const approvalPriorityChip = $('<span>', {
+                    class: `ssc-approval-priority ${getApprovalPriorityClass(approval.priority)}`,
+                    text: approvalPriorityLabel,
+                });
+                metaPrimary.append(approvalPriorityChip);
+            }
             hasPendingApproval = approvalStatus === 'pending';
         }
 
@@ -2523,7 +2613,51 @@
         });
     }
 
-    function requestTokenApproval(token, comment) {
+    function promptForApprovalPriority() {
+        if (!approvalPriorityOptions.length) {
+            return defaultApprovalPriority;
+        }
+
+        const promptMessage = translate('approvalPriorityPrompt', 'Choisissez la priorité (faible, normale ou haute).');
+        const optionsSummary = approvalPriorityOptions
+            .map((option) => `- ${option.label} (${option.value})`)
+            .join('\n');
+        const defaultLabel = getApprovalPriorityLabel(defaultApprovalPriority);
+        const response = window.prompt(`${promptMessage}\n${optionsSummary}`, defaultLabel);
+
+        if (response === null) {
+            return null;
+        }
+
+        const trimmed = response.trim();
+        if (!trimmed.length) {
+            return defaultApprovalPriority;
+        }
+
+        const normalized = trimmed.toLowerCase();
+        const directValue = approvalPriorityOptions.find((option) => option.value.toLowerCase() === normalized);
+        if (directValue) {
+            return directValue.value;
+        }
+
+        const exactLabel = approvalPriorityOptions.find((option) => option.label && option.label.toLowerCase() === normalized);
+        if (exactLabel) {
+            return exactLabel.value;
+        }
+
+        const partialLabel = approvalPriorityOptions.find((option) => option.label && option.label.toLowerCase().startsWith(normalized));
+        if (partialLabel) {
+            return partialLabel.value;
+        }
+
+        if (typeof window.sscToast === 'function') {
+            window.sscToast(translate('approvalPriorityInvalid', 'Priorité inconnue. La demande a été annulée.'));
+        }
+
+        return null;
+    }
+
+    function requestTokenApproval(token, comment, priority) {
         if (!restRoot) {
             const deferred = $.Deferred();
             deferred.reject();
@@ -2535,6 +2669,7 @@
                 name: token && typeof token.name === 'string' ? token.name : '',
                 context: token && typeof token.context === 'string' ? token.context : defaultContext,
             },
+            priority: normalizeApprovalPriority(priority),
         };
 
         if (comment && comment.trim()) {
@@ -2962,9 +3097,14 @@
                 comment = response;
             }
 
+            const priority = promptForApprovalPriority();
+            if (priority === null) {
+                return;
+            }
+
             button.prop('disabled', true).addClass('is-busy');
 
-            requestTokenApproval(token, comment).done(function() {
+            requestTokenApproval(token, comment, priority).done(function() {
                 if (typeof window.sscToast === 'function') {
                     window.sscToast(i18n.approvalRequestedToast || 'Demande d’approbation envoyée.');
                 }

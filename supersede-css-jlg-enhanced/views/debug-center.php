@@ -7,6 +7,7 @@ if (!defined('ABSPATH')) {
 /** @var bool $can_review_approvals */
 /** @var array{entries: array<int,array<string,mixed>>, pagination: array<string,int>, filters: array<string,string>} $activity_log */
 /** @var array<int,array<string,mixed>> $css_revisions */
+/** @var array<int, array{value: string, label: string, description: string, tone: string, default: bool}> $approval_priorities */
 $can_export_tokens = isset($can_export_tokens) ? (bool) $can_export_tokens : false;
 $plugin_version    = $system_info['plugin_version'] ?? __('N/A', 'supersede-css-jlg');
 $wordpress_version = $system_info['wordpress_version'] ?? '';
@@ -15,6 +16,30 @@ $css_revisions     = isset($css_revisions) && is_array($css_revisions) ? $css_re
 $approvals         = isset($approvals) && is_array($approvals) ? $approvals : [];
 $activity_log      = isset($activity_log) && is_array($activity_log) ? $activity_log : ['entries' => [], 'pagination' => ['total' => 0, 'total_pages' => 1, 'page' => 1], 'filters' => []];
 $can_review        = isset($can_review_approvals) ? (bool) $can_review_approvals : false;
+$priority_definitions = isset($approval_priorities) && is_array($approval_priorities)
+    ? $approval_priorities
+    : \SSC\Infra\Approvals\TokenApprovalStore::getSupportedPriorities();
+$priority_labels = [];
+$default_priority = 'normal';
+foreach ($priority_definitions as $definition) {
+    if (!is_array($definition)) {
+        continue;
+    }
+
+    $value = isset($definition['value']) ? (string) $definition['value'] : '';
+    if ($value === '') {
+        continue;
+    }
+
+    $priority_labels[$value] = isset($definition['label']) ? (string) $definition['label'] : $value;
+    if (isset($definition['default']) && $definition['default'] === true) {
+        $default_priority = $value;
+    }
+}
+
+if (!isset($priority_labels[$default_priority]) && $priority_labels !== []) {
+    $default_priority = array_key_first($priority_labels);
+}
 
 $normalize_user = static function ($user_id): array {
     $user_id = (int) $user_id;
@@ -68,6 +93,9 @@ $approvals_enriched = array_map(static function ($entry) use ($normalize_user) {
         'comment' => isset($entry['comment']) ? (string) $entry['comment'] : '',
         'decision' => $decisionStruct,
         'decision_user' => $decisionUser,
+        'priority' => isset($entry['priority']) && isset($priority_labels[(string) $entry['priority']])
+            ? (string) $entry['priority']
+            : $default_priority,
     ];
 }, $approvals);
 
@@ -452,6 +480,7 @@ $format_datetime = static function (string $iso): string {
                 <thead>
                     <tr>
                         <th><?php esc_html_e('Token', 'supersede-css-jlg'); ?></th>
+                        <th><?php esc_html_e('Priorité', 'supersede-css-jlg'); ?></th>
                         <th><?php esc_html_e('Statut', 'supersede-css-jlg'); ?></th>
                         <th><?php esc_html_e('Demandé par', 'supersede-css-jlg'); ?></th>
                         <th><?php esc_html_e('Commentaires', 'supersede-css-jlg'); ?></th>
@@ -475,6 +504,12 @@ $format_datetime = static function (string $iso): string {
                             ? $approval['requested_by_user']
                             : $normalize_user($approval['requested_by'] ?? 0);
                         $requested_at = $format_datetime($approval['requested_at'] ?? '');
+                        $priority_value = isset($approval['priority']) ? (string) $approval['priority'] : $default_priority;
+                        if (!isset($priority_labels[$priority_value])) {
+                            $priority_value = $default_priority;
+                        }
+                        $priority_label = $priority_labels[$priority_value] ?? $priority_value;
+                        $priority_class = 'ssc-approval-priority--' . preg_replace('/[^a-z0-9_-]/', '', strtolower($priority_value));
                         $decision = $approval['decision'];
                         $comment = $approval['comment'] ?? '';
                         $decision_comment = is_array($decision) ? ($decision['comment'] ?? '') : '';
@@ -492,6 +527,11 @@ $format_datetime = static function (string $iso): string {
                                         <span class="ssc-approval-context"><?php echo esc_html($token_context); ?></span>
                                     <?php endif; ?>
                                 </div>
+                            </td>
+                            <td>
+                                <span class="ssc-approval-priority <?php echo esc_attr($priority_class); ?>">
+                                    <?php echo esc_html($priority_label); ?>
+                                </span>
                             </td>
                             <td>
                                 <span class="ssc-approval-badge <?php echo esc_attr($status_class); ?>">
@@ -538,6 +578,7 @@ $format_datetime = static function (string $iso): string {
         </div>
         <p id="ssc-approvals-empty" class="description" <?php if (!empty($approvals_enriched)) : ?>hidden<?php endif; ?>><?php esc_html_e('Aucune demande d’approbation pour le moment.', 'supersede-css-jlg'); ?></p>
         <script type="application/json" id="ssc-approvals-data"><?php echo wp_json_encode($approvals_enriched); ?></script>
+        <script type="application/json" id="ssc-approvals-priorities"><?php echo wp_json_encode($priority_definitions); ?></script>
         <script type="application/json" id="ssc-approvals-permissions"><?php echo wp_json_encode(['canReview' => $can_review]); ?></script>
     </div>
 

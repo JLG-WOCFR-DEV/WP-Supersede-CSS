@@ -1373,6 +1373,9 @@
         const approvalsRefreshButton = $('#ssc-approvals-refresh');
         const approvalsPermissions = parseJsonFromScript('#ssc-approvals-permissions');
         const approvalsInitialData = parseJsonFromScript('#ssc-approvals-data');
+        const approvalsPriorityDefinitions = parseJsonFromScript('#ssc-approvals-priorities');
+
+        const priorityMeta = buildPriorityMeta(approvalsPriorityDefinitions);
 
         const approvalsState = {
             entries: normalizeApprovals(approvalsInitialData),
@@ -1394,6 +1397,75 @@
                 name: `#${id}`,
                 avatar: '',
             };
+        }
+
+        function buildPriorityMeta(definitions) {
+            const list = Array.isArray(definitions) ? definitions : [];
+            const meta = {
+                labels: Object.create(null),
+                defaultValue: 'normal',
+            };
+
+            list.forEach((item) => {
+                if (!item || typeof item !== 'object') {
+                    return;
+                }
+
+                const value = typeof item.value === 'string' ? item.value.trim().toLowerCase() : '';
+                if (!value) {
+                    return;
+                }
+
+                const label = typeof item.label === 'string' && item.label.length ? item.label : value;
+                meta.labels[value] = { value, label };
+
+                if (item.default === true) {
+                    meta.defaultValue = value;
+                }
+            });
+
+            if (!meta.labels[meta.defaultValue]) {
+                if (meta.labels.normal) {
+                    meta.defaultValue = 'normal';
+                } else {
+                    const firstKey = Object.keys(meta.labels)[0];
+                    if (firstKey) {
+                        meta.defaultValue = firstKey;
+                    }
+                }
+            }
+
+            return meta;
+        }
+
+        function normalizePriorityValue(value) {
+            const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+            if (normalized && priorityMeta.labels[normalized]) {
+                return normalized;
+            }
+
+            return priorityMeta.defaultValue;
+        }
+
+        function getPriorityLabel(value) {
+            const normalized = normalizePriorityValue(value);
+            const meta = priorityMeta.labels[normalized];
+
+            if (meta && meta.label) {
+                return meta.label;
+            }
+
+            if (normalized === 'low') {
+                return translate('approvalPriorityLow', 'Faible');
+            }
+            if (normalized === 'normal') {
+                return translate('approvalPriorityNormal', 'Normale');
+            }
+            if (normalized === 'high') {
+                return translate('approvalPriorityHigh', 'Haute');
+            }
+
+            return translate('approvalPriorityUnknown', 'Priorité inconnue');
         }
 
         function normalizeApprovals(raw) {
@@ -1443,6 +1515,7 @@
                 }
 
                 normalized.status = (normalized.status || 'pending').toLowerCase();
+                normalized.priority = normalizePriorityValue(entry && entry.priority);
 
                 return normalized;
             });
@@ -1461,6 +1534,8 @@
             const tokenName = entry.token && entry.token.name ? entry.token.name : '';
             const tokenContext = entry.token && entry.token.context ? entry.token.context : '';
             const status = (entry.status || 'pending').toLowerCase();
+            const priorityValue = normalizePriorityValue(entry.priority);
+            const priorityLabel = getPriorityLabel(priorityValue);
             const statusLabelMap = {
                 pending: translate('approvalStatusPending', 'En attente'),
                 approved: translate('approvalStatusApproved', 'Approuvé'),
@@ -1485,6 +1560,12 @@
                 tokenWrapper.append($('<span>').addClass('ssc-approval-context').text(tokenContext));
             }
             tokenCell.append(tokenWrapper);
+
+            const priorityCell = $('<td>').append(
+                $('<span>')
+                    .addClass(`ssc-approval-priority ssc-approval-priority--${priorityValue.replace(/[^a-z0-9_-]/g, '')}`)
+                    .text(priorityLabel)
+            );
 
             const statusCell = $('<td>').append(
                 $('<span>').addClass(`ssc-approval-badge ${statusClass}`).text(statusLabel)
@@ -1551,7 +1632,7 @@
                 ));
             }
 
-            row.append(tokenCell, statusCell, requestedCell, commentCell, actionsCell);
+            row.append(tokenCell, priorityCell, statusCell, requestedCell, commentCell, actionsCell);
             return row;
         }
 

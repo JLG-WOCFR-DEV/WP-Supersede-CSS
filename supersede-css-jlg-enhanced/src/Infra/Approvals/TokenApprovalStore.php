@@ -2,6 +2,8 @@
 
 namespace SSC\Infra\Approvals;
 
+use function __;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -9,6 +11,28 @@ if (!defined('ABSPATH')) {
 final class TokenApprovalStore
 {
     private const OPTION = 'ssc_token_approval_queue';
+
+    /**
+     * @var array<string, array{label: string, description: string, tone: string, default?: bool}>
+     */
+    private const SUPPORTED_PRIORITIES = [
+        'low' => [
+            'label' => 'Faible',
+            'description' => 'Peut être traité lors du prochain cycle de publication.',
+            'tone' => 'muted',
+        ],
+        'normal' => [
+            'label' => 'Normale',
+            'description' => 'Flux standard avec revue lors du prochain comité design.',
+            'tone' => 'info',
+            'default' => true,
+        ],
+        'high' => [
+            'label' => 'Haute',
+            'description' => 'À prioriser : impact production ou campagne imminente.',
+            'tone' => 'danger',
+        ],
+    ];
 
     /**
      * @return array<int, array<string, mixed>>
@@ -46,6 +70,9 @@ final class TokenApprovalStore
             $item['requested_by'] = isset($item['requested_by']) ? (int) $item['requested_by'] : 0;
             $item['comment'] = isset($item['comment']) ? sanitize_textarea_field((string) $item['comment']) : '';
             $item['decision'] = isset($item['decision']) && is_array($item['decision']) ? $item['decision'] : null;
+            $item['priority'] = isset($item['priority'])
+                ? self::sanitizePriority((string) $item['priority'])
+                : self::getDefaultPriority();
 
             return $item;
         }, $stored)));
@@ -67,7 +94,7 @@ final class TokenApprovalStore
         return null;
     }
 
-    public function upsert(string $name, string $context, int $userId, string $comment = ''): array
+    public function upsert(string $name, string $context, int $userId, string $comment = '', string $priority = ''): array
     {
         $normalizedName = $this->normalizeKey($name);
         $normalizedContext = trim($context) !== '' ? $context : ':root';
@@ -93,6 +120,7 @@ final class TokenApprovalStore
             'status' => 'pending',
             'comment' => $comment,
             'decision' => null,
+            'priority' => self::sanitizePriority($priority),
         ];
 
         if ($existingIndex !== null) {
@@ -145,6 +173,48 @@ final class TokenApprovalStore
         $raw = strtolower($context . '|' . $name);
 
         return substr(hash('sha256', $raw), 0, 32);
+    }
+
+    /**
+     * @return array<int, array{value: string, label: string, description: string, tone: string, default: bool}>
+     */
+    public static function getSupportedPriorities(): array
+    {
+        $priorities = [];
+
+        foreach (self::SUPPORTED_PRIORITIES as $value => $meta) {
+            $priorities[] = [
+                'value' => $value,
+                'label' => __($meta['label'], 'supersede-css-jlg'),
+                'description' => __($meta['description'], 'supersede-css-jlg'),
+                'tone' => $meta['tone'],
+                'default' => isset($meta['default']) ? (bool) $meta['default'] : false,
+            ];
+        }
+
+        return $priorities;
+    }
+
+    public static function sanitizePriority(string $priority): string
+    {
+        $priority = strtolower(trim($priority));
+
+        if ($priority !== '' && isset(self::SUPPORTED_PRIORITIES[$priority])) {
+            return $priority;
+        }
+
+        return self::getDefaultPriority();
+    }
+
+    private static function getDefaultPriority(): string
+    {
+        foreach (self::SUPPORTED_PRIORITIES as $value => $meta) {
+            if (isset($meta['default']) && $meta['default'] === true) {
+                return $value;
+            }
+        }
+
+        return 'normal';
     }
 
     private function normalizeKey(string $name): string
