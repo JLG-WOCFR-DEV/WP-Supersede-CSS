@@ -71,5 +71,11 @@ final class CommentStoreTest extends WP_UnitTestCase
         $this->assertCount(1, $first['mentions']);
         $this->assertSame($mentionId, $first['mentions'][0]['id']);
         $this->assertSame('Bob', $first['mentions'][0]['name']);
+
+        $second = $comments[1];
+        $this->assertSame($authorId, $second['created_by']['id']);
+        $this->assertCount(2, $second['mentions']);
+        $this->assertSame($mentionId, $second['mentions'][0]['id']);
+        $this->assertSame($authorId, $second['mentions'][1]['id']);
     }
 }

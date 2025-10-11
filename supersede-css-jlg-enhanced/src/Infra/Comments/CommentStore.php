@@ -41,7 +41,8 @@ final class CommentStore
             }
         }
 
-        $users = $this->preloadUsers($comments);
+        $userIds = $this->collectUserIds($comments);
+        $users = $this->loadUsers($userIds);
 
         return array_map(
             fn(array $comment): array => $this->hydrateComment($comment, $users),
@@ -108,7 +109,8 @@ final class CommentStore
             ],
         ]);
 
-        $users = $this->preloadUsers([$newComment]);
+        $userIds = $this->collectUserIds([$newComment]);
+        $users = $this->loadUsers($userIds);
 
         return $this->hydrateComment($newComment, $users);
     }
@@ -152,16 +154,13 @@ final class CommentStore
      * @param array<int, WP_User> $users
      * @return array<string, mixed>
      */
-    private function hydrateComment(array $raw, array $users = []): array
+    private function hydrateComment(array $raw, array $users): array
     {
         $author = null;
         $userId = isset($raw['created_by']) ? (int) $raw['created_by'] : 0;
 
         if ($userId > 0) {
             $user = $users[$userId] ?? null;
-            if (!$user instanceof WP_User) {
-                $user = get_userdata($userId);
-            }
             if ($user instanceof WP_User) {
                 $author = [
                     'id' => $user->ID,
@@ -179,9 +178,6 @@ final class CommentStore
                     continue;
                 }
                 $user = $users[$mentionId] ?? null;
-                if (!$user instanceof WP_User) {
-                    $user = get_userdata($mentionId);
-                }
                 if ($user instanceof WP_User) {
                     $mentions[] = [
                         'id' => $user->ID,
@@ -226,9 +222,9 @@ final class CommentStore
 
     /**
      * @param array<int, array<string, mixed>> $comments
-     * @return array<int, WP_User>
+     * @return array<int, int>
      */
-    private function preloadUsers(array $comments): array
+    private function collectUserIds(array $comments): array
     {
         $ids = [];
 
@@ -249,6 +245,19 @@ final class CommentStore
             static fn(int $id): bool => $id > 0
         )));
 
+        if ($ids === []) {
+            return [];
+        }
+
+        return $ids;
+    }
+
+    /**
+     * @param array<int, int> $ids
+     * @return array<int, WP_User>
+     */
+    private function loadUsers(array $ids): array
+    {
         if ($ids === []) {
             return [];
         }
