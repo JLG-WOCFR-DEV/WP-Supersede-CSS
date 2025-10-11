@@ -50,6 +50,7 @@ class Tokens extends AbstractPage
             'default_context' => TokenRegistry::getDefaultContext(),
             'token_statuses' => TokenRegistry::getSupportedStatuses(),
             'token_approvals' => $approvalStore->all(),
+            'approval_priorities' => TokenApprovalStore::getSupportedPriorities(),
             'collaborators' => $collaborators,
             'can_manage_tokens' => $canManageTokens,
         ]);

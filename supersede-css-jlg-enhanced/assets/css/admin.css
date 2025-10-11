@@ -1530,6 +1530,40 @@ body[class*="page_supersede-css-jlg"] .ssc-layout .ssc-main-content {
     color: var(--ssc-muted);
 }
 
+.ssc-approval-priority {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 2px 10px;
+    border-radius: var(--ssc-radius-pill);
+    font-size: var(--ssc-font-size-xs);
+    font-weight: var(--ssc-font-weight-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid var(--ssc-border-subtle);
+    background: color-mix(in srgb, var(--ssc-border-subtle) 18%, transparent);
+    color: color-mix(in srgb, var(--ssc-muted) 70%, var(--ssc-text) 30%);
+}
+
+.ssc-approval-priority--low {
+    border-color: color-mix(in srgb, var(--ssc-success) 35%, var(--ssc-border));
+    background: color-mix(in srgb, var(--ssc-success) 16%, transparent);
+    color: color-mix(in srgb, var(--ssc-success) 65%, var(--ssc-text) 35%);
+}
+
+.ssc-approval-priority--normal {
+    border-color: color-mix(in srgb, var(--ssc-accent) 40%, var(--ssc-border));
+    background: color-mix(in srgb, var(--ssc-accent-soft) 22%, transparent);
+    color: color-mix(in srgb, var(--ssc-accent) 68%, var(--ssc-text) 32%);
+}
+
+.ssc-approval-priority--high {
+    border-color: color-mix(in srgb, var(--ssc-danger) 40%, var(--ssc-border));
+    background: color-mix(in srgb, var(--ssc-danger) 18%, transparent);
+    color: color-mix(in srgb, var(--ssc-danger) 72%, var(--ssc-text) 28%);
+}
+
 .ssc-approval-badge {
     display: inline-flex;
     align-items: center;

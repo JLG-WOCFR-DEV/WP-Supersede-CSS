@@ -9,8 +9,13 @@ if (!defined('ABSPATH')) {
 /** @var string $default_context */
 /** @var array<int, array{value: string, label: string, description: string}> $token_statuses */
 /** @var array<int, array<string, mixed>> $token_approvals */
+/** @var array<int, array{value: string, label: string, description: string, tone: string, default: bool}> $approval_priorities */
 /** @var array<int, array{id: int, name: string, avatar: string}> $collaborators */
 /** @var bool $can_manage_tokens */
+
+$approval_priorities = isset($approval_priorities) && is_array($approval_priorities)
+    ? $approval_priorities
+    : \SSC\Infra\Approvals\TokenApprovalStore::getSupportedPriorities();
 
 if (function_exists('wp_localize_script')) {
     $localized_types = [];
@@ -47,6 +52,7 @@ if (function_exists('wp_localize_script')) {
         'defaultContext' => $default_context,
         'statuses' => $token_statuses,
         'approvals' => $token_approvals,
+        'approvalPriorities' => $approval_priorities,
         'collaborators' => $collaborators,
         'permissions' => [
             'canEdit' => $can_manage_tokens,
@@ -134,7 +140,14 @@ if (function_exists('wp_localize_script')) {
             'approvalChangesRequestedLabel' => __('Modifications demandées', 'supersede-css-jlg'),
             'approvalTooltipComment' => __('Commentaire', 'supersede-css-jlg'),
             'approvalTooltipRequestedAt' => __('Envoyée le %s', 'supersede-css-jlg'),
+            'approvalTooltipPriority' => __('Priorité', 'supersede-css-jlg'),
             'approvalUnavailableLabel' => __('Les demandes d’approbation nécessitent des droits supplémentaires.', 'supersede-css-jlg'),
+            'approvalPriorityPrompt' => __('Choisissez la priorité (faible, normale ou haute). Laissez vide pour la valeur par défaut.', 'supersede-css-jlg'),
+            'approvalPriorityInvalid' => __('Priorité inconnue. La demande a été annulée.', 'supersede-css-jlg'),
+            'approvalPriorityLow' => __('Faible', 'supersede-css-jlg'),
+            'approvalPriorityNormal' => __('Normale', 'supersede-css-jlg'),
+            'approvalPriorityHigh' => __('Haute', 'supersede-css-jlg'),
+            'approvalPriorityUnknown' => __('Priorité inconnue', 'supersede-css-jlg'),
             'commentsPanelTitle' => __('Commentaires', 'supersede-css-jlg'),
             'commentsEmpty' => __('Aucun commentaire pour ce token pour le moment.', 'supersede-css-jlg'),
             'commentsPlaceholder' => __('Ajouter un commentaire…', 'supersede-css-jlg'),
