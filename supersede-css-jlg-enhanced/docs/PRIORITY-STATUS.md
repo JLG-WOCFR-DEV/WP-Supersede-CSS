@@ -4,6 +4,7 @@
 - Les demandes d'approbation disposent désormais d'un niveau de priorité normalisé (faible, normale, haute) enregistré côté serveur et exposé dans l'API `ssc/v1/approvals`.
 - Le gestionnaire de tokens propose la sélection de priorité au moment de la soumission et affiche le badge associé sur chaque ligne pour repérer les urgences.
 - Le Debug Center met en avant la priorité dans le tableau des approbations avec des badges colorés et relaie l'information dans le journal d'activité.
+- Le CSS Performance Analyzer peut exporter ses recommandations en Markdown et JSON pour alimenter des tickets de suivi.
 
 ## Manques vs. roadmap Supersede CSS
 - L'expérience de revue reste basique : la modal dédiée décrite dans la RFC (historique détaillé, commentaires contextuels) n'est pas encore implémentée et les décisions passent toujours par des dialogues natifs. ([Token Governance](./TOKEN-GOVERNANCE-AND-DEBUG.md))

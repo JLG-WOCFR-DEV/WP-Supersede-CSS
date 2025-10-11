@@ -22,7 +22,7 @@ Ce document développe les initiatives proposées pour faire évoluer Supersede 
 - **Statut** : prototype fonctionnel capable d’identifier la taille livrée, les doublons et les sélecteurs inutilisés.
 - **Approche suivante** :
   - ✅ Ajouter un mode « comparaison » entre deux snapshots de build pour suivre la dérive du poids CSS.
-  - Exporter les recommandations en Markdown/JSON afin d’alimenter des tickets automatisés.
+  - ✅ Exporter les recommandations en Markdown/JSON afin d’alimenter des tickets automatisés.
   - Brancher le module sur les widgets de monitoring (voir plus bas) pour une visualisation historique.
 - **Livrables clés** : pipeline de mesure, stockage des rapports, alertes configurables.
 

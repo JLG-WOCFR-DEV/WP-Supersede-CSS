@@ -9,6 +9,7 @@ if (!defined('ABSPATH')) {
 /** @var array $recommendations */
 /** @var array|null $comparison */
 /** @var array|null $snapshot_meta */
+/** @var array<string, string> $export_urls */
 
 $format_int = static function (int $value): string {
     if (function_exists('number_format_i18n')) {
@@ -112,6 +113,21 @@ $vendor_prefix_total = (int) ($combined_metrics['vendor_prefix_total'] ?? 0);
     <p class="description">
         <?php esc_html_e('Surveillez la taille et la complexité du CSS généré par Supersede afin d’anticiper les points de friction sur les Core Web Vitals et la maintenabilité.', 'supersede-css-jlg'); ?>
     </p>
+
+    <?php if ($export_markdown_url || $export_json_url) : ?>
+        <div class="ssc-actions ssc-mt-200" role="group" aria-label="<?php echo esc_attr__('Exporter le rapport de performance', 'supersede-css-jlg'); ?>">
+            <?php if ($export_markdown_url) : ?>
+                <a class="button" href="<?php echo esc_url($export_markdown_url); ?>">
+                    <?php esc_html_e('Exporter en Markdown', 'supersede-css-jlg'); ?>
+                </a>
+            <?php endif; ?>
+            <?php if ($export_json_url) : ?>
+                <a class="button" href="<?php echo esc_url($export_json_url); ?>">
+                    <?php esc_html_e('Exporter en JSON', 'supersede-css-jlg'); ?>
+                </a>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
 
     <?php if (!empty($warnings)) : ?>
         <div class="ssc-callout ssc-callout--warning" role="alert">
@@ -493,3 +509,6 @@ $vendor_prefix_total = (int) ($combined_metrics['vendor_prefix_total'] ?? 0);
         </ul>
     </div>
 </div>
+$export_urls = isset($export_urls) && is_array($export_urls) ? $export_urls : [];
+$export_markdown_url = isset($export_urls['markdown']) ? (string) $export_urls['markdown'] : '';
+$export_json_url = isset($export_urls['json']) ? (string) $export_urls['json'] : '';
