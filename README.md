@@ -216,7 +216,7 @@ Les axes prioritaires détaillés dans [`docs/FUTURE-IMPROVEMENTS.md`](./superse
 
 - **Mode « starter site »** : scénarios guidés pour générer la structure CSS complète d’un nouveau site (tokens, presets, grilles) en quelques étapes.
 - **Assistant IA contextuel** : panel facultatif exploitant l’API OpenAI pour suggérer des classes ou corriger automatiquement le CSS généré.
-- ✅ **Analyse de performance CSS** : le module « CSS Performance Analyzer » identifie la taille livrée, les doublons et propose des recommandations concrètes pour alléger le CSS.
+- ✅ **Analyse de performance CSS** : le module « CSS Performance Analyzer » identifie la taille livrée, les doublons, propose des recommandations concrètes et permet désormais d’exporter le rapport en Markdown/JSON pour suivre les optimisations dans vos tickets.
 - **Marketplace de presets** : import direct de presets partagés par la communauté via une galerie en ligne avec notes et prévisualisations.
 - **Export Figma** : connecteur pour synchroniser tokens et styles Supersede avec une bibliothèque de composants Figma et garder design/développement alignés.
 - **Mode hors ligne** : empaqueter les dépendances critiques et proposer une synchronisation différée pour travailler en mobilité sans connexion stable.
