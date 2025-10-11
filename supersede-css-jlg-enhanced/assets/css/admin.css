@@ -396,6 +396,14 @@
     max-height: 200px;
 }
 
+.ssc-code--lg {
+    max-height: 320px;
+}
+
+.ssc-code--xl {
+    max-height: 480px;
+}
+
 .button .ssc-button-icon {
     margin-right: var(--ssc-space-2xs);
     line-height: 1;
