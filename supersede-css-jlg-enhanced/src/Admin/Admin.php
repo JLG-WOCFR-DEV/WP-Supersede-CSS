@@ -206,7 +206,9 @@ final class Admin
                 'mobileMenuShowLabel' => esc_attr__('Afficher le menu', 'supersede-css-jlg'),
                 'mobileMenuHideLabel' => esc_attr__('Masquer le menu', 'supersede-css-jlg'),
                 'mobileMenuToggleSrLabel' => esc_html__('Menu', 'supersede-css-jlg'),
+                /* translators: Toast displayed after successfully copying content to the clipboard. */
                 'clipboardSuccess' => esc_html__('Texte copié !', 'supersede-css-jlg'),
+                /* translators: Toast displayed when copying to the clipboard fails. */
                 'clipboardError' => esc_html__('Impossible de copier le texte.', 'supersede-css-jlg'),
             ],
         ]);

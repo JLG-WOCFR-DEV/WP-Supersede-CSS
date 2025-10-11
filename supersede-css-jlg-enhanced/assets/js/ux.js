@@ -22,14 +22,33 @@
         );
 
         const resolveAnnouncement = (rawValue, fallback) => {
+            const fallbackTemplate = pickString(fallback, DEFAULT_I18N.commandPaletteResultsAnnouncement);
+
             if (typeof rawValue === 'function') {
                 return {
-                    template: fallback,
+                    template: fallbackTemplate,
                     formatter: rawValue,
                 };
             }
 
-            const template = pickString(rawValue, fallback);
+            if (rawValue && typeof rawValue === 'object') {
+                const template = pickString(rawValue.template, fallbackTemplate);
+                const customFormatter = typeof rawValue.formatter === 'function'
+                    ? rawValue.formatter
+                    : null;
+
+                return {
+                    template,
+                    formatter: customFormatter || ((count) => {
+                        if (template.includes('%d')) {
+                            return template.replace(/%d/g, `${count}`);
+                        }
+                        return `${count} ${template}`;
+                    }),
+                };
+            }
+
+            const template = pickString(rawValue, fallbackTemplate);
             return {
                 template,
                 formatter: (count) => {
@@ -46,11 +65,8 @@
                 return cache;
             }
 
-            const localizedData = (typeof window !== 'undefined' && typeof window.SSC === 'object' && window.SSC)
-                ? window.SSC
-                : {};
-            const rawI18n = (typeof localizedData.i18n === 'object' && localizedData.i18n !== null)
-                ? localizedData.i18n
+            const rawI18n = (typeof window !== 'undefined' && window?.SSC?.i18n && typeof window.SSC.i18n === 'object')
+                ? window.SSC.i18n
                 : {};
 
             const merged = { ...DEFAULT_I18N };
