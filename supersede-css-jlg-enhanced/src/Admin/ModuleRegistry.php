@@ -150,6 +150,11 @@ final class ModuleRegistry
                             'path' => 'assets/js/gradient-editor.js',
                         ],
                     ],
+                    'styles'  => [
+                        [
+                            'path' => 'assets/css/gradient-editor.css',
+                        ],
+                    ],
                 ],
             ],
             'typography' => [

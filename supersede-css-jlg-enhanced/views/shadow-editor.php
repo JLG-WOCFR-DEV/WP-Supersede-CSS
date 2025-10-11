@@ -5,10 +5,10 @@ if (!defined('ABSPATH')) {
 ?>
 <div class="ssc-app ssc-fullwidth">
     <h2><?php esc_html_e('Visual Shadow Editor', 'supersede-css-jlg'); ?></h2>
-    <div class="ssc-two" style="align-items: flex-start;">
+    <div class="ssc-two ssc-two--align-start">
         <div class="ssc-pane">
             <div id="ssc-shadow-layers-container"></div>
-            <div class="ssc-actions" style="margin-top: 16px;">
+            <div class="ssc-actions ssc-mt-200">
                 <button id="ssc-shadow-add-layer" class="button"><?php esc_html_e('Ajouter un calque', 'supersede-css-jlg'); ?></button>
             </div>
             <hr>
@@ -20,7 +20,7 @@ if (!defined('ABSPATH')) {
         </div>
         <div class="ssc-pane">
             <h3><?php esc_html_e('Preview', 'supersede-css-jlg'); ?></h3>
-            <div id="ssc-shadow-preview" style="width: 200px; height: 120px; background: #fff; border-radius: 12px; margin: 2em auto; display: grid; place-items: center; border: 1px solid #e5e7eb; transition: all 0.2s ease;">
+            <div id="ssc-shadow-preview" class="ssc-shadow-preview">
                 <?php esc_html_e('Aperçu', 'supersede-css-jlg'); ?>
             </div>
         </div>

@@ -10,11 +10,11 @@
             let unit = 'px';
             if (['brightness', 'contrast', 'grayscale', 'saturate'].includes(prop)) unit = '%';
             if (prop === 'hue-rotate') unit = 'deg';
-            
+
             $('#val-' + prop).text(value + unit);
-            
+
             if ((prop === 'blur' && value > 0) || (prop !== 'blur' && value != 100 && value != 0)) {
-                 if (prop === 'hue-rotate') {
+                if (prop === 'hue-rotate') {
                     filters[prop] = `${prop}(${value}deg)`;
                 } else if (unit === '%') {
                     filters[prop] = `${prop}(${value}%)`;
@@ -39,10 +39,10 @@
         
         if (glassEnabled) {
             previewBox.addClass('ssc-glassmorphism-preview');
-            finalCss += `background: rgba(255, 255, 255, 0.2);\n`;
-            finalCss += `backdrop-filter: blur(5px) ${filterValue};\n`;
-            finalCss += `-webkit-backdrop-filter: blur(5px) ${filterValue};\n`;
-            finalCss += `border: 1px solid rgba(255, 255, 255, 0.3);`;
+            finalCss += `background: rgba(255, 255, 255, 0.18);\n`;
+            finalCss += `backdrop-filter: blur(12px)${filterValue ? ` ${filterValue}` : ''};\n`;
+            finalCss += `-webkit-backdrop-filter: blur(12px)${filterValue ? ` ${filterValue}` : ''};\n`;
+            finalCss += `border: 1px solid rgba(255, 255, 255, 0.35);`;
         } else {
             previewBox.removeClass('ssc-glassmorphism-preview');
         }
@@ -53,8 +53,14 @@
     $(document).ready(function() {
         if (!$('.ssc-filter-prop').length) return;
 
+        const previewBg = $('#ssc-filter-preview-bg');
+        const previewBackground = previewBg.data('previewBg');
+        if (previewBackground) {
+            previewBg.css('--ssc-filter-preview-image', `url('${previewBackground}')`);
+        }
+
         $('.ssc-filter-prop, #ssc-glass-enable').on('input change', updateFilters);
-        
+
         $('#ssc-filter-copy').on('click', () => {
             window.sscCopyToClipboard($('#ssc-filter-css').text(), {
                 successMessage: 'CSS copié !',

@@ -115,8 +115,6 @@
         const preset = presets[presetKey];
         if (!preset) return;
 
-        const isMobile = $('#layout-grid-mobile').is(':visible');
-        const view = isMobile ? 'mobile' : 'desktop';
         const gridDesktop = $('#layout-grid-desktop');
         const gridMobile = $('#layout-grid-mobile');
 
@@ -171,16 +169,19 @@ ${mobileStyles}
 
         $('#layout-preset').on('change', renderLayout);
         
+        const gridDesktop = $('#layout-grid-desktop');
+        const gridMobile = $('#layout-grid-mobile');
+
         $('#view-desktop').on('click', function() {
             $(this).addClass('button-primary').siblings().removeClass('button-primary');
-            $('#layout-grid-desktop').show();
-            $('#layout-grid-mobile').hide();
+            gridDesktop.removeClass('ssc-hidden');
+            gridMobile.addClass('ssc-hidden');
         });
 
         $('#view-mobile').on('click', function() {
             $(this).addClass('button-primary').siblings().removeClass('button-primary');
-            $('#layout-grid-desktop').hide();
-            $('#layout-grid-mobile').show();
+            gridDesktop.addClass('ssc-hidden');
+            gridMobile.removeClass('ssc-hidden');
         });
 
         renderLayout();

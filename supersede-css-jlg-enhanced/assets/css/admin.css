@@ -396,6 +396,14 @@
     max-height: 200px;
 }
 
+.ssc-code--lg {
+    max-height: 320px;
+}
+
+.ssc-code--xl {
+    max-height: 480px;
+}
+
 .button .ssc-button-icon {
     margin-right: var(--ssc-space-2xs);
     line-height: 1;
@@ -633,6 +641,24 @@
 /* Visual Editors */
 .ssc-kv-builder .kv-row { display: flex; gap: 8px; margin-bottom: 8px; } .ssc-kv-builder .kv-row input { flex: 1; }
 .ssc-shadow-layer { border: 1px solid var(--ssc-border); border-radius: var(--ssc-radius-sm); padding: var(--ssc-space-sm); margin-bottom: var(--ssc-space-sm); }
+.ssc-shadow-preview {
+    width: 200px;
+    height: 120px;
+    border-radius: var(--ssc-radius-lg);
+    margin: var(--ssc-space-xl) auto;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--ssc-border);
+    background: var(--ssc-card);
+    color: var(--ssc-text);
+    box-shadow: var(--ssc-shadow-soft);
+    transition: all 0.2s ease;
+}
+
+.ssc-dark .ssc-shadow-preview {
+    border-color: color-mix(in srgb, var(--ssc-border) 70%, transparent 30%);
+    box-shadow: var(--ssc-shadow-elevated);
+}
 .ssc-grad-preview-bar { height: 40px; border-radius: 8px; border: 1px solid var(--ssc-border); cursor: pointer; }
 
 /* Form foundation */
@@ -647,10 +673,42 @@
     margin-top: var(--ssc-space-xs);
 }
 
+.ssc-form-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ssc-space-2xs);
+}
+
 .ssc-form-label {
     font-weight: var(--ssc-font-weight-semibold);
     color: var(--ssc-text);
     line-height: var(--ssc-line-height-snug);
+}
+
+.ssc-form-label-meta {
+    font-size: var(--ssc-font-size-100);
+    color: var(--ssc-muted);
+    font-weight: var(--ssc-font-weight-medium);
+}
+
+.ssc-form-control-row {
+    display: flex;
+    align-items: center;
+    gap: var(--ssc-space-xs);
+    flex-wrap: wrap;
+}
+
+.ssc-form-control-row__suffix {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ssc-space-3xs);
+    font-size: var(--ssc-font-size-100);
+    color: var(--ssc-muted);
+}
+
+.ssc-form-control-row__suffix input[type="number"] {
+    width: 4.5rem;
 }
 
 .ssc-range-control {
