@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
     <h2><?php esc_html_e('📐 Maquettage de Page (CSS Grid)', 'supersede-css-jlg'); ?></h2>
     <p><?php esc_html_e('Préparez des mises en page complexes pour vos thèmes ou des sections spécifiques de vos pages.', 'supersede-css-jlg'); ?></p>
 
-    <div class="ssc-panel ssc-tutorial-panel" style="margin-bottom:16px;">
+    <div class="ssc-panel ssc-tutorial-panel ssc-mb-200">
         <h3><?php esc_html_e('💡 Tutoriel : Comment Utiliser le Maquettage de Page dans WordPress', 'supersede-css-jlg'); ?></h3>
         <p><?php esc_html_e('Cet outil génère le "plan" CSS de votre mise en page. Pour l\'utiliser, vous devez ensuite construire la structure HTML correspondante dans votre page WordPress.', 'supersede-css-jlg'); ?></p>
 
@@ -33,35 +33,43 @@ if (!defined('ABSPATH')) {
     </div>
 
 
-    <div class="ssc-two" style="align-items: flex-start;">
+    <div class="ssc-two ssc-two--align-start">
         <div class="ssc-pane">
-            <h3><?php esc_html_e('Paramètres & Code', 'supersede-css-jlg'); ?></h3>
-            <label><strong><?php esc_html_e('Modèle de layout', 'supersede-css-jlg'); ?></strong></label>
-            <select id="layout-preset">
-                <option value="holy-grail"><?php esc_html_e('Saint Graal (Header, 3 colonnes, Footer)', 'supersede-css-jlg'); ?></option>
-                <option value="sidebar-right"><?php esc_html_e('Contenu + Sidebar à Droite', 'supersede-css-jlg'); ?></option>
-                <option value="hero-features"><?php esc_html_e('Section Héro + 3 Cartes', 'supersede-css-jlg'); ?></option>
-                <option value="dashboard"><?php esc_html_e('Tableau de Bord Asymétrique', 'supersede-css-jlg'); ?></option>
-            </select>
-            <hr>
-            <label><strong><?php esc_html_e('Vue :', 'supersede-css-jlg'); ?></strong></label>
-            <div class="ssc-actions">
-                <button class="button button-primary" id="view-desktop"><?php esc_html_e('Desktop', 'supersede-css-jlg'); ?></button>
-                <button class="button" id="view-mobile"><?php esc_html_e('Mobile', 'supersede-css-jlg'); ?></button>
+            <div class="ssc-stack">
+                <h3><?php esc_html_e('Paramètres & Code', 'supersede-css-jlg'); ?></h3>
+                <div class="ssc-form-field">
+                    <label class="ssc-form-label" for="layout-preset"><?php esc_html_e('Modèle de layout', 'supersede-css-jlg'); ?></label>
+                    <select id="layout-preset">
+                        <option value="holy-grail"><?php esc_html_e('Saint Graal (Header, 3 colonnes, Footer)', 'supersede-css-jlg'); ?></option>
+                        <option value="sidebar-right"><?php esc_html_e('Contenu + Sidebar à Droite', 'supersede-css-jlg'); ?></option>
+                        <option value="hero-features"><?php esc_html_e('Section Héro + 3 Cartes', 'supersede-css-jlg'); ?></option>
+                        <option value="dashboard"><?php esc_html_e('Tableau de Bord Asymétrique', 'supersede-css-jlg'); ?></option>
+                    </select>
+                </div>
+                <div class="ssc-divider-top" aria-hidden="true"></div>
+                <div class="ssc-form-field">
+                    <span class="ssc-form-label"><?php esc_html_e('Vue', 'supersede-css-jlg'); ?></span>
+                    <div class="ssc-actions" role="group" aria-label="<?php echo esc_attr__('Changer la vue de prévisualisation', 'supersede-css-jlg'); ?>">
+                        <button class="button button-primary" id="view-desktop" type="button"><?php esc_html_e('Desktop', 'supersede-css-jlg'); ?></button>
+                        <button class="button" id="view-mobile" type="button"><?php esc_html_e('Mobile', 'supersede-css-jlg'); ?></button>
+                    </div>
+                </div>
+                <h3 class="ssc-section-heading"><?php esc_html_e('Code CSS Généré', 'supersede-css-jlg'); ?></h3>
+                <pre id="layout-css" class="ssc-code"></pre>
             </div>
-            <h3 style="margin-top:24px;"><?php esc_html_e('Code CSS Généré', 'supersede-css-jlg'); ?></h3>
-            <pre id="layout-css" class="ssc-code"></pre>
         </div>
         <div class="ssc-pane">
-            <h3><?php esc_html_e('Aperçu Visuel', 'supersede-css-jlg'); ?></h3>
-            <div id="layout-preview-container">
-                <div id="layout-grid-desktop" class="ssc-layout-grid"></div>
-                <div id="layout-grid-mobile" class="ssc-layout-grid ssc-layout-preview-mobile" style="display:none;"></div>
+            <div class="ssc-stack">
+                <h3><?php esc_html_e('Aperçu Visuel', 'supersede-css-jlg'); ?></h3>
+                <div id="layout-preview-container" class="ssc-layout-preview-container ssc-preview-surface ssc-preview-surface--grid">
+                    <div id="layout-grid-desktop" class="ssc-layout-grid ssc-layout-grid--desktop"></div>
+                    <div id="layout-grid-mobile" class="ssc-layout-grid ssc-layout-preview-mobile ssc-hidden"></div>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="ssc-panel ssc-tutorial-panel" style="margin-top:16px;">
+    <div class="ssc-panel ssc-tutorial-panel ssc-mt-150">
         <h3><?php esc_html_e('🚀 Idées d\'Amélioration & Inspiration', 'supersede-css-jlg'); ?></h3>
         <h4><?php esc_html_e('Ajouter de l\'Espacement (Gap)', 'supersede-css-jlg'); ?></h4>
         <p><?php printf(wp_kses_post(__('Par défaut, les blocs sont collés. Pour ajouter un espacement uniforme entre toutes les zones, modifiez la classe principale dans votre CSS et ajoutez la propriété %s :', 'supersede-css-jlg')), '<code>gap</code>'); ?></p>

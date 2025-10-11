@@ -13,20 +13,23 @@
     function renderUI() {
         const uiContainer = $('#ssc-grad-stops-ui');
         uiContainer.empty();
+        const removeStopLabel = window.SSC && window.SSC.i18n && window.SSC.i18n.removeStop
+            ? window.SSC.i18n.removeStop
+            : 'Supprimer ce point de couleur';
 
-        colorStops.forEach((stop, index) => {
+        colorStops.forEach((stop) => {
             const stopUI = $(`
-                <div class="ssc-grad-stop" data-stop-id="${stop.id}" style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
+                <div class="ssc-grad-stop" data-stop-id="${stop.id}">
                     <input type="color" class="ssc-grad-prop" data-prop="color" value="${stop.color}">
-                    <input type="range" class="ssc-grad-prop" data-prop="position" min="0" max="100" value="${stop.position}" style="flex: 1;">
-                    <span class="ssc-grad-stop-position-display">${stop.position}%</span>
-                    <button class="button button-link-delete ssc-grad-remove-stop">X</button>
+                    <input type="range" class="ssc-grad-prop ssc-grad-stop__range" data-prop="position" min="0" max="100" value="${stop.position}">
+                    <span class="ssc-grad-stop__value">${stop.position}%</span>
+                    <button type="button" class="button button-link-delete ssc-grad-remove-stop" aria-label="${removeStopLabel}">×</button>
                 </div>
             `);
             uiContainer.append(stopUI);
         });
 
-        $('<button class="button" id="ssc-grad-add-stop" style="margin-top: 10px;">+ Ajouter une couleur</button>').appendTo(uiContainer);
+        $('<button type="button" class="button ssc-grad-add-stop" id="ssc-grad-add-stop">+ Ajouter une couleur</button>').appendTo(uiContainer);
 
         generateGradientCSS();
     }
@@ -70,7 +73,7 @@
             stop[prop] = value;
 
             if (prop === 'position') {
-                $stop.find('.ssc-grad-stop-position-display').text(`${value}%`);
+                $stop.find('.ssc-grad-stop__value').text(`${value}%`);
             }
 
             generateGradientCSS();
