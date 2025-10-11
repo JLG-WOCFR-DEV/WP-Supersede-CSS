@@ -281,6 +281,25 @@ class CssPerformanceAnalyzer
         ];
     }
 
+    public function compareSnapshots(array $baseline, array $candidate): array
+    {
+        $diff = [
+            'size_bytes'                 => $this->buildDelta($baseline, $candidate, 'size_bytes'),
+            'gzip_bytes'                 => $this->buildDelta($baseline, $candidate, 'gzip_bytes'),
+            'selector_count'             => $this->buildDelta($baseline, $candidate, 'selector_count'),
+            'declaration_count'          => $this->buildDelta($baseline, $candidate, 'declaration_count'),
+            'important_count'            => $this->buildDelta($baseline, $candidate, 'important_count'),
+            'specificity_average'        => $this->buildDelta($baseline, $candidate, 'specificity_average', true),
+            'specificity_max'            => $this->buildDelta($baseline, $candidate, 'specificity_max'),
+            'custom_property_unique_count'=> $this->buildDelta($baseline, $candidate, 'custom_property_unique_count'),
+            'vendor_prefix_total'        => $this->buildDelta($baseline, $candidate, 'vendor_prefix_total'),
+        ];
+
+        $diff['alerts'] = $this->buildComparisonAlerts($diff);
+
+        return $diff;
+    }
+
     /**
      * @return list<string>
      */
@@ -370,6 +389,102 @@ class CssPerformanceAnalyzer
         }
 
         return $recommendations;
+    }
+
+    private function buildDelta(array $baseline, array $candidate, string $key, bool $allowFloat = false): array
+    {
+        $previous = $this->extractNumericValue($baseline[$key] ?? 0, $allowFloat);
+        $current  = $this->extractNumericValue($candidate[$key] ?? 0, $allowFloat);
+        $delta    = $current - $previous;
+        $percent  = $this->calculatePercentChange($previous, $delta);
+
+        return [
+            'previous' => $allowFloat ? $previous : (int) round($previous),
+            'current'  => $allowFloat ? $current : (int) round($current),
+            'delta'    => $allowFloat ? $delta : (int) round($delta),
+            'percent'  => $percent,
+        ];
+    }
+
+    private function extractNumericValue($value, bool $allowFloat): float
+    {
+        if (is_numeric($value)) {
+            return (float) $value;
+        }
+
+        if (is_string($value) && $value !== '') {
+            $normalized = str_replace([' ', ','], ['', '.'], $value);
+            if (is_numeric($normalized)) {
+                return (float) $normalized;
+            }
+        }
+
+        return 0.0;
+    }
+
+    private function calculatePercentChange(float $previous, float $delta): ?float
+    {
+        if (abs($delta) < 0.0001 && abs($previous) < 0.0001) {
+            return 0.0;
+        }
+
+        if (abs($previous) < 0.0001) {
+            return null;
+        }
+
+        return ($delta / $previous) * 100.0;
+    }
+
+    private function buildComparisonAlerts(array $diff): array
+    {
+        $alerts = [];
+
+        $size = $diff['size_bytes'];
+        if ($size['delta'] > 8 * 1024 || ($size['percent'] !== null && $size['percent'] > 10)) {
+            $alerts[] = __('Le poids total a augmenté sensiblement depuis le dernier snapshot. Identifiez les composants récents et planifiez une purge ciblée.', 'supersede-css-jlg');
+        }
+
+        $gzip = $diff['gzip_bytes'];
+        if ($gzip['delta'] > 4 * 1024 || ($gzip['percent'] !== null && $gzip['percent'] > 10)) {
+            $alerts[] = __('Le poids gzip progresse fortement, pensez à purger les classes inutilisées ou à activer la minification côté build.', 'supersede-css-jlg');
+        }
+
+        $selectors = $diff['selector_count'];
+        if ($selectors['delta'] > 50) {
+            $alerts[] = __('Beaucoup de sélecteurs supplémentaires ont été ajoutés. Vérifiez l’impact des nouveaux presets ou modules activés.', 'supersede-css-jlg');
+        }
+
+        $declarations = $diff['declaration_count'];
+        if ($declarations['delta'] > 100) {
+            $alerts[] = __('Le nombre de déclarations explose. Assurez-vous que les composants sont factorisés et que la génération ne duplique pas les styles.', 'supersede-css-jlg');
+        }
+
+        $important = $diff['important_count'];
+        if ($important['delta'] > 3) {
+            $alerts[] = __('Les overrides !important se multiplient. Analysez la cascade pour éviter des conflits durables.', 'supersede-css-jlg');
+        }
+
+        $specificityMax = $diff['specificity_max'];
+        if ($specificityMax['delta'] > 50) {
+            $alerts[] = __('La spécificité maximale progresse. Cartographiez les composants concernés avant que la dette ne devienne ingérable.', 'supersede-css-jlg');
+        }
+
+        $specificityAverage = $diff['specificity_average'];
+        if ($specificityAverage['percent'] !== null && $specificityAverage['percent'] > 15) {
+            $alerts[] = __('La spécificité moyenne augmente rapidement. Songez à introduire des layers ou une architecture utilitaire.', 'supersede-css-jlg');
+        }
+
+        $vendorPrefixes = $diff['vendor_prefix_total'];
+        if ($vendorPrefixes['delta'] > 10) {
+            $alerts[] = __('Davantage de préfixes propriétaires sont émis. Vérifiez votre configuration Browserslist/Autoprefixer.', 'supersede-css-jlg');
+        }
+
+        $customProperties = $diff['custom_property_unique_count'];
+        if ($customProperties['delta'] < -10) {
+            $alerts[] = __('Des tokens CSS semblent avoir disparu. Confirmez que les presets attendus sont toujours synchronisés.', 'supersede-css-jlg');
+        }
+
+        return $alerts;
     }
 
     private function buildSample(string $css): string
