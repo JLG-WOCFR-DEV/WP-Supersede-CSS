@@ -1,4 +1,83 @@
 (function($) {
+    const DEFAULT_I18N = {
+        commandPaletteTitle: 'Supersede CSS command palette',
+        commandPaletteSearchPlaceholder: 'Navigate or run an action…',
+        commandPaletteSearchLabel: 'Command palette search',
+        commandPaletteEmptyState: 'Aucun résultat',
+        commandPaletteResultsAnnouncement: '%d result(s) available.',
+        mobileMenuShowLabel: 'Afficher le menu',
+        mobileMenuHideLabel: 'Masquer le menu',
+        mobileMenuToggleSrLabel: 'Menu',
+        clipboardSuccess: 'Texte copié !',
+        clipboardError: 'Impossible de copier le texte.',
+    };
+
+    const getSscI18n = (() => {
+        let cache = null;
+
+        const pickString = (value, fallback = '') => (
+            typeof value === 'string' && value.trim() !== ''
+                ? value
+                : fallback
+        );
+
+        const resolveAnnouncement = (rawValue, fallback) => {
+            if (typeof rawValue === 'function') {
+                return {
+                    template: fallback,
+                    formatter: rawValue,
+                };
+            }
+
+            const template = pickString(rawValue, fallback);
+            return {
+                template,
+                formatter: (count) => {
+                    if (template.includes('%d')) {
+                        return template.replace(/%d/g, `${count}`);
+                    }
+                    return `${count} ${template}`;
+                },
+            };
+        };
+
+        return () => {
+            if (cache) {
+                return cache;
+            }
+
+            const localizedData = (typeof window !== 'undefined' && typeof window.SSC === 'object' && window.SSC)
+                ? window.SSC
+                : {};
+            const rawI18n = (typeof localizedData.i18n === 'object' && localizedData.i18n !== null)
+                ? localizedData.i18n
+                : {};
+
+            const merged = { ...DEFAULT_I18N };
+
+            Object.keys(DEFAULT_I18N).forEach((key) => {
+                if (key === 'commandPaletteResultsAnnouncement') {
+                    return;
+                }
+                const rawValue = rawI18n[key];
+                if (typeof rawValue === 'string' && rawValue.trim() !== '') {
+                    merged[key] = rawValue;
+                }
+            });
+
+            const announcement = resolveAnnouncement(
+                rawI18n.commandPaletteResultsAnnouncement,
+                merged.commandPaletteResultsAnnouncement
+            );
+
+            merged.commandPaletteResultsAnnouncement = announcement.template;
+            merged.getCommandPaletteResultsAnnouncement = announcement.formatter;
+
+            cache = merged;
+            return cache;
+        };
+    })();
+
     // --- Toast Notifications ---
     const TOAST_DEFAULT_TIMEOUT = 3000;
     const TOAST_DEFAULT_POLITENESS = 'polite';
@@ -58,10 +137,15 @@
     };
 
     // --- Clipboard Helper ---
-    window.sscCopyToClipboard = function(text, {
-        successMessage = 'Texte copié !',
-        errorMessage = 'Impossible de copier le texte.'
-    } = {}) {
+    window.sscCopyToClipboard = function(text, options = {}) {
+        const i18n = getSscI18n();
+        const successMessage = (typeof options.successMessage === 'string')
+            ? options.successMessage
+            : i18n.clipboardSuccess;
+        const errorMessage = (typeof options.errorMessage === 'string')
+            ? options.errorMessage
+            : i18n.clipboardError;
+
         const showSuccess = () => window.sscToast(successMessage);
         const showError = (error) => {
             if (errorMessage) {
@@ -113,6 +197,7 @@
     };
 
     const commandPalette = (() => {
+        const localized = getSscI18n();
         const sources = new Map();
         let overlay = null;
         let searchInput = null;
@@ -123,11 +208,11 @@
         let isPaletteOpen = false;
         let lastFocusedElement = null;
         let config = {
-            title: 'Command palette',
-            searchPlaceholder: 'Search…',
-            searchLabel: 'Command palette search',
-            emptyState: 'No results',
-            announce: (count) => `${count} result(s)`,
+            title: localized.commandPaletteTitle,
+            searchPlaceholder: localized.commandPaletteSearchPlaceholder,
+            searchLabel: localized.commandPaletteSearchLabel,
+            emptyState: localized.commandPaletteEmptyState,
+            announce: (count) => localized.getCommandPaletteResultsAnnouncement(count),
         };
 
         const speak = (message) => {
@@ -449,44 +534,15 @@
     };
 
     $(document).ready(function() {
-        const localizedData = (typeof window !== 'undefined' && typeof window.SSC !== 'undefined' && window.SSC)
-            ? window.SSC
-            : {};
-        const i18n = (typeof localizedData.i18n === 'object' && localizedData.i18n !== null)
-            ? localizedData.i18n
-            : {};
-        const commandPaletteTitle = i18n.commandPaletteTitle || 'Supersede CSS command palette';
-        const commandPaletteSearchPlaceholder = i18n.commandPaletteSearchPlaceholder || 'Navigate or run an action…';
-        const commandPaletteSearchLabel = i18n.commandPaletteSearchLabel || 'Command palette search';
-        const commandPaletteEmptyState = (typeof i18n.commandPaletteEmptyState === 'string' && i18n.commandPaletteEmptyState.trim() !== '')
-            ? i18n.commandPaletteEmptyState
-            : 'Aucun résultat';
-        const mobileMenuShowLabel = (typeof i18n.mobileMenuShowLabel === 'string' && i18n.mobileMenuShowLabel.trim() !== '')
-            ? i18n.mobileMenuShowLabel
-            : 'Afficher le menu';
-        const mobileMenuHideLabel = (typeof i18n.mobileMenuHideLabel === 'string' && i18n.mobileMenuHideLabel.trim() !== '')
-            ? i18n.mobileMenuHideLabel
-            : 'Masquer le menu';
-        const mobileMenuToggleSrLabel = (typeof i18n.mobileMenuToggleSrLabel === 'string' && i18n.mobileMenuToggleSrLabel.trim() !== '')
-            ? i18n.mobileMenuToggleSrLabel
-            : 'Menu';
-        const getCommandPaletteResultsAnnouncement = (count) => {
-            const template = i18n.commandPaletteResultsAnnouncement || '%d result(s) available.';
-
-            if (typeof template === 'function') {
-                return template(count);
-            }
-
-            if (typeof template === 'string') {
-                if (template.includes('%d')) {
-                    return template.replace(/%d/g, count);
-                }
-
-                return `${count} ${template}`;
-            }
-
-            return `${count} result(s) available.`;
-        };
+        const i18n = getSscI18n();
+        const commandPaletteTitle = i18n.commandPaletteTitle;
+        const commandPaletteSearchPlaceholder = i18n.commandPaletteSearchPlaceholder;
+        const commandPaletteSearchLabel = i18n.commandPaletteSearchLabel;
+        const commandPaletteEmptyState = i18n.commandPaletteEmptyState;
+        const mobileMenuShowLabel = i18n.mobileMenuShowLabel;
+        const mobileMenuHideLabel = i18n.mobileMenuHideLabel;
+        const mobileMenuToggleSrLabel = i18n.mobileMenuToggleSrLabel;
+        const getCommandPaletteResultsAnnouncement = (count) => i18n.getCommandPaletteResultsAnnouncement(count);
 
         // --- Dark/Light Theme Toggle ---
         const themeToggle = $('#ssc-theme');
