@@ -15,4 +15,4 @@ Les chaînes injectées dans `window.SSC.i18n` pilotent l'UX côté JavaScript. 
 | `clipboardSuccess` | Toast succès affiché après une copie dans le presse-papier. | `Texte copié !` |
 | `clipboardError` | Toast erreur si la copie échoue. | `Impossible de copier le texte.` |
 
-> ℹ️ Les traducteurs peuvent fournir une fonction JavaScript pour `commandPaletteResultsAnnouncement`. Elle recevra le nombre de résultats et doit renvoyer la phrase complète à annoncer.
+> ℹ️ Les traducteurs peuvent fournir une fonction JavaScript pour `commandPaletteResultsAnnouncement`. Elle recevra le nombre de résultats et doit renvoyer la phrase complète à annoncer. Un objet `{ template, formatter }` est également accepté : `template` sert de repli pour les lecteurs d'écran et `formatter` (facultatif) reçoit le nombre de résultats et doit retourner la phrase finale.
