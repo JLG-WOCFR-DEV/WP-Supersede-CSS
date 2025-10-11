@@ -115,6 +115,52 @@ final class CssPerformanceAnalyzerTest extends TestCase
         self::assertTrue($this->arrayContainsString($recommendations, 'Autoprefixer'));
     }
 
+    public function testCompareSnapshotsHighlightsDrift(): void
+    {
+        $baseline = [
+            'size_bytes'                  => 102400,
+            'gzip_bytes'                  => 30200,
+            'selector_count'              => 600,
+            'declaration_count'           => 1280,
+            'important_count'             => 6,
+            'specificity_average'         => 90.0,
+            'specificity_max'             => 320,
+            'custom_property_unique_count'=> 45,
+            'vendor_prefix_total'         => 12,
+        ];
+
+        $candidate = [
+            'size_bytes'                  => 120000,
+            'gzip_bytes'                  => 36000,
+            'selector_count'              => 675,
+            'declaration_count'           => 1505,
+            'important_count'             => 11,
+            'specificity_average'         => 120.0,
+            'specificity_max'             => 420,
+            'custom_property_unique_count'=> 30,
+            'vendor_prefix_total'         => 28,
+        ];
+
+        $diff = $this->analyzer->compareSnapshots($baseline, $candidate);
+
+        self::assertSame(120000, $diff['size_bytes']['current']);
+        self::assertSame(102400, $diff['size_bytes']['previous']);
+        self::assertSame(17600, $diff['size_bytes']['delta']);
+        self::assertGreaterThan(15, (float) $diff['size_bytes']['percent']);
+
+        self::assertSame(75, $diff['selector_count']['delta']);
+        self::assertSame(225, $diff['declaration_count']['delta']);
+        self::assertSame(5, $diff['important_count']['delta']);
+        self::assertSame(100, $diff['specificity_max']['delta']);
+        self::assertLessThan(0, $diff['custom_property_unique_count']['delta']);
+        self::assertSame(16, $diff['vendor_prefix_total']['delta']);
+
+        self::assertNotEmpty($diff['alerts']);
+        self::assertTrue($this->arrayContainsString($diff['alerts'], 'poids total'));
+        self::assertTrue($this->arrayContainsString($diff['alerts'], 'préfixes'));
+        self::assertTrue($this->arrayContainsString($diff['alerts'], 'tokens CSS'));
+    }
+
     /**
      * @param list<string> $messages
      */

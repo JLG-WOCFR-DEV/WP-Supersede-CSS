@@ -98,7 +98,7 @@ Affiche les options `ssc_active_css` et `ssc_tokens_css` telles qu’enregistré
 
 ### CSS Performance Analyzer
 Mesure la taille brute/gzip, le nombre de règles et les sélecteurs complexes du CSS généré. Fournit des alertes sur les `@import`,
-les doublons ou l’usage excessif de `!important`, ainsi que des recommandations d’optimisation pour garder le front rapide.
+les doublons ou l’usage excessif de `!important`, ainsi que des recommandations d’optimisation pour garder le front rapide. Un journal automatique des snapshots conserve la dernière analyse afin de comparer le build courant (écarts, pourcentages, alertes de dérive) et de suivre la dette CSS au fil des itérations.
 
 ### Debug Center
 Centre de diagnostic : infos système, health check JSON, zone de danger pour réinitialiser le CSS, export de révisions et filtres par date/utilisateur.
@@ -212,10 +212,12 @@ Chaque chantier est découpé en étapes (design, migrations, tests) et sera ré
 
 ## Pistes d'amélioration
 
-- **Mode « starter site »** : proposer des scénarios guidés pour générer la structure CSS complète d’un nouveau site (tokens, presets, grilles) en quelques étapes.
-- **Assistant IA contextuel** : intégrer un panel facultatif exploitant l’API OpenAI pour suggérer des classes ou corriger automatiquement le CSS généré.
+Les axes prioritaires détaillés dans [`docs/FUTURE-IMPROVEMENTS.md`](./supersede-css-jlg-enhanced/docs/FUTURE-IMPROVEMENTS.md) servent de socle aux prochaines itérations :
+
+- **Mode « starter site »** : scénarios guidés pour générer la structure CSS complète d’un nouveau site (tokens, presets, grilles) en quelques étapes.
+- **Assistant IA contextuel** : panel facultatif exploitant l’API OpenAI pour suggérer des classes ou corriger automatiquement le CSS généré.
 - ✅ **Analyse de performance CSS** : le module « CSS Performance Analyzer » identifie la taille livrée, les doublons et propose des recommandations concrètes pour alléger le CSS.
-- **Marketplace de presets** : permettre l’import direct de presets partagés par la communauté via une galerie en ligne avec notes et prévisualisations.
-- **Export Figma** : fournir un connecteur pour synchroniser tokens et styles Supersede avec une bibliothèque de composants Figma, afin de garder design et développement alignés.
+- **Marketplace de presets** : import direct de presets partagés par la communauté via une galerie en ligne avec notes et prévisualisations.
+- **Export Figma** : connecteur pour synchroniser tokens et styles Supersede avec une bibliothèque de composants Figma et garder design/développement alignés.
 - **Mode hors ligne** : empaqueter les dépendances critiques et proposer une synchronisation différée pour travailler en mobilité sans connexion stable.
-- **Widgets de monitoring** : ajouter des graphiques (taille CSS, temps de génération) pour suivre l’évolution de la dette front-end directement depuis le tableau de bord WordPress.
+- **Widgets de monitoring** : graphiques (taille CSS, temps de génération) pour suivre l’évolution de la dette front-end depuis le tableau de bord WordPress.

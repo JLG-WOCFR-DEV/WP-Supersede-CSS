@@ -7,6 +7,8 @@ if (!defined('ABSPATH')) {
 /** @var array $combined_metrics */
 /** @var array $warnings */
 /** @var array $recommendations */
+/** @var array|null $comparison */
+/** @var array|null $snapshot_meta */
 
 $format_int = static function (int $value): string {
     if (function_exists('number_format_i18n')) {
@@ -23,6 +25,75 @@ $format_float = static function (float $value, int $precision = 1): string {
 
     return number_format($value, $precision, '.', ' ');
 };
+
+$format_bytes = static function ($value) use ($format_int, $format_float): string {
+    $bytes = (int) round((float) $value);
+
+    if ($bytes <= 0) {
+        return '0 B';
+    }
+
+    $units = ['B', 'KB', 'MB'];
+    $power = (int) floor(log($bytes, 1024));
+    $power = max(0, min($power, count($units) - 1));
+
+    if ($power === 0) {
+        return sprintf('%s %s', $format_int($bytes), $units[$power]);
+    }
+
+    $value = $bytes / (1024 ** $power);
+
+    return sprintf('%s %s', $format_float((float) $value, 2), $units[$power]);
+};
+
+$format_delta = static function ($value, bool $isFloat = false) use ($format_int, $format_float): string {
+    if ($isFloat) {
+        $formatted = $format_float((float) abs($value), 1);
+    } else {
+        $formatted = $format_int((int) abs($value));
+    }
+
+    if ((float) $value > 0) {
+        return '+' . $formatted;
+    }
+
+    if ((float) $value < 0) {
+        return '-' . $formatted;
+    }
+
+    return $isFloat ? $format_float(0.0, 1) : $format_int(0);
+};
+
+$format_percent = static function (?float $value) use ($format_float): string {
+    if ($value === null) {
+        return __('N/A', 'supersede-css-jlg');
+    }
+
+    $sign = $value > 0 ? '+' : ($value < 0 ? '−' : '');
+
+    return sprintf('%s%s%%', $sign, $format_float(abs($value), 1));
+};
+
+$format_snapshot_date = static function (?array $meta): ?string {
+    if (empty($meta['timestamp'])) {
+        return null;
+    }
+
+    $timestamp = (int) $meta['timestamp'];
+
+    if (function_exists('date_i18n')) {
+        $dateFormat = function_exists('get_option') ? (string) get_option('date_format', 'Y-m-d') : 'Y-m-d';
+        $timeFormat = function_exists('get_option') ? (string) get_option('time_format', 'H:i') : 'H:i';
+
+        return date_i18n(trim($dateFormat . ' ' . $timeFormat), $timestamp);
+    }
+
+    return date('Y-m-d H:i', $timestamp);
+};
+
+$comparison = $comparison ?? null;
+$snapshot_meta = $snapshot_meta ?? null;
+$snapshot_label = $format_snapshot_date($snapshot_meta);
 
 $specificity_top = $combined_metrics['specificity_top'] ?? [];
 $specificity_average = isset($combined_metrics['specificity_average']) ? (float) $combined_metrics['specificity_average'] : 0.0;
@@ -61,6 +132,107 @@ $vendor_prefix_total = (int) ($combined_metrics['vendor_prefix_total'] ?? 0);
                     <li><?php echo esc_html($recommendation); ?></li>
                 <?php endforeach; ?>
             </ul>
+        </div>
+    <?php endif; ?>
+
+    <?php if (!empty($comparison)) : ?>
+        <div class="ssc-panel ssc-panel--accent">
+            <h3><?php esc_html_e('Comparaison avec le snapshot précédent', 'supersede-css-jlg'); ?></h3>
+            <?php if (!empty($snapshot_label)) : ?>
+                <p class="description">
+                    <?php printf(esc_html__('Dernière mesure enregistrée le %s.', 'supersede-css-jlg'), esc_html($snapshot_label)); ?>
+                </p>
+            <?php endif; ?>
+
+            <?php if (!empty($comparison['alerts'])) : ?>
+                <div class="ssc-callout ssc-callout--warning" role="status">
+                    <h4><?php esc_html_e('Variations notables', 'supersede-css-jlg'); ?></h4>
+                    <ul>
+                        <?php foreach ($comparison['alerts'] as $alert) : ?>
+                            <li><?php echo esc_html($alert); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
+
+            <?php
+            $diffRows = [
+                'size_bytes' => [
+                    'label'     => __('Poids brut', 'supersede-css-jlg'),
+                    'formatter' => $format_bytes,
+                    'is_float'  => false,
+                ],
+                'gzip_bytes' => [
+                    'label'     => __('Poids gzip', 'supersede-css-jlg'),
+                    'formatter' => $format_bytes,
+                    'is_float'  => false,
+                ],
+                'selector_count' => [
+                    'label'     => __('Sélecteurs', 'supersede-css-jlg'),
+                    'formatter' => $format_int,
+                    'is_float'  => false,
+                ],
+                'declaration_count' => [
+                    'label'     => __('Déclarations', 'supersede-css-jlg'),
+                    'formatter' => $format_int,
+                    'is_float'  => false,
+                ],
+                'important_count' => [
+                    'label'     => __('!important', 'supersede-css-jlg'),
+                    'formatter' => $format_int,
+                    'is_float'  => false,
+                ],
+                'specificity_average' => [
+                    'label'     => __('Spécificité moyenne', 'supersede-css-jlg'),
+                    'formatter' => static function ($value) use ($format_float): string {
+                        return $format_float((float) $value, 1);
+                    },
+                    'is_float'  => true,
+                ],
+                'specificity_max' => [
+                    'label'     => __('Spécificité max', 'supersede-css-jlg'),
+                    'formatter' => $format_int,
+                    'is_float'  => false,
+                ],
+                'custom_property_unique_count' => [
+                    'label'     => __('Tokens CSS uniques', 'supersede-css-jlg'),
+                    'formatter' => $format_int,
+                    'is_float'  => false,
+                ],
+                'vendor_prefix_total' => [
+                    'label'     => __('Préfixes propriétaires', 'supersede-css-jlg'),
+                    'formatter' => $format_int,
+                    'is_float'  => false,
+                ],
+            ];
+            ?>
+            <table class="widefat striped ssc-diff-table">
+                <thead>
+                    <tr>
+                        <th scope="col"><?php esc_html_e('Indicateur', 'supersede-css-jlg'); ?></th>
+                        <th scope="col"><?php esc_html_e('Snapshot précédent', 'supersede-css-jlg'); ?></th>
+                        <th scope="col"><?php esc_html_e('Valeur actuelle', 'supersede-css-jlg'); ?></th>
+                        <th scope="col"><?php esc_html_e('Écart', 'supersede-css-jlg'); ?></th>
+                        <th scope="col"><?php esc_html_e('Variation %', 'supersede-css-jlg'); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($diffRows as $key => $row) : ?>
+                        <?php if (empty($comparison[$key]) || !is_array($comparison[$key])) { ?>
+                            <?php continue; ?>
+                        <?php } ?>
+                        <?php $data = $comparison[$key]; ?>
+                        <?php $formatter = $row['formatter']; ?>
+                        <tr>
+                            <th scope="row"><?php echo esc_html($row['label']); ?></th>
+                            <td><?php echo esc_html($formatter($data['previous'] ?? 0)); ?></td>
+                            <td><?php echo esc_html($formatter($data['current'] ?? 0)); ?></td>
+                            <td><?php echo esc_html($format_delta($data['delta'] ?? 0, (bool) $row['is_float'])); ?></td>
+                            <td><?php echo esc_html($format_percent(isset($data['percent']) ? (float) $data['percent'] : null)); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
         </div>
     <?php endif; ?>
 
