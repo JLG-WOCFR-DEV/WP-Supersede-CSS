@@ -7,6 +7,7 @@ use SSC\Infra\Activity\ActivityLogRepository;
 use SSC\Infra\Approvals\TokenApprovalStore;
 use SSC\Infra\Capabilities\CapabilityManager;
 use SSC\Support\CssRevisions;
+use SSC\Support\TokenRegistry;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -49,6 +50,13 @@ class DebugCenter extends AbstractPage
         $approvals = $approvalStore->all();
         $canReviewApprovals = current_user_can(CapabilityManager::getApprovalCapability());
         $canExportTokens = current_user_can(CapabilityManager::getExportCapability());
+        $tokenRegistry = TokenRegistry::getRegistry();
+        $tokenStatuses = TokenRegistry::getSupportedStatuses();
+        $approvalSlaRules = [
+            'low' => ['hours' => 120],
+            'normal' => ['hours' => 48],
+            'high' => ['hours' => 12],
+        ];
 
         if (function_exists('wp_localize_script')) {
             wp_localize_script(
@@ -111,6 +119,52 @@ class DebugCenter extends AbstractPage
                         'approvalsFetchError'            => __('Impossible de récupérer les demandes d’approbation.', 'supersede-css-jlg'),
                         'approvalsNoComment'             => __('Aucun commentaire fourni lors de la demande.', 'supersede-css-jlg'),
                         'approvalsNoActions'             => __('Aucune action disponible.', 'supersede-css-jlg'),
+                        'approvalsOpenReview'            => __('Examiner', 'supersede-css-jlg'),
+                        'approvalsReviewTitle'           => __('Revue de token', 'supersede-css-jlg'),
+                        'approvalsReviewSummary'         => __('Résumé', 'supersede-css-jlg'),
+                        'approvalsReviewStatusLabel'     => __('Statut', 'supersede-css-jlg'),
+                        'approvalsReviewPriorityLabel'   => __('Priorité', 'supersede-css-jlg'),
+                        'approvalsReviewOwnerLabel'      => __('Référent', 'supersede-css-jlg'),
+                        'approvalsReviewVersionLabel'    => __('Version', 'supersede-css-jlg'),
+                        'approvalsReviewContextLabel'    => __('Contexte', 'supersede-css-jlg'),
+                        'approvalsReviewTypeLabel'       => __('Type', 'supersede-css-jlg'),
+                        'approvalsReviewValueLabel'      => __('Valeur CSS', 'supersede-css-jlg'),
+                        'approvalsReviewValueUnavailable'=> __('Valeur indisponible.', 'supersede-css-jlg'),
+                        'approvalsReviewCopyValue'       => __('Copier la valeur CSS', 'supersede-css-jlg'),
+                        'approvalsReviewCopySuccess'     => __('Valeur copiée dans le presse-papiers.', 'supersede-css-jlg'),
+                        'approvalsReviewCopyError'       => __('Impossible de copier la valeur.', 'supersede-css-jlg'),
+                        'approvalsReviewLinkedComponentsLabel' => __('Composants liés', 'supersede-css-jlg'),
+                        'approvalsReviewLinkedComponentsEmpty' => __('Aucun composant référencé.', 'supersede-css-jlg'),
+                        'approvalsReviewChangelogLabel'  => __('Changelog', 'supersede-css-jlg'),
+                        'approvalsReviewChangelogEmpty'  => __('Aucune note pour ce token.', 'supersede-css-jlg'),
+                        'approvalsReviewCommentsTitle'   => __('Commentaires de la demande', 'supersede-css-jlg'),
+                        'approvalsReviewRequesterLabel'  => __('Demande initiale', 'supersede-css-jlg'),
+                        'approvalsReviewDecisionLabel'   => __('Dernière décision', 'supersede-css-jlg'),
+                        'approvalsReviewNoDecision'      => __('Aucune décision enregistrée pour le moment.', 'supersede-css-jlg'),
+                        'approvalsReviewTimelineTitle'   => __('Historique d’activité', 'supersede-css-jlg'),
+                        'approvalsReviewTimelineLoading' => __('Chargement de l’historique…', 'supersede-css-jlg'),
+                        'approvalsReviewTimelineEmpty'   => __('Aucune activité récente pour ce token.', 'supersede-css-jlg'),
+                        'approvalsReviewTimelineError'   => __('Impossible de charger l’historique.', 'supersede-css-jlg'),
+                        'approvalsReviewCloseLabel'      => __('Fermer la revue', 'supersede-css-jlg'),
+                        'approvalsReviewMissingToken'    => __('Le token associé est introuvable ou a été supprimé.', 'supersede-css-jlg'),
+                        'approvalsReviewSlaLabel'        => __('SLA', 'supersede-css-jlg'),
+                        'approvalsReviewSlaTarget'       => __('Délai cible : %s', 'supersede-css-jlg'),
+                        'approvalsReviewSlaRemaining'    => __('Temps restant : %s', 'supersede-css-jlg'),
+                        'approvalsReviewSlaOverdue'      => __('Retard de %s', 'supersede-css-jlg'),
+                        'approvalsReviewSlaMet'          => __('Revue clôturée dans les temps.', 'supersede-css-jlg'),
+                        'approvalsReviewSlaLate'         => __('Clôturée avec %s de retard.', 'supersede-css-jlg'),
+                        'approvalsReviewOpenedAgo'       => __('Demande ouverte depuis %s', 'supersede-css-jlg'),
+                        'approvalsReviewRequestedAt'     => __('Demande envoyée le %s', 'supersede-css-jlg'),
+                        'approvalsReviewDecisionAt'      => __('Décision enregistrée le %s', 'supersede-css-jlg'),
+                        'approvalsTimelineTokenCreated'  => __('Token créé', 'supersede-css-jlg'),
+                        'approvalsTimelineTokenUpdated'  => __('Token mis à jour', 'supersede-css-jlg'),
+                        'approvalsTimelineTokenApproved' => __('Token approuvé', 'supersede-css-jlg'),
+                        'approvalsTimelineTokenDeprecated' => __('Token déprécié', 'supersede-css-jlg'),
+                        'approvalsTimelineApprovalRequested' => __('Demande d’approbation', 'supersede-css-jlg'),
+                        'approvalsTimelineApprovalChangesRequested' => __('Changements demandés', 'supersede-css-jlg'),
+                        'approvalsTimelineCssPublished'  => __('CSS publié', 'supersede-css-jlg'),
+                        'approvalsTimelinePresetChanged' => __('Preset mis à jour', 'supersede-css-jlg'),
+                        'approvalsTimelineExportGenerated' => __('Export généré', 'supersede-css-jlg'),
                         'approvalPriorityColumn'         => __('Priorité', 'supersede-css-jlg'),
                         'approvalPriorityLow'            => __('Faible', 'supersede-css-jlg'),
                         'approvalPriorityNormal'         => __('Normale', 'supersede-css-jlg'),
@@ -161,6 +215,9 @@ class DebugCenter extends AbstractPage
             'can_export_tokens' => $canExportTokens,
             'activity_log' => $activityLog,
             'css_revisions' => CssRevisions::all(),
+            'token_registry' => $tokenRegistry,
+            'token_statuses' => $tokenStatuses,
+            'approval_sla_rules' => $approvalSlaRules,
         ]);
     }
 }

@@ -8,6 +8,9 @@ if (!defined('ABSPATH')) {
 /** @var array{entries: array<int,array<string,mixed>>, pagination: array<string,int>, filters: array<string,string>} $activity_log */
 /** @var array<int,array<string,mixed>> $css_revisions */
 /** @var array<int, array{value: string, label: string, description: string, tone: string, default: bool}> $approval_priorities */
+/** @var array<int, array{name: string, value: string, type: string, description: string, group: string, context: string, status: string, owner: int, version: string, changelog: string, linked_components: array<int, string>}> $token_registry */
+/** @var array<int, array{value: string, label: string, description: string}> $token_statuses */
+/** @var array<string, array<string, int>> $approval_sla_rules */
 $can_export_tokens = isset($can_export_tokens) ? (bool) $can_export_tokens : false;
 $plugin_version    = $system_info['plugin_version'] ?? __('N/A', 'supersede-css-jlg');
 $wordpress_version = $system_info['wordpress_version'] ?? '';
@@ -59,6 +62,10 @@ $normalize_user = static function ($user_id): array {
     ];
 };
 
+$token_registry = isset($token_registry) && is_array($token_registry) ? $token_registry : [];
+$token_statuses = isset($token_statuses) && is_array($token_statuses) ? $token_statuses : [];
+$approval_sla_rules = isset($approval_sla_rules) && is_array($approval_sla_rules) ? $approval_sla_rules : [];
+
 $approvals_enriched = array_map(static function ($entry) use ($normalize_user) {
     if (!is_array($entry)) {
         return null;
@@ -100,6 +107,84 @@ $approvals_enriched = array_map(static function ($entry) use ($normalize_user) {
 }, $approvals);
 
 $approvals_enriched = array_values(array_filter($approvals_enriched));
+$normalize_owner = static function (int $user_id) use ($normalize_user): array {
+    if ($user_id <= 0) {
+        return [
+            'id' => 0,
+            'name' => __('Non assigné', 'supersede-css-jlg'),
+            'avatar' => '',
+        ];
+    }
+
+    return $normalize_user($user_id);
+};
+
+$token_status_map = [];
+foreach ($token_statuses as $status_meta) {
+    if (!is_array($status_meta)) {
+        continue;
+    }
+
+    $value = isset($status_meta['value']) ? strtolower((string) $status_meta['value']) : '';
+    if ($value === '') {
+        continue;
+    }
+
+    $token_status_map[$value] = [
+        'label' => isset($status_meta['label']) ? (string) $status_meta['label'] : $value,
+        'description' => isset($status_meta['description']) ? (string) $status_meta['description'] : '',
+    ];
+}
+
+$token_meta_index = [];
+foreach ($token_registry as $token_entry) {
+    if (!is_array($token_entry)) {
+        continue;
+    }
+
+    $name = isset($token_entry['name']) ? (string) $token_entry['name'] : '';
+    $context = isset($token_entry['context']) ? (string) $token_entry['context'] : '';
+
+    if ($name === '' || $context === '') {
+        continue;
+    }
+
+    $key = strtolower($context . '|' . $name);
+    $status_value = isset($token_entry['status']) ? strtolower((string) $token_entry['status']) : '';
+    $token_meta_index[$key] = [
+        'name' => $name,
+        'context' => $context,
+        'type' => isset($token_entry['type']) ? (string) $token_entry['type'] : '',
+        'value' => isset($token_entry['value']) ? (string) $token_entry['value'] : '',
+        'description' => isset($token_entry['description']) ? (string) $token_entry['description'] : '',
+        'status' => [
+            'value' => $status_value,
+            'label' => $token_status_map[$status_value]['label'] ?? $status_value,
+            'description' => $token_status_map[$status_value]['description'] ?? '',
+        ],
+        'owner' => $normalize_owner(isset($token_entry['owner']) ? (int) $token_entry['owner'] : 0),
+        'version' => isset($token_entry['version']) ? (string) $token_entry['version'] : '',
+        'changelog' => isset($token_entry['changelog']) ? (string) $token_entry['changelog'] : '',
+        'linked_components' => isset($token_entry['linked_components']) && is_array($token_entry['linked_components'])
+            ? array_values(array_map('strval', $token_entry['linked_components']))
+            : [],
+        'status_raw' => $status_value,
+    ];
+}
+
+$sla_rules = [];
+foreach ($approval_sla_rules as $priority_value => $config) {
+    if (!is_array($config)) {
+        continue;
+    }
+
+    $hours = isset($config['hours']) ? (int) $config['hours'] : 0;
+    if ($hours <= 0) {
+        continue;
+    }
+
+    $sla_rules[strtolower((string) $priority_value)] = ['hours' => $hours];
+}
 $activity_entries = isset($activity_log['entries']) && is_array($activity_log['entries']) ? $activity_log['entries'] : [];
 $activity_pagination = isset($activity_log['pagination']) && is_array($activity_log['pagination']) ? $activity_log['pagination'] : ['total' => 0, 'total_pages' => 1, 'page' => 1];
 $activity_filters = isset($activity_log['filters']) && is_array($activity_log['filters']) ? $activity_log['filters'] : [];
@@ -519,7 +604,16 @@ $format_datetime = static function (string $iso): string {
                         $decision_user = is_array($decision_user_data) ? ($decision_user_data['name'] ?? '') : '';
                         $decision_at = is_array($decision) ? $format_datetime($decision['decided_at'] ?? '') : '';
                         ?>
-                        <tr data-approval-id="<?php echo esc_attr($approval['id']); ?>">
+                        <?php
+                        $token_key = strtolower($token_context . '|' . $token_name);
+                        $requested_at_raw = isset($approval['requested_at']) ? (string) $approval['requested_at'] : '';
+                        ?>
+                        <tr
+                            data-approval-id="<?php echo esc_attr($approval['id']); ?>"
+                            data-token-key="<?php echo esc_attr($token_key); ?>"
+                            data-priority="<?php echo esc_attr($priority_value); ?>"
+                            data-requested-at="<?php echo esc_attr($requested_at_raw); ?>"
+                        >
                             <td>
                                 <div class="ssc-approval-token">
                                     <code><?php echo esc_html($token_name); ?></code>
@@ -529,9 +623,12 @@ $format_datetime = static function (string $iso): string {
                                 </div>
                             </td>
                             <td>
-                                <span class="ssc-approval-priority <?php echo esc_attr($priority_class); ?>">
-                                    <?php echo esc_html($priority_label); ?>
-                                </span>
+                                <div class="ssc-approval-priority-wrapper">
+                                    <span class="ssc-approval-priority <?php echo esc_attr($priority_class); ?>">
+                                        <?php echo esc_html($priority_label); ?>
+                                    </span>
+                                    <p class="ssc-approval-sla" hidden></p>
+                                </div>
                             </td>
                             <td>
                                 <span class="ssc-approval-badge <?php echo esc_attr($status_class); ?>">
@@ -562,14 +659,23 @@ $format_datetime = static function (string $iso): string {
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <?php if ($status === 'pending' && $can_review) : ?>
-                                    <div class="ssc-approval-actions">
-                                        <button type="button" class="button button-secondary ssc-approval-approve" data-approval-id="<?php echo esc_attr($approval['id']); ?>"><?php esc_html_e('Approuver', 'supersede-css-jlg'); ?></button>
-                                        <button type="button" class="button button-link-delete ssc-approval-request-changes" data-approval-id="<?php echo esc_attr($approval['id']); ?>"><?php esc_html_e('Demander des changements', 'supersede-css-jlg'); ?></button>
-                                    </div>
-                                <?php else : ?>
-                                    <p class="description ssc-description--flush"><?php esc_html_e('Aucune action disponible.', 'supersede-css-jlg'); ?></p>
-                                <?php endif; ?>
+                                <div class="ssc-approval-actions">
+                                    <button
+                                        type="button"
+                                        class="button button-primary ssc-approval-open-modal"
+                                        data-approval-id="<?php echo esc_attr($approval['id']); ?>"
+                                    >
+                                        <?php esc_html_e('Examiner', 'supersede-css-jlg'); ?>
+                                    </button>
+                                    <?php if ($status === 'pending' && $can_review) : ?>
+                                        <div class="ssc-approval-actions__decisions">
+                                            <button type="button" class="button button-secondary ssc-approval-approve" data-approval-id="<?php echo esc_attr($approval['id']); ?>"><?php esc_html_e('Approuver', 'supersede-css-jlg'); ?></button>
+                                            <button type="button" class="button button-link-delete ssc-approval-request-changes" data-approval-id="<?php echo esc_attr($approval['id']); ?>"><?php esc_html_e('Demander des changements', 'supersede-css-jlg'); ?></button>
+                                        </div>
+                                    <?php else : ?>
+                                        <p class="description ssc-description--flush ssc-approval-actions__info"><?php esc_html_e('Aucune action disponible.', 'supersede-css-jlg'); ?></p>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -580,6 +686,58 @@ $format_datetime = static function (string $iso): string {
         <script type="application/json" id="ssc-approvals-data"><?php echo wp_json_encode($approvals_enriched); ?></script>
         <script type="application/json" id="ssc-approvals-priorities"><?php echo wp_json_encode($priority_definitions); ?></script>
         <script type="application/json" id="ssc-approvals-permissions"><?php echo wp_json_encode(['canReview' => $can_review]); ?></script>
+        <script type="application/json" id="ssc-approvals-token-meta"><?php echo wp_json_encode([
+            'tokens' => $token_meta_index,
+            'statuses' => $token_status_map,
+            'sla' => $sla_rules,
+        ]); ?></script>
+    </div>
+
+    <div class="ssc-modal" id="ssc-approval-review-modal" hidden>
+        <div class="ssc-modal__backdrop" data-ssc-approval-modal-close></div>
+        <div class="ssc-modal__dialog ssc-approval-review" role="dialog" aria-modal="true" aria-labelledby="ssc-approval-review-title" aria-describedby="ssc-approval-review-summary" tabindex="-1">
+            <header class="ssc-approval-review__header">
+                <div>
+                    <p class="ssc-approval-review__eyebrow" id="ssc-approval-review-eyebrow"></p>
+                    <h2 id="ssc-approval-review-title"><?php esc_html_e('Revue de token', 'supersede-css-jlg'); ?></h2>
+                </div>
+                <button type="button" class="button button-secondary" id="ssc-approval-review-close" data-ssc-approval-modal-close>
+                    <?php esc_html_e('Fermer la revue', 'supersede-css-jlg'); ?>
+                </button>
+            </header>
+            <div class="ssc-approval-review__body">
+                <section class="ssc-approval-review__summary" id="ssc-approval-review-summary">
+                    <div class="ssc-approval-review__badges" id="ssc-approval-review-badges"></div>
+                    <dl class="ssc-approval-review__meta" id="ssc-approval-review-meta"></dl>
+                    <div class="ssc-approval-review__value">
+                        <h3><?php esc_html_e('Valeur CSS', 'supersede-css-jlg'); ?></h3>
+                        <pre id="ssc-approval-review-value" class="ssc-approval-review__value-code"></pre>
+                        <button type="button" class="button button-secondary" id="ssc-approval-review-copy">
+                            <?php esc_html_e('Copier la valeur CSS', 'supersede-css-jlg'); ?>
+                        </button>
+                    </div>
+                    <div class="ssc-approval-review__changelog">
+                        <h3><?php esc_html_e('Changelog', 'supersede-css-jlg'); ?></h3>
+                        <p id="ssc-approval-review-changelog" class="ssc-approval-review__changelog-body"></p>
+                    </div>
+                    <div class="ssc-approval-review__components">
+                        <h3><?php esc_html_e('Composants liés', 'supersede-css-jlg'); ?></h3>
+                        <ul id="ssc-approval-review-components" class="ssc-approval-review__components-list"></ul>
+                    </div>
+                </section>
+                <section class="ssc-approval-review__comments" aria-labelledby="ssc-approval-review-comments-title">
+                    <h3 id="ssc-approval-review-comments-title"><?php esc_html_e('Commentaires de la demande', 'supersede-css-jlg'); ?></h3>
+                    <div id="ssc-approval-review-comments"></div>
+                </section>
+                <section class="ssc-approval-review__timeline" aria-labelledby="ssc-approval-review-timeline-title">
+                    <h3 id="ssc-approval-review-timeline-title"><?php esc_html_e('Historique d’activité', 'supersede-css-jlg'); ?></h3>
+                    <p id="ssc-approval-review-timeline-empty" class="description" hidden><?php esc_html_e('Aucune activité récente pour ce token.', 'supersede-css-jlg'); ?></p>
+                    <p id="ssc-approval-review-timeline-error" class="description ssc-approval-review__error" hidden><?php esc_html_e('Impossible de charger l’historique.', 'supersede-css-jlg'); ?></p>
+                    <div id="ssc-approval-review-loading" class="ssc-approval-review__loading" hidden><?php esc_html_e('Chargement de l’historique…', 'supersede-css-jlg'); ?></div>
+                    <ul class="ssc-approval-timeline" id="ssc-approval-review-timeline"></ul>
+                </section>
+            </div>
+        </div>
     </div>
 
     <div class="ssc-panel ssc-mt-200" data-ssc-debug-label="<?php echo esc_attr__('Journal d’activité', 'supersede-css-jlg'); ?>">
