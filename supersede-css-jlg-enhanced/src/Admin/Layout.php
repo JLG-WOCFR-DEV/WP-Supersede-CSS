@@ -18,6 +18,11 @@ class Layout {
 
         $allowed = wp_kses_allowed_html('post');
 
+        $containerTags = [
+            'article', 'aside', 'div', 'figcaption', 'figure', 'footer', 'header', 'li', 'main', 'nav', 'p', 'pre',
+            'section', 'span', 'table', 'tbody', 'td', 'th', 'thead', 'tr', 'ul', 'ol', 'dl', 'dt', 'dd',
+        ];
+
         foreach ($allowed as $tag => $attributes) {
             if (!is_array($attributes)) {
                 continue;
@@ -25,6 +30,11 @@ class Layout {
 
             $attributes['style']  = true;
             $attributes['data-*'] = true;
+
+            if (in_array($tag, $containerTags, true)) {
+                $attributes['id'] = true;
+                $attributes['class'] = true;
+            }
 
             $allowed[$tag] = $attributes;
         }
