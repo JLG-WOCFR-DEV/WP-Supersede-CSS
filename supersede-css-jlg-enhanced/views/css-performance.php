@@ -10,6 +10,9 @@ if (!defined('ABSPATH')) {
 /** @var array|null $comparison */
 /** @var array|null $snapshot_meta */
 /** @var array<string, string> $export_urls */
+$export_urls = isset($export_urls) && is_array($export_urls) ? $export_urls : [];
+$export_markdown_url = isset($export_urls['markdown']) ? (string) $export_urls['markdown'] : '';
+$export_json_url = isset($export_urls['json']) ? (string) $export_urls['json'] : '';
 
 $format_int = static function (int $value): string {
     if (function_exists('number_format_i18n')) {
@@ -509,6 +512,3 @@ $vendor_prefix_total = (int) ($combined_metrics['vendor_prefix_total'] ?? 0);
         </ul>
     </div>
 </div>
-$export_urls = isset($export_urls) && is_array($export_urls) ? $export_urls : [];
-$export_markdown_url = isset($export_urls['markdown']) ? (string) $export_urls['markdown'] : '';
-$export_json_url = isset($export_urls['json']) ? (string) $export_urls['json'] : '';
