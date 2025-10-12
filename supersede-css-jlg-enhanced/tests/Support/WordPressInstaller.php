@@ -80,6 +80,10 @@ final class WordPressInstaller
             throw new RuntimeException('Failed to write the downloaded WordPress archive to disk.');
         }
 
+        if (!class_exists(ZipArchive::class)) {
+            throw new RuntimeException('The ZipArchive extension is required to extract the WordPress archive.');
+        }
+
         $zip = new ZipArchive();
         if ($zip->open($tempFile) !== true) {
             throw new RuntimeException('Failed to open the WordPress archive.');
