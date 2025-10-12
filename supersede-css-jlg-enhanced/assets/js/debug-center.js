@@ -1374,6 +1374,19 @@
         const approvalsPermissions = parseJsonFromScript('#ssc-approvals-permissions');
         const approvalsInitialData = parseJsonFromScript('#ssc-approvals-data');
         const approvalsPriorityDefinitions = parseJsonFromScript('#ssc-approvals-priorities');
+        const approvalsTokenMetaRaw = parseJsonFromScript('#ssc-approvals-token-meta');
+        const approvalsTokenMeta = (approvalsTokenMetaRaw && !Array.isArray(approvalsTokenMetaRaw))
+            ? approvalsTokenMetaRaw
+            : {};
+        const approvalsTokenLookup = approvalsTokenMeta.tokens && typeof approvalsTokenMeta.tokens === 'object'
+            ? approvalsTokenMeta.tokens
+            : {};
+        const approvalsStatusMeta = approvalsTokenMeta.statuses && typeof approvalsTokenMeta.statuses === 'object'
+            ? approvalsTokenMeta.statuses
+            : {};
+        const approvalsSlaRules = approvalsTokenMeta.sla && typeof approvalsTokenMeta.sla === 'object'
+            ? approvalsTokenMeta.sla
+            : {};
 
         const priorityMeta = buildPriorityMeta(approvalsPriorityDefinitions);
 
@@ -1381,6 +1394,28 @@
             entries: normalizeApprovals(approvalsInitialData),
             currentStatus: approvalsFilter.val() || 'pending',
             canReview: approvalsPermissions && approvalsPermissions.canReview,
+        };
+        const approvalsModalElement = $('#ssc-approval-review-modal');
+        const approvalsModalBadges = $('#ssc-approval-review-badges');
+        const approvalsModalDialog = approvalsModalElement.find('.ssc-modal__dialog');
+        const approvalsModalMeta = $('#ssc-approval-review-meta');
+        const approvalsModalValue = $('#ssc-approval-review-value');
+        const approvalsModalCopy = $('#ssc-approval-review-copy');
+        const approvalsModalChangelog = $('#ssc-approval-review-changelog');
+        const approvalsModalComponents = $('#ssc-approval-review-components');
+        const approvalsModalComments = $('#ssc-approval-review-comments');
+        const approvalsModalTimeline = $('#ssc-approval-review-timeline');
+        const approvalsModalTimelineEmpty = $('#ssc-approval-review-timeline-empty');
+        const approvalsModalTimelineError = $('#ssc-approval-review-timeline-error');
+        const approvalsModalLoading = $('#ssc-approval-review-loading');
+        const approvalsModalCloseButtons = $('[data-ssc-approval-modal-close]');
+        const approvalsModalTitle = $('#ssc-approval-review-title');
+        const approvalsModalEyebrow = $('#ssc-approval-review-eyebrow');
+        let approvalsModalState = {
+            open: false,
+            currentId: null,
+            tokenKey: null,
+            restoreFocus: null,
         };
 
         function createUserPlaceholder(id) {
@@ -1468,6 +1503,216 @@
             return translate('approvalPriorityUnknown', 'Priorité inconnue');
         }
 
+        function buildTokenKey(name, context) {
+            const safeName = typeof name === 'string' ? name.trim().toLowerCase() : '';
+            const safeContext = typeof context === 'string' ? context.trim().toLowerCase() : '';
+            return `${safeContext}|${safeName}`;
+        }
+
+        function getTokenMeta(entry) {
+            if (!entry || !entry.token) {
+                return { key: '', meta: null };
+            }
+
+            const tokenName = entry.token.name || '';
+            const tokenContext = entry.token.context || '';
+            const key = buildTokenKey(tokenName, tokenContext);
+
+            if (key && approvalsTokenLookup[key]) {
+                return { key, meta: approvalsTokenLookup[key] };
+            }
+
+            return { key, meta: null };
+        }
+
+        function getStatusMeta(value) {
+            const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+            if (normalized && approvalsStatusMeta[normalized]) {
+                return approvalsStatusMeta[normalized];
+            }
+
+            return { label: value || '', description: '' };
+        }
+
+        function computeSlaMeta(entry) {
+            if (!entry) {
+                return null;
+            }
+
+            const requestedAtIso = entry.requested_at || '';
+            if (!requestedAtIso) {
+                return null;
+            }
+
+            const requestedAt = new Date(requestedAtIso);
+            if (Number.isNaN(requestedAt.getTime())) {
+                return null;
+            }
+
+            const priority = normalizePriorityValue(entry.priority);
+            const rule = approvalsSlaRules[priority];
+            if (!rule || typeof rule.hours !== 'number' || Number.isNaN(rule.hours) || rule.hours <= 0) {
+                return null;
+            }
+
+            const status = (entry.status || 'pending').toLowerCase();
+            const targetTime = requestedAt.getTime() + (rule.hours * 60 * 60 * 1000);
+            const now = Date.now();
+
+            let state = 'pending';
+            let diffSeconds;
+            let decisionAtTime = null;
+
+            if (status === 'pending') {
+                diffSeconds = Math.round((targetTime - now) / 1000);
+                if (diffSeconds < 0) {
+                    state = 'overdue';
+                    diffSeconds = Math.abs(diffSeconds);
+                }
+            } else {
+                const decisionAtIso = entry.decision && entry.decision.decided_at ? entry.decision.decided_at : '';
+                const decisionAt = decisionAtIso ? new Date(decisionAtIso) : null;
+
+                if (decisionAt && !Number.isNaN(decisionAt.getTime())) {
+                    decisionAtTime = decisionAt.getTime();
+                    const delta = decisionAtTime - targetTime;
+                    diffSeconds = Math.round(Math.abs(delta) / 1000);
+                    state = delta <= 0 ? 'fulfilled' : 'fulfilled_late';
+                } else {
+                    diffSeconds = Math.round(Math.abs(targetTime - now) / 1000);
+                    state = targetTime < now ? 'overdue' : 'pending';
+                }
+            }
+
+            return {
+                state,
+                priority,
+                diffSeconds,
+                targetTime,
+                requestedAt: requestedAt.getTime(),
+                decisionAt: decisionAtTime,
+            };
+        }
+
+        function buildSlaDisplay(entry) {
+            const meta = computeSlaMeta(entry);
+            if (!meta) {
+                return null;
+            }
+
+            const targetIso = new Date(meta.targetTime).toISOString();
+            const targetLabel = formatDateTime(targetIso) || targetIso;
+
+            let text = '';
+            let cssClass = '';
+
+            if (meta.state === 'pending') {
+                const remaining = formatDuration(Math.max(1, meta.diffSeconds || 0));
+                text = translate('approvalsReviewSlaRemaining', 'Temps restant : %s').replace('%s', remaining);
+            } else if (meta.state === 'overdue') {
+                const overdue = formatDuration(Math.max(1, meta.diffSeconds || 0));
+                text = translate('approvalsReviewSlaOverdue', 'Retard de %s').replace('%s', overdue);
+                cssClass = 'is-overdue';
+            } else if (meta.state === 'fulfilled') {
+                text = translate('approvalsReviewSlaMet', 'Revue clôturée dans les temps.');
+                cssClass = 'is-success';
+            } else if (meta.state === 'fulfilled_late') {
+                const delay = formatDuration(Math.max(1, meta.diffSeconds || 0));
+                text = translate('approvalsReviewSlaLate', 'Clôturée avec %s de retard.').replace('%s', delay);
+                cssClass = 'is-overdue';
+            }
+
+            return {
+                text,
+                cssClass,
+                meta,
+                title: translate('approvalsReviewSlaTarget', 'Délai cible : %s').replace('%s', targetLabel),
+            };
+        }
+
+        function applySlaToRow(row, entry) {
+            if (!row || !row.length) {
+                return;
+            }
+
+            const slaDisplay = buildSlaDisplay(entry);
+            const slaElement = row.find('.ssc-approval-sla');
+
+            if (!slaElement.length) {
+                return;
+            }
+
+            if (!slaDisplay || !slaDisplay.text) {
+                slaElement.attr('hidden', 'hidden').text('');
+                row.removeClass('ssc-approvals-row--overdue');
+                return;
+            }
+
+            slaElement.text(slaDisplay.text);
+            slaElement.attr('title', slaDisplay.title);
+            slaElement.removeAttr('hidden');
+            slaElement.removeClass('is-overdue is-success');
+            if (slaDisplay.cssClass) {
+                slaElement.addClass(slaDisplay.cssClass);
+            }
+
+            if (slaDisplay.meta && (slaDisplay.meta.state === 'overdue' || slaDisplay.meta.state === 'fulfilled_late')) {
+                row.addClass('ssc-approvals-row--overdue');
+            } else {
+                row.removeClass('ssc-approvals-row--overdue');
+            }
+        }
+
+        const timelineEventLabels = {
+            'token.created': translate('approvalsTimelineTokenCreated', 'Token créé'),
+            'token.updated': translate('approvalsTimelineTokenUpdated', 'Token mis à jour'),
+            'token.approved': translate('approvalsTimelineTokenApproved', 'Token approuvé'),
+            'token.deprecated': translate('approvalsTimelineTokenDeprecated', 'Token déprécié'),
+            'token.approval_requested': translate('approvalsTimelineApprovalRequested', 'Demande d’approbation'),
+            'token.approval_changes_requested': translate('approvalsTimelineApprovalChangesRequested', 'Changements demandés'),
+            'css.published': translate('approvalsTimelineCssPublished', 'CSS publié'),
+            'preset.changed': translate('approvalsTimelinePresetChanged', 'Preset mis à jour'),
+            'export.generated': translate('approvalsTimelineExportGenerated', 'Export généré'),
+        };
+
+        function getTimelineEventLabel(eventName) {
+            if (timelineEventLabels[eventName]) {
+                return timelineEventLabels[eventName];
+            }
+
+            return eventName || '';
+        }
+
+        function copyToClipboard(text) {
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                return navigator.clipboard.writeText(text);
+            }
+
+            return new Promise((resolve, reject) => {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.setAttribute('readonly', '');
+                textarea.style.position = 'absolute';
+                textarea.style.left = '-9999px';
+                document.body.appendChild(textarea);
+
+                textarea.select();
+
+                try {
+                    const successful = document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    if (successful) {
+                        resolve();
+                    } else {
+                        reject(new Error('copy-failed'));
+                    }
+                } catch (error) {
+                    document.body.removeChild(textarea);
+                    reject(error);
+                }
+            });
+        }
+
         function normalizeApprovals(raw) {
             const list = Array.isArray(raw) ? raw : [];
 
@@ -1544,14 +1789,20 @@
             const statusLabel = statusLabelMap[status] || translate('approvalStatusUnknown', 'Statut inconnu');
             const statusClass = `ssc-approval-badge--${status.replace(/[^a-z0-9_-]/g, '')}`;
             const requestedBy = entry.requested_by_user || { name: '', avatar: '' };
-            const requestedAt = formatDateTime(entry.requested_at || '');
+            const requestedAtIso = entry.requested_at || '';
+            const requestedAt = formatDateTime(requestedAtIso);
             const comment = entry.comment || '';
             const decision = entry.decision || null;
             const decisionUser = entry.decision_user || null;
             const decisionComment = decision ? (decision.comment || '') : '';
             const decisionAt = decision ? formatDateTime(decision.decided_at || '') : '';
+            const tokenMeta = getTokenMeta(entry);
 
-            const row = $('<tr>').attr('data-approval-id', entry.id || '');
+            const row = $('<tr>')
+                .attr('data-approval-id', entry.id || '')
+                .attr('data-priority', priorityValue)
+                .attr('data-requested-at', requestedAtIso)
+                .attr('data-token-key', tokenMeta.key || '');
 
             const tokenCell = $('<td>');
             const tokenWrapper = $('<div>').addClass('ssc-approval-token');
@@ -1561,11 +1812,15 @@
             }
             tokenCell.append(tokenWrapper);
 
-            const priorityCell = $('<td>').append(
+            const priorityCell = $('<td>');
+            const priorityWrapper = $('<div>').addClass('ssc-approval-priority-wrapper');
+            priorityWrapper.append(
                 $('<span>')
                     .addClass(`ssc-approval-priority ssc-approval-priority--${priorityValue.replace(/[^a-z0-9_-]/g, '')}`)
                     .text(priorityLabel)
             );
+            priorityWrapper.append($('<p>').addClass('ssc-approval-sla').attr('hidden', 'hidden'));
+            priorityCell.append(priorityWrapper);
 
             const statusCell = $('<td>').append(
                 $('<span>').addClass(`ssc-approval-badge ${statusClass}`).text(statusLabel)
@@ -1611,26 +1866,36 @@
             }
 
             const actionsCell = $('<td>');
+            const actionsWrapper = $('<div>').addClass('ssc-approval-actions');
+            actionsWrapper.append($('<button>', {
+                type: 'button',
+                class: 'button button-primary ssc-approval-open-modal',
+                text: translate('approvalsOpenReview', 'Examiner'),
+                'data-approval-id': entry.id || '',
+            }));
+
             if (status === 'pending' && approvalsState.canReview) {
-                const actionsWrapper = $('<div>').addClass('ssc-approval-actions');
-                actionsWrapper.append($('<button>', {
+                const decisionsWrapper = $('<div>').addClass('ssc-approval-actions__decisions');
+                decisionsWrapper.append($('<button>', {
                     type: 'button',
                     class: 'button button-secondary ssc-approval-approve',
                     text: translate('approvalsDecisionApprove', 'Approuver'),
                     'data-approval-id': entry.id || '',
                 }));
-                actionsWrapper.append($('<button>', {
+                decisionsWrapper.append($('<button>', {
                     type: 'button',
                     class: 'button button-link-delete ssc-approval-request-changes',
                     text: translate('approvalsDecisionRequestChanges', 'Demander des changements'),
                     'data-approval-id': entry.id || '',
                 }));
-                actionsCell.append(actionsWrapper);
+                actionsWrapper.append(decisionsWrapper);
             } else {
-                actionsCell.append($('<p>').addClass('description ssc-description--flush').text(
+                actionsWrapper.append($('<p>').addClass('description ssc-description--flush ssc-approval-actions__info').text(
                     translate('approvalsNoActions', 'Aucune action disponible.')
                 ));
             }
+
+            actionsCell.append(actionsWrapper);
 
             row.append(tokenCell, priorityCell, statusCell, requestedCell, commentCell, actionsCell);
             return row;
@@ -1646,7 +1911,9 @@
             setVisibility(approvalsEmptyState, entries.length === 0);
 
             entries.forEach((entry) => {
-                approvalsTableBody.append(buildApprovalRow(entry));
+                const row = buildApprovalRow(entry);
+                approvalsTableBody.append(row);
+                applySlaToRow(row, entry);
             });
         }
 
@@ -1738,6 +2005,368 @@
             });
         }
 
+        function resetApprovalModal() {
+            approvalsModalBadges.empty();
+            approvalsModalMeta.empty();
+            approvalsModalValue.text('');
+            approvalsModalCopy.prop('disabled', true);
+            approvalsModalChangelog.text('');
+            approvalsModalComponents.empty();
+            approvalsModalComments.empty();
+            approvalsModalTimeline.empty();
+            approvalsModalTimelineEmpty.attr('hidden', 'hidden');
+            approvalsModalTimelineError.attr('hidden', 'hidden');
+            approvalsModalLoading.attr('hidden', 'hidden');
+            approvalsModalEyebrow.text('');
+            approvalsModalTitle.text('');
+        }
+
+        function appendMetaItem(label, value) {
+            if (!value || !approvalsModalMeta.length) {
+                return;
+            }
+
+            const item = $('<div>').addClass('ssc-approval-review__meta-item');
+            item.append($('<dt>').text(label));
+            item.append($('<dd>').text(value));
+            approvalsModalMeta.append(item);
+        }
+
+        function renderModalComponents(components) {
+            approvalsModalComponents.empty();
+
+            const list = Array.isArray(components) ? components : [];
+
+            if (!list.length) {
+                approvalsModalComponents.append(
+                    $('<li>').addClass('is-empty').text(
+                        translate('approvalsReviewLinkedComponentsEmpty', 'Aucun composant référencé.')
+                    )
+                );
+                return;
+            }
+
+            list.forEach((component) => {
+                approvalsModalComponents.append(
+                    $('<li>').text(component)
+                );
+            });
+        }
+
+        function renderModalComments(entry) {
+            approvalsModalComments.empty();
+
+            const requestedBy = entry.requested_by_user || { name: '', avatar: '' };
+            const requestedAt = formatDateTime(entry.requested_at || '') || (entry.requested_at || '');
+            const comment = entry.comment || '';
+
+            const requesterBlock = $('<article>').addClass('ssc-approval-review__comment');
+            requesterBlock.append($('<h4>').text(translate('approvalsReviewRequesterLabel', 'Demande initiale')));
+            const requesterMetaParts = [];
+            if (requestedBy.name) {
+                requesterMetaParts.push(requestedBy.name);
+            }
+            if (requestedAt) {
+                requesterMetaParts.push(requestedAt);
+            }
+            if (requesterMetaParts.length) {
+                requesterBlock.append(
+                    $('<p>').addClass('ssc-approval-review__comment-meta').text(requesterMetaParts.join(' · '))
+                );
+            }
+            requesterBlock.append(
+                $('<p>').addClass('ssc-approval-review__comment-body').text(
+                    comment ? `“${comment}”` : translate('approvalsNoComment', 'Aucun commentaire fourni lors de la demande.')
+                )
+            );
+            approvalsModalComments.append(requesterBlock);
+
+            const decision = entry.decision || null;
+            const decisionUser = entry.decision_user || null;
+            const decisionComment = decision ? (decision.comment || '') : '';
+            const decisionAt = decision ? (formatDateTime(decision.decided_at || '') || decision.decided_at || '') : '';
+
+            const decisionBlock = $('<article>').addClass('ssc-approval-review__comment');
+            decisionBlock.append($('<h4>').text(translate('approvalsReviewDecisionLabel', 'Dernière décision')));
+
+            if (decisionUser && decisionUser.name) {
+                const decisionMetaParts = [decisionUser.name];
+                if (decisionAt) {
+                    decisionMetaParts.push(decisionAt);
+                }
+                decisionBlock.append(
+                    $('<p>').addClass('ssc-approval-review__comment-meta').text(decisionMetaParts.join(' · '))
+                );
+                decisionBlock.append(
+                    $('<p>').addClass('ssc-approval-review__comment-body').text(
+                        decisionComment
+                            ? `“${decisionComment}”`
+                            : translate('approvalsNoComment', 'Aucun commentaire fourni lors de la demande.')
+                    )
+                );
+            } else {
+                decisionBlock.append(
+                    $('<p>').addClass('ssc-approval-review__comment-meta').text(
+                        translate('approvalsReviewNoDecision', 'Aucune décision enregistrée pour le moment.')
+                    )
+                );
+            }
+
+            approvalsModalComments.append(decisionBlock);
+        }
+
+        function loadApprovalTimeline(tokenKey, approvalId) {
+            approvalsModalTimeline.empty();
+            approvalsModalTimelineEmpty.attr('hidden', 'hidden');
+            approvalsModalTimelineError.attr('hidden', 'hidden');
+
+            if (!tokenKey) {
+                approvalsModalTimelineEmpty.text(
+                    translate('approvalsReviewMissingToken', 'Le token associé est introuvable ou a été supprimé.')
+                ).removeAttr('hidden');
+                return;
+            }
+
+            if (!SSC || !SSC.rest || !SSC.rest.root) {
+                approvalsModalTimelineError.removeAttr('hidden').text(
+                    translate('approvalsReviewTimelineError', 'Impossible de charger l’historique.')
+                );
+                return;
+            }
+
+            approvalsModalLoading.removeAttr('hidden');
+
+            $.ajax({
+                url: SSC.rest.root + 'activity-log',
+                method: 'GET',
+                data: {
+                    entity_type: 'token',
+                    entity_id: tokenKey,
+                    per_page: 15,
+                },
+                beforeSend: (xhr) => xhr.setRequestHeader('X-WP-Nonce', SSC.rest.nonce),
+            }).done((response) => {
+                if (!approvalsModalState.open || approvalsModalState.currentId !== approvalId) {
+                    return;
+                }
+
+                const entries = response && Array.isArray(response.entries) ? response.entries : [];
+
+                if (!entries.length) {
+                    approvalsModalTimelineEmpty.removeAttr('hidden');
+                    return;
+                }
+
+                entries.forEach((activityEntry) => {
+                    const createdAt = formatDateTime(activityEntry.created_at || '') || (activityEntry.created_at || '');
+                    const eventLabel = getTimelineEventLabel(activityEntry.event || '');
+                    const author = activityEntry.created_by && activityEntry.created_by.name
+                        ? activityEntry.created_by.name
+                        : translate('activitySystemUser', 'Système');
+                    const details = activityEntry.details && typeof activityEntry.details === 'object'
+                        ? activityEntry.details
+                        : {};
+                    const detailParts = [];
+
+                    if (details.comment) {
+                        detailParts.push(`“${details.comment}”`);
+                    }
+                    if (details.priority) {
+                        detailParts.push(`${translate('approvalPriorityColumn', 'Priorité')} : ${getPriorityLabel(details.priority)}`);
+                    }
+                    if (details.status) {
+                        const statusMeta = getStatusMeta(details.status);
+                        detailParts.push(`${translate('approvalsReviewStatusLabel', 'Statut')} : ${statusMeta.label || details.status}`);
+                    }
+                    if (details.version) {
+                        detailParts.push(`${translate('approvalsReviewVersionLabel', 'Version')} : ${details.version}`);
+                    }
+
+                    const item = $('<li>').addClass('ssc-approval-timeline__item');
+                    item.append($('<time>').addClass('ssc-approval-timeline__time').attr('datetime', activityEntry.created_at || '').text(createdAt));
+
+                    const body = $('<div>').addClass('ssc-approval-timeline__body');
+                    body.append($('<strong>').text(eventLabel));
+                    body.append($('<p>').addClass('ssc-approval-timeline__meta').text(author));
+
+                    if (detailParts.length) {
+                        body.append($('<p>').addClass('ssc-approval-timeline__details').text(detailParts.join(' · ')));
+                    }
+
+                    item.append(body);
+                    approvalsModalTimeline.append(item);
+                });
+            }).fail(() => {
+                if (!approvalsModalState.open || approvalsModalState.currentId !== approvalId) {
+                    return;
+                }
+
+                approvalsModalTimelineError.removeAttr('hidden').text(
+                    translate('approvalsReviewTimelineError', 'Impossible de charger l’historique.')
+                );
+            }).always(() => {
+                if (!approvalsModalState.open || approvalsModalState.currentId !== approvalId) {
+                    return;
+                }
+
+                approvalsModalLoading.attr('hidden', 'hidden');
+            });
+        }
+
+        function populateApprovalModal(entry) {
+            resetApprovalModal();
+
+            const tokenName = entry.token && entry.token.name ? entry.token.name : '';
+            const tokenContext = entry.token && entry.token.context ? entry.token.context : '';
+            const requestedAtIso = entry.requested_at || '';
+            const requestedAt = formatDateTime(requestedAtIso) || requestedAtIso;
+            const tokenMeta = getTokenMeta(entry);
+            approvalsModalState.currentId = entry.id || '';
+            approvalsModalState.tokenKey = tokenMeta.key || '';
+
+            if (requestedAt) {
+                approvalsModalEyebrow.text(
+                    translate('approvalsReviewRequestedAt', 'Demande envoyée le %s').replace('%s', requestedAt)
+                );
+            } else {
+                approvalsModalEyebrow.text(translate('approvalsReviewTitle', 'Revue de token'));
+            }
+
+            const titleParts = [];
+            if (tokenName) {
+                titleParts.push(tokenName);
+            }
+            if (tokenContext) {
+                titleParts.push(tokenContext);
+            }
+            approvalsModalTitle.text(titleParts.length ? titleParts.join(' · ') : translate('approvalsReviewTitle', 'Revue de token'));
+
+            const statusMeta = tokenMeta.meta && tokenMeta.meta.status ? tokenMeta.meta.status : null;
+            if (tokenMeta.meta) {
+                const statusLabel = statusMeta && statusMeta.label
+                    ? statusMeta.label
+                    : getStatusMeta(entry.status).label || translate('approvalStatusUnknown', 'Statut inconnu');
+                approvalsModalBadges.append(
+                    $('<span>').addClass('ssc-approval-review__badge ssc-approval-review__badge--status').text(statusLabel)
+                );
+            } else {
+                approvalsModalBadges.append(
+                    $('<span>').addClass('ssc-approval-review__notice').text(
+                        translate('approvalsReviewMissingToken', 'Le token associé est introuvable ou a été supprimé.')
+                    )
+                );
+            }
+
+            const priorityValue = normalizePriorityValue(entry.priority);
+            approvalsModalBadges.append(
+                $('<span>')
+                    .addClass(`ssc-approval-review__badge ssc-approval-review__badge--priority ssc-approval-priority--${priorityValue.replace(/[^a-z0-9_-]/g, '')}`)
+                    .text(getPriorityLabel(priorityValue))
+            );
+
+            const owner = tokenMeta.meta && tokenMeta.meta.owner ? tokenMeta.meta.owner : null;
+            if (owner && owner.name) {
+                appendMetaItem(translate('approvalsReviewOwnerLabel', 'Référent'), owner.name);
+            }
+
+            if (tokenMeta.meta && tokenMeta.meta.version) {
+                appendMetaItem(translate('approvalsReviewVersionLabel', 'Version'), tokenMeta.meta.version);
+            }
+
+            const contextDisplay = tokenContext || '—';
+            appendMetaItem(translate('approvalsReviewContextLabel', 'Contexte'), contextDisplay);
+
+            if (tokenMeta.meta && tokenMeta.meta.type) {
+                appendMetaItem(translate('approvalsReviewTypeLabel', 'Type'), tokenMeta.meta.type);
+            }
+
+            const slaDisplay = buildSlaDisplay(entry);
+            if (slaDisplay && slaDisplay.text) {
+                appendMetaItem(translate('approvalsReviewSlaLabel', 'SLA'), slaDisplay.text);
+            }
+
+            const tokenValue = tokenMeta.meta && tokenMeta.meta.value ? tokenMeta.meta.value : '';
+            if (tokenValue) {
+                approvalsModalValue.text(tokenValue);
+                approvalsModalCopy.prop('disabled', false);
+            } else {
+                approvalsModalValue.text(translate('approvalsReviewValueUnavailable', 'Valeur indisponible.'));
+                approvalsModalCopy.prop('disabled', true);
+            }
+
+            const changelog = tokenMeta.meta && tokenMeta.meta.changelog ? tokenMeta.meta.changelog : '';
+            approvalsModalChangelog.text(
+                changelog ? changelog : translate('approvalsReviewChangelogEmpty', 'Aucune note pour ce token.')
+            );
+
+            renderModalComponents(tokenMeta.meta && tokenMeta.meta.linked_components ? tokenMeta.meta.linked_components : []);
+            renderModalComments(entry);
+
+            loadApprovalTimeline(tokenMeta.key || '', approvalsModalState.currentId);
+        }
+
+        function openApprovalModal(event) {
+            let entry = event;
+            let triggerElement = null;
+
+            if (event && event.preventDefault) {
+                event.preventDefault();
+                const button = $(event.currentTarget);
+                triggerElement = button.length ? button[0] : null;
+                const approvalId = button.attr('data-approval-id');
+                entry = approvalsState.entries.find((item) => String(item.id) === String(approvalId));
+            }
+
+            if (!entry) {
+                window.sscToast && window.sscToast(translate('approvalsFetchError', 'Impossible de récupérer les demandes d’approbation.'));
+                return;
+            }
+
+            approvalsModalState.restoreFocus = triggerElement || approvalsModalState.restoreFocus;
+            approvalsModalState.open = true;
+            approvalsModalElement.removeAttr('hidden').addClass('is-visible');
+            $('body').addClass('ssc-modal-open');
+
+            populateApprovalModal(entry);
+
+            setTimeout(() => {
+                if (!approvalsModalState.open) {
+                    return;
+                }
+
+                if (approvalsModalDialog.length) {
+                    approvalsModalDialog.attr('tabindex', '-1').trigger('focus');
+                } else if (approvalsModalCloseButtons.length) {
+                    approvalsModalCloseButtons.first().trigger('focus');
+                }
+            }, 20);
+        }
+
+        function closeApprovalModal() {
+            if (!approvalsModalState.open) {
+                return;
+            }
+
+            approvalsModalState.open = false;
+            approvalsModalElement.attr('hidden', 'hidden').removeClass('is-visible');
+            $('body').removeClass('ssc-modal-open');
+            approvalsModalState.currentId = null;
+            approvalsModalState.tokenKey = null;
+            resetApprovalModal();
+
+            if (approvalsModalState.restoreFocus && typeof approvalsModalState.restoreFocus.focus === 'function') {
+                approvalsModalState.restoreFocus.focus();
+            } else if (approvalsModalState.restoreFocus) {
+                try {
+                    approvalsModalState.restoreFocus.focus();
+                } catch (error) {
+                    // Ignore focus restoration errors.
+                }
+            }
+
+            approvalsModalState.restoreFocus = null;
+        }
+
         if (approvalsFilter.length) {
             approvalsFilter.on('change', function() {
                 approvalsState.currentStatus = approvalsFilter.val() || 'pending';
@@ -1753,6 +2382,46 @@
 
         approvalsTableBody.on('click', '.ssc-approval-approve', (event) => handleApprovalDecision(event, 'approve'));
         approvalsTableBody.on('click', '.ssc-approval-request-changes', (event) => handleApprovalDecision(event, 'changes_requested'));
+        approvalsTableBody.on('click', '.ssc-approval-open-modal', (event) => openApprovalModal(event));
+
+        approvalsModalCloseButtons.on('click', (event) => {
+            event.preventDefault();
+            closeApprovalModal();
+        });
+
+        approvalsModalCopy.on('click', (event) => {
+            event.preventDefault();
+            const value = approvalsModalValue.text();
+            if (!value || !value.trim()) {
+                window.sscToast && window.sscToast(translate('approvalsReviewCopyError', 'Impossible de copier la valeur.'));
+                return;
+            }
+
+            copyToClipboard(value).then(() => {
+                window.sscToast && window.sscToast(translate('approvalsReviewCopySuccess', 'Valeur copiée dans le presse-papiers.'));
+            }).catch(() => {
+                window.sscToast && window.sscToast(translate('approvalsReviewCopyError', 'Impossible de copier la valeur.'));
+            });
+        });
+
+        $(document).on('keydown', (event) => {
+            if (event.key === 'Escape' && approvalsModalState.open) {
+                event.preventDefault();
+                closeApprovalModal();
+            }
+        });
+
+        $(document).on('focusin', (event) => {
+            if (!approvalsModalState.open || !approvalsModalElement.length) {
+                return;
+            }
+
+            if (!approvalsModalElement[0].contains(event.target)) {
+                if (approvalsModalDialog.length) {
+                    approvalsModalDialog.attr('tabindex', '-1').trigger('focus');
+                }
+            }
+        });
 
         renderApprovals();
 
