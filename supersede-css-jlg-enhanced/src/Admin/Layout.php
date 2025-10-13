@@ -39,6 +39,18 @@ class Layout {
             $allowed[$tag] = $attributes;
         }
 
+        foreach ($containerTags as $containerTag) {
+            if (!isset($allowed[$containerTag]) || !is_array($allowed[$containerTag])) {
+                $allowed[$containerTag] = [];
+            }
+
+            $allowed[$containerTag]['id'] = true;
+
+            if (!array_key_exists('class', $allowed[$containerTag])) {
+                $allowed[$containerTag]['class'] = true;
+            }
+        }
+
         $allowed['style'] = [
             'id'     => true,
             'class'  => true,
