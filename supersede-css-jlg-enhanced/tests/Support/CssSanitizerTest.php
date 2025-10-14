@@ -1,6 +1,5 @@
 <?php declare(strict_types=1);
 
-use ReflectionClass;
 use SSC\Support\CssSanitizer;
 
 class CssSanitizerTest extends WP_UnitTestCase
