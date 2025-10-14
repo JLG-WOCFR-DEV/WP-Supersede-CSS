@@ -86,12 +86,20 @@ final class CommentsController extends BaseController
         try {
             $comment = $this->store->addComment($entityType, $entityId, $message, $mentions);
         } catch (\Throwable $exception) {
+            if (class_exists('\SSC\Infra\Logger')) {
+                \SSC\Infra\Logger::add('comments_store_failure', [
+                    'entity_type' => $entityType,
+                    'entity_id' => $entityId,
+                    'exception' => get_class($exception),
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+
             return new WP_Error(
                 'ssc_comment_creation_failed',
                 __('Unable to store the comment.', 'supersede-css-jlg'),
                 [
                     'status' => 500,
-                    'details' => $exception->getMessage(),
                 ]
             );
         }
