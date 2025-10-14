@@ -10,6 +10,7 @@ use ZipArchive;
 final class WordPressInstaller
 {
     private const WORDPRESS_DIR = '/wordpress';
+    private const WORDPRESS_ARCHIVE_ENV = 'WP_TESTS_WORDPRESS_ZIP';
 
     public static function ensure(): void
     {
@@ -62,50 +63,151 @@ final class WordPressInstaller
 
     private static function downloadAndExtract(string $version, string $destination): void
     {
+        $localArchive = self::resolveLocalArchivePath();
+        if ($localArchive !== null) {
+            self::extractArchive($localArchive, $destination);
+
+            return;
+        }
+
         $downloadUrl = sprintf('https://wordpress.org/wordpress-%s-no-content.zip', $version);
+        $archive = self::fetchArchive($downloadUrl);
+
         $tempFile = self::createTempFile();
 
+        try {
+            if (file_put_contents($tempFile, $archive) === false) {
+                throw new RuntimeException('Failed to write the downloaded WordPress archive to disk.');
+            }
+
+            self::extractArchive($tempFile, $destination);
+        } finally {
+            if (is_file($tempFile)) {
+                @unlink($tempFile);
+            }
+        }
+    }
+
+    private static function fetchArchive(string $downloadUrl): string
+    {
         $context = stream_context_create([
             'http' => [
                 'timeout' => 60,
             ],
         ]);
 
-        $archive = self::downloadArchive($downloadUrl, $context);
+        $handler = static function (int $severity, string $message, string $file = '', int $line = 0) use ($downloadUrl): bool {
+            unset($severity, $file, $line);
 
-        if (file_put_contents($tempFile, $archive) === false) {
-            throw new RuntimeException('Failed to write the downloaded WordPress archive to disk.');
+            throw new RuntimeException(sprintf('Unable to download WordPress from %s: %s', $downloadUrl, $message));
+        };
+
+        set_error_handler($handler);
+
+        try {
+            $archive = file_get_contents($downloadUrl, false, $context);
+        } finally {
+            restore_error_handler();
         }
 
+        if ($archive === false) {
+            throw new RuntimeException(sprintf('Unable to download WordPress from %s.', $downloadUrl));
+        }
+
+        return $archive;
+    }
+
+    private static function extractArchive(string $archivePath, string $destination): void
+    {
         if (!class_exists(ZipArchive::class)) {
             throw new RuntimeException('The ZipArchive extension is required to extract the WordPress archive.');
         }
 
         $zip = new ZipArchive();
-        if ($zip->open($tempFile) !== true) {
+        if ($zip->open($archivePath) !== true) {
             throw new RuntimeException('Failed to open the WordPress archive.');
         }
 
         $extractPath = self::createTempDir();
-        if (!$zip->extractTo($extractPath)) {
+
+        try {
+            if (!$zip->extractTo($extractPath)) {
+                throw new RuntimeException('Failed to extract the WordPress archive.');
+            }
+        } finally {
             $zip->close();
-            throw new RuntimeException('Failed to extract the WordPress archive.');
         }
-        $zip->close();
-        @unlink($tempFile);
 
-        $extractedWordPressPath = $extractPath . '/wordpress';
-        if (!is_dir($extractedWordPressPath)) {
+        try {
+            $extractedWordPressPath = $extractPath . '/wordpress';
+            if (!is_dir($extractedWordPressPath)) {
+                throw new RuntimeException('The WordPress archive did not contain the expected directory.');
+            }
+
+            if (is_dir($destination)) {
+                self::deletePath($destination);
+            }
+
+            self::movePath($extractedWordPressPath, $destination);
+        } finally {
             self::deletePath($extractPath);
-            throw new RuntimeException('The WordPress archive did not contain the expected directory.');
+        }
+    }
+
+    private static function resolveLocalArchivePath(): ?string
+    {
+        $configuredPath = getenv(self::WORDPRESS_ARCHIVE_ENV);
+        if ($configuredPath === false) {
+            return null;
         }
 
-        if (is_dir($destination)) {
-            self::deletePath($destination);
+        $configuredPath = trim($configuredPath);
+        if ($configuredPath === '') {
+            return null;
         }
 
-        self::movePath($extractedWordPressPath, $destination);
-        self::deletePath($extractPath);
+        if (!self::isAbsolutePath($configuredPath)) {
+            $relative = ltrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $configuredPath), DIRECTORY_SEPARATOR);
+            $path = self::projectRoot() . DIRECTORY_SEPARATOR . $relative;
+        } else {
+            $path = $configuredPath;
+        }
+
+        $resolved = realpath($path);
+        if ($resolved === false || !is_file($resolved)) {
+            throw new RuntimeException(sprintf(
+                'Local WordPress archive defined in %s does not exist: %s',
+                self::WORDPRESS_ARCHIVE_ENV,
+                $path
+            ));
+        }
+
+        if (!is_readable($resolved)) {
+            throw new RuntimeException(sprintf(
+                'Local WordPress archive defined in %s is not readable: %s',
+                self::WORDPRESS_ARCHIVE_ENV,
+                $resolved
+            ));
+        }
+
+        return $resolved;
+    }
+
+    private static function isAbsolutePath(string $path): bool
+    {
+        if ($path === '') {
+            return false;
+        }
+
+        if ($path[0] === '/' || $path[0] === '\\') {
+            return true;
+        }
+
+        if (preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1) {
+            return true;
+        }
+
+        return str_starts_with($path, 'phar://');
     }
 
     /**
