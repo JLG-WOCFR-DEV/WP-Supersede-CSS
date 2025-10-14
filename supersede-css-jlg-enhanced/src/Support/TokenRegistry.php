@@ -1300,6 +1300,12 @@ final class TokenRegistry
      */
     private static function writeOption(string $name, $value): void
     {
+        $autoload = self::shouldAutoloadOption($name);
+
+        if (function_exists('apply_filters')) {
+            $autoload = (bool) apply_filters('ssc_option_autoload', $autoload, $name, $value);
+        }
+
         if (function_exists('update_option')) {
             update_option($name, $value, $autoload);
         }
@@ -1307,6 +1313,19 @@ final class TokenRegistry
         if (isset($GLOBALS['ssc_options_store']) && is_array($GLOBALS['ssc_options_store'])) {
             $GLOBALS['ssc_options_store'][$name] = $value;
         }
+    }
+
+    /**
+     * Determines whether a given option should autoload by default.
+     */
+    private static function shouldAutoloadOption(string $name): bool
+    {
+        static $autoloadMap = [
+            self::OPTION_REGISTRY => false,
+            self::OPTION_CSS => false,
+        ];
+
+        return $autoloadMap[$name] ?? true;
     }
 
     private static function detectContextForDeclaration(string $css, int $offset): string
