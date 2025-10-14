@@ -86,7 +86,7 @@ final class CommentsController extends BaseController
         try {
             $comment = $this->store->addComment($entityType, $entityId, $message, $mentions);
         } catch (\Throwable $exception) {
-            if (class_exists('\SSC\Infra\Logger')) {
+            if (class_exists('SSC\Infra\Logger')) {
                 \SSC\Infra\Logger::add('comments_store_failure', [
                     'entity_type' => $entityType,
                     'entity_id' => $entityId,
