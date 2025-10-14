@@ -127,7 +127,7 @@ class LayoutTest extends TestCase
     {
         parent::setUp();
 
-        $property = new ReflectionProperty(Layout::class, 'allowedTagsCache');
+        $property = new \ReflectionProperty(Layout::class, 'allowedTagsCache');
         $property->setAccessible(true);
         $property->setValue(null, null);
     }

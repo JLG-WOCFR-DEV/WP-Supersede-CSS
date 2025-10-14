@@ -137,7 +137,7 @@ class CssSanitizerTest extends WP_UnitTestCase
 
     public function test_internal_url_sanitizer_preserves_literals(): void
     {
-        $reflection = new ReflectionClass(CssSanitizer::class);
+        $reflection = new \ReflectionClass(CssSanitizer::class);
         $sanitizeUrls = $reflection->getMethod('sanitizeUrls');
         $sanitizeUrls->setAccessible(true);
 
@@ -181,7 +181,7 @@ class CssSanitizerTest extends WP_UnitTestCase
 
     public function test_internal_import_sanitizer_preserves_literals(): void
     {
-        $reflection = new ReflectionClass(CssSanitizer::class);
+        $reflection = new \ReflectionClass(CssSanitizer::class);
         $sanitizeImports = $reflection->getMethod('sanitizeImports');
         $sanitizeImports->setAccessible(true);
 
