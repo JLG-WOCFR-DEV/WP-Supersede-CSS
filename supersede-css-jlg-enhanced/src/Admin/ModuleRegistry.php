@@ -343,6 +343,28 @@ final class ModuleRegistry
                     ],
                 ],
             ],
+            'device-lab' => [
+                'slug'      => 'device-lab',
+                'page_slug' => self::BASE_SLUG . '-device-lab',
+                'label'     => __('Device Lab', 'supersede-css-jlg'),
+                'class'     => '\\SSC\\Admin\\Pages\\DeviceLab',
+                'group'     => 'tools',
+                'assets'    => [
+                    'scripts' => [
+                        [
+                            'handle' => 'ssc-device-lab',
+                            'path'   => 'assets/js/device-lab.js',
+                            'deps'   => [],
+                        ],
+                    ],
+                    'styles'  => [
+                        [
+                            'handle' => 'ssc-device-lab-style',
+                            'path'   => 'assets/css/device-lab.css',
+                        ],
+                    ],
+                ],
+            ],
         ];
     }
 

@@ -1,0 +1,133 @@
+.ssc-device-lab {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.ssc-device-lab__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: flex-start;
+}
+
+@media (max-width: 1100px) {
+    .ssc-device-lab__layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ssc-device-lab__controls,
+.ssc-device-lab__preview {
+    background: var(--ssc-surface, #ffffff);
+    border: 1px solid var(--ssc-border-muted, #e2e8f0);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+.ssc-device-lab__controls h3,
+.ssc-device-lab__preview h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-size: 1.125rem;
+}
+
+.ssc-device-lab__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.ssc-device-lab__field:last-of-type {
+    margin-bottom: 0;
+}
+
+.ssc-device-lab__field label,
+.ssc-device-lab__field-label {
+    font-weight: 600;
+    color: var(--ssc-text-strong, #0f172a);
+}
+
+.ssc-device-lab__select,
+.ssc-device-lab__url-form input[type="url"],
+.ssc-device-lab__url-form button {
+    width: 100%;
+}
+
+.ssc-device-lab__orientation {
+    display: inline-flex;
+    gap: 0.5rem;
+}
+
+.ssc-device-lab__slider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.ssc-device-lab__slider-value {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
+.ssc-device-lab__url-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.ssc-device-lab__url-input {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.ssc-device-lab__url-input input[type="url"] {
+    flex: 1 1 auto;
+}
+
+.ssc-device-lab__viewport-shell {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 1.5rem;
+    border-radius: 12px;
+    background: repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 10px, #e2e8f0 10px, #e2e8f0 20px);
+    overflow: auto;
+    min-height: 400px;
+}
+
+.ssc-device-lab__viewport-wrapper {
+    transform-origin: top center;
+    transition: transform 0.2s ease;
+}
+
+.ssc-device-lab__viewport {
+    position: relative;
+    background: #ffffff;
+    border-radius: 24px;
+    box-shadow:
+        0 20px 40px rgba(15, 23, 42, 0.25),
+        0 0 0 1px rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+}
+
+.ssc-device-lab__viewport iframe {
+    display: block;
+    border: 0;
+    width: 100%;
+    height: 100%;
+    background: #ffffff;
+}
+
+@media (max-width: 600px) {
+    .ssc-device-lab__controls,
+    .ssc-device-lab__preview {
+        padding: 1rem;
+    }
+
+    .ssc-device-lab__viewport-shell {
+        padding: 1rem;
+    }
+}
