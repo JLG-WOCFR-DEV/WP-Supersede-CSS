@@ -237,8 +237,9 @@
             try {
                 const normalizedUrl = new URL(rawUrl.trim(), window.location.origin);
                 const protocol = normalizedUrl.protocol.toLowerCase();
+                const isHttpScheme = protocol === 'http:' || protocol === 'https:';
 
-                if (protocol !== 'http:' && protocol !== 'https:') {
+                if (!isHttpScheme) {
                     return null;
                 }
 
