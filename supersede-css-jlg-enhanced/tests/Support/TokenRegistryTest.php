@@ -121,6 +121,10 @@ function ssc_test_get_option_value(string $name, $default = null)
 {
     global $ssc_options_store;
 
+    if (!is_array($ssc_options_store)) {
+        $ssc_options_store = [];
+    }
+
     if (array_key_exists($name, $ssc_options_store)) {
         return $ssc_options_store[$name];
     }
@@ -140,6 +144,10 @@ function ssc_test_get_option_value(string $name, $default = null)
 function ssc_test_delete_option(string $name): void
 {
     global $ssc_options_store;
+
+    if (!is_array($ssc_options_store)) {
+        $ssc_options_store = [];
+    }
 
     unset($ssc_options_store[$name]);
 
