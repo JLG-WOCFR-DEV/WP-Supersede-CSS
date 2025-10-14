@@ -153,6 +153,8 @@ final class TokenRegistry
         ],
     ];
 
+    private static bool $isPersistingOptions = false;
+
     /**
      * @return array<int, array{value: string, label: string, preview?: array<string, string>}>
      */
@@ -366,18 +368,24 @@ final class TokenRegistry
             $normalized = $result['tokens'];
             $shouldPersistCss = false;
 
-            if ($stored !== $normalized) {
-                self::writeOption(self::OPTION_REGISTRY, $normalized);
-                $shouldPersistCss = true;
-            }
+            self::beginOptionPersistence();
 
-            $existingCss = self::readOption(self::OPTION_CSS, null);
-            if (!is_string($existingCss) || trim($existingCss) === '') {
-                $shouldPersistCss = true;
-            }
+            try {
+                if ($stored !== $normalized) {
+                    update_option(self::OPTION_REGISTRY, $normalized, false);
+                    $shouldPersistCss = true;
+                }
 
-            if ($shouldPersistCss) {
-                self::persistCss($normalized);
+                $existingCss = get_option(self::OPTION_CSS, null);
+                if (!is_string($existingCss) || trim($existingCss) === '') {
+                    $shouldPersistCss = true;
+                }
+
+                if ($shouldPersistCss) {
+                    self::persistCss($normalized);
+                }
+            } finally {
+                self::endOptionPersistence();
             }
 
             return $normalized;
@@ -389,16 +397,29 @@ final class TokenRegistry
             $result = self::normalizeRegistry($converted);
             $fromCss = $result['tokens'];
             if ($fromCss !== []) {
-                self::writeOption(self::OPTION_REGISTRY, $fromCss);
-                self::persistCss($fromCss);
+                self::beginOptionPersistence();
+
+                try {
+                    update_option(self::OPTION_REGISTRY, $fromCss, false);
+                    self::persistCss($fromCss);
+                } finally {
+                    self::endOptionPersistence();
+                }
+
                 return $fromCss;
             }
         }
 
         $defaultsResult = self::normalizeRegistry(self::getDefaultRegistry());
         $defaults = $defaultsResult['tokens'];
-        self::writeOption(self::OPTION_REGISTRY, $defaults);
-        self::persistCss($defaults);
+        self::beginOptionPersistence();
+
+        try {
+            update_option(self::OPTION_REGISTRY, $defaults, false);
+            self::persistCss($defaults);
+        } finally {
+            self::endOptionPersistence();
+        }
 
         return $defaults;
     }
@@ -439,12 +460,55 @@ final class TokenRegistry
     }
 
     /**
+     * Retrieve the currently stored registry without triggering side effects such as CSS regeneration.
+     *
+     * @return array<int, array{name: string, value: string, type: string, description: string, group: string, context: string, status: string, owner: int, version: string, changelog: string, linked_components: array<int, string>}>
+     */
+    private static function getRegistrySnapshot(): array
+    {
+        $stored = get_option(self::OPTION_REGISTRY, self::REGISTRY_NOT_FOUND);
+
+        if (is_array($stored)) {
+            $normalized = self::normalizeRegistry($stored);
+
+            return $normalized['tokens'];
+        }
+
+        $legacyCss = get_option(self::OPTION_CSS, '');
+        if (is_string($legacyCss) && trim($legacyCss) !== '') {
+            $converted = self::convertCssToRegistry($legacyCss);
+            $normalized = self::normalizeRegistry($converted);
+
+            return $normalized['tokens'];
+        }
+
+        $defaults = self::normalizeRegistry(self::getDefaultRegistry());
+
+        return $defaults['tokens'];
+    }
+
+    private static function beginOptionPersistence(): void
+    {
+        self::$isPersistingOptions = true;
+    }
+
+    private static function endOptionPersistence(): void
+    {
+        self::$isPersistingOptions = false;
+    }
+
+    public static function isOptionPersistenceInProgress(): bool
+    {
+        return self::$isPersistingOptions;
+    }
+
+    /**
      * @param array<int, array{name?: mixed, value?: mixed, type?: mixed, description?: mixed, group?: mixed, context?: mixed, status?: mixed, owner?: mixed, version?: mixed, changelog?: mixed, linked_components?: mixed}> $tokens
      * @return array{tokens: array<int, array{name: string, value: string, type: string, description: string, group: string, context: string, status: string, owner: int, version: string, changelog: string, linked_components: array<int, string>}>, duplicates: array<int, array{canonical: string, context: string, variants: array<int, string>, conflicts: array<int, array{name: string, value: string, context?: string}>}>}
      */
     public static function saveRegistry(array $tokens): array
     {
-        $previous = self::getRegistry();
+        $previous = self::getRegistrySnapshot();
         $result = self::normalizeRegistry($tokens);
         $normalized = $result['tokens'];
 
@@ -452,12 +516,18 @@ final class TokenRegistry
             return $result;
         }
 
-        $stored = self::readOption(self::OPTION_REGISTRY, null);
-        if (!is_array($stored) || $stored !== $normalized) {
-            self::writeOption(self::OPTION_REGISTRY, $normalized);
-        }
+        self::beginOptionPersistence();
 
-        self::persistCss($normalized);
+        try {
+            $stored = get_option(self::OPTION_REGISTRY, null);
+            if (!is_array($stored) || $stored !== $normalized) {
+                update_option(self::OPTION_REGISTRY, $normalized, false);
+            }
+
+            self::persistCss($normalized);
+        } finally {
+            self::endOptionPersistence();
+        }
 
         self::recordRegistryChanges($previous, $normalized);
 

@@ -73,6 +73,14 @@ if (!function_exists('ssc_invalidate_css_cache')) {
     }
 }
 
+if (function_exists('add_action')) {
+    add_action('ssc_css_cache_invalidated', static function (): void {
+        global $ssc_css_invalidation_calls;
+
+        $ssc_css_invalidation_calls++;
+    });
+}
+
 if (!function_exists('get_option')) {
     function get_option($name, $default = false)
     {
@@ -90,6 +98,53 @@ if (!function_exists('update_option')) {
         $ssc_options_store[$name] = $value;
 
         return true;
+    }
+}
+
+if (!function_exists('delete_option')) {
+    function delete_option($name)
+    {
+        global $ssc_options_store;
+
+        unset($ssc_options_store[$name]);
+
+        return true;
+    }
+}
+
+/**
+ * @param string $name
+ * @param mixed  $default
+ * @return mixed
+ */
+function ssc_test_get_option_value(string $name, $default = null)
+{
+    global $ssc_options_store;
+
+    if (array_key_exists($name, $ssc_options_store)) {
+        return $ssc_options_store[$name];
+    }
+
+    if (function_exists('get_option')) {
+        $sentinel = (object) ['ssc_option_probe' => true];
+        $value = get_option($name, $sentinel);
+
+        if ($value !== $sentinel) {
+            return $value;
+        }
+    }
+
+    return $default;
+}
+
+function ssc_test_delete_option(string $name): void
+{
+    global $ssc_options_store;
+
+    unset($ssc_options_store[$name]);
+
+    if (function_exists('delete_option')) {
+        delete_option($name);
     }
 }
 
@@ -145,12 +200,14 @@ if (!isset($registry[0]['context']) || $registry[0]['context'] !== TokenRegistry
     exit(1);
 }
 
-if (!isset($ssc_options_store['ssc_tokens_css']) || !is_string($ssc_options_store['ssc_tokens_css'])) {
+$persistedCss = ssc_test_get_option_value('ssc_tokens_css');
+
+if (!is_string($persistedCss)) {
     fwrite(STDERR, 'TokenRegistry::saveRegistry should persist CSS using the original token name.' . PHP_EOL);
     exit(1);
 }
 
-if (strpos($ssc_options_store['ssc_tokens_css'], '--BrandPrimary') === false) {
+if (strpos($persistedCss, '--BrandPrimary') === false) {
     fwrite(STDERR, 'Persisted CSS should contain the original token casing.' . PHP_EOL);
     exit(1);
 }
@@ -161,7 +218,7 @@ if ($ssc_css_invalidation_calls !== 1) {
 }
 
 $cssInvalidationsBeforeRefresh = $ssc_css_invalidation_calls;
-unset($ssc_options_store['ssc_tokens_css']);
+ssc_test_delete_option('ssc_tokens_css');
 
 $refreshedRegistry = TokenRegistry::getRegistry();
 
@@ -175,12 +232,14 @@ if ($refreshedRegistry === [] || $refreshedRegistry[0]['name'] !== '--BrandPrima
     exit(1);
 }
 
-if (!isset($ssc_options_store['ssc_tokens_css']) || strpos($ssc_options_store['ssc_tokens_css'], '--BrandPrimary') === false) {
+$regeneratedCss = ssc_test_get_option_value('ssc_tokens_css');
+
+if (!is_string($regeneratedCss) || strpos($regeneratedCss, '--BrandPrimary') === false) {
     fwrite(STDERR, 'TokenRegistry::getRegistry should regenerate CSS when missing.' . PHP_EOL);
     exit(1);
 }
 
-$roundTripRegistry = TokenRegistry::convertCssToRegistry($ssc_options_store['ssc_tokens_css']);
+$roundTripRegistry = TokenRegistry::convertCssToRegistry((string) $regeneratedCss);
 
 if ($roundTripRegistry === [] || $roundTripRegistry[0]['name'] !== '--BrandPrimary') {
     fwrite(STDERR, 'convertCssToRegistry should keep the original casing after import.' . PHP_EOL);
@@ -309,19 +368,21 @@ if (!isset($supportedTypes['shadow']['help']) || strpos($supportedTypes['shadow'
     exit(1);
 }
 
-if (!isset($ssc_options_store['ssc_tokens_registry']) || !is_array($ssc_options_store['ssc_tokens_registry'])) {
+$storedRegistry = ssc_test_get_option_value('ssc_tokens_registry');
+
+if (!is_array($storedRegistry)) {
     fwrite(STDERR, 'saveRegistry should persist the registry with the underscored token.' . PHP_EOL);
     exit(1);
 }
-
-$storedRegistry = $ssc_options_store['ssc_tokens_registry'];
 
 if ($storedRegistry === [] || $storedRegistry[0]['name'] !== '--spacing_small') {
     fwrite(STDERR, 'Persisted registry should keep underscores in token names.' . PHP_EOL);
     exit(1);
 }
 
-if (!isset($ssc_options_store['ssc_tokens_css']) || strpos($ssc_options_store['ssc_tokens_css'], '--spacing_small') === false) {
+$persistedRegistryCss = ssc_test_get_option_value('ssc_tokens_css');
+
+if (!is_string($persistedRegistryCss) || strpos($persistedRegistryCss, '--spacing_small') === false) {
     fwrite(STDERR, 'Persisted CSS should include the underscored token name.' . PHP_EOL);
     exit(1);
 }
@@ -345,6 +406,9 @@ if (strpos($roundTripCss, '--spacing_small') === false) {
     exit(1);
 }
 
+ssc_test_delete_option('ssc_tokens_registry');
+ssc_test_delete_option('ssc_tokens_css');
+
 $ssc_options_store = [];
 
 $cssWithLeadingComment = '/* initial token */ --comment-prefixed: 24px;';
@@ -366,15 +430,22 @@ if ($commentedResult['duplicates'] !== []) {
     exit(1);
 }
 
-if (!isset($ssc_options_store['ssc_tokens_registry']) || !is_array($ssc_options_store['ssc_tokens_registry'])) {
+$commentedRegistryStore = ssc_test_get_option_value('ssc_tokens_registry');
+
+if (!is_array($commentedRegistryStore)) {
     fwrite(STDERR, 'saveRegistry should persist tokens parsed after leading comments.' . PHP_EOL);
     exit(1);
 }
 
-if (!isset($ssc_options_store['ssc_tokens_css']) || strpos($ssc_options_store['ssc_tokens_css'], '--comment-prefixed') === false) {
+$commentedCssStore = ssc_test_get_option_value('ssc_tokens_css');
+
+if (!is_string($commentedCssStore) || strpos($commentedCssStore, '--comment-prefixed') === false) {
     fwrite(STDERR, 'Persisted CSS should include tokens parsed after leading comments.' . PHP_EOL);
     exit(1);
 }
+
+ssc_test_delete_option('ssc_tokens_registry');
+ssc_test_delete_option('ssc_tokens_css');
 
 $ssc_options_store = [];
 
@@ -397,12 +468,16 @@ if ($annotatedResult['duplicates'] !== []) {
     exit(1);
 }
 
-if (!isset($ssc_options_store['ssc_tokens_registry']) || !is_array($ssc_options_store['ssc_tokens_registry'])) {
+$annotatedRegistryStore = ssc_test_get_option_value('ssc_tokens_registry');
+
+if (!is_array($annotatedRegistryStore)) {
     fwrite(STDERR, 'saveRegistry should persist tokens that follow annotated comments.' . PHP_EOL);
     exit(1);
 }
 
-if (!isset($ssc_options_store['ssc_tokens_css']) || strpos($ssc_options_store['ssc_tokens_css'], '--my-token:') === false) {
+$annotatedCssStore = ssc_test_get_option_value('ssc_tokens_css');
+
+if (!is_string($annotatedCssStore) || strpos($annotatedCssStore, '--my-token:') === false) {
     fwrite(STDERR, 'Persisted CSS should retain tokens declared after annotated comments.' . PHP_EOL);
     exit(1);
 }
