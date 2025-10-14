@@ -359,7 +359,7 @@ final class TokenRegistry
      */
     public static function getRegistry(): array
     {
-        $stored = get_option(self::OPTION_REGISTRY, self::REGISTRY_NOT_FOUND);
+        $stored = self::readOption(self::OPTION_REGISTRY, self::REGISTRY_NOT_FOUND);
 
         if ($stored !== self::REGISTRY_NOT_FOUND && is_array($stored)) {
             $result = self::normalizeRegistry($stored);
@@ -367,11 +367,11 @@ final class TokenRegistry
             $shouldPersistCss = false;
 
             if ($stored !== $normalized) {
-                self::persistOption(self::OPTION_REGISTRY, $normalized);
+                self::writeOption(self::OPTION_REGISTRY, $normalized);
                 $shouldPersistCss = true;
             }
 
-            $existingCss = get_option(self::OPTION_CSS, null);
+            $existingCss = self::readOption(self::OPTION_CSS, null);
             if (!is_string($existingCss) || trim($existingCss) === '') {
                 $shouldPersistCss = true;
             }
@@ -383,13 +383,13 @@ final class TokenRegistry
             return $normalized;
         }
 
-        $legacyCss = get_option(self::OPTION_CSS, '');
+        $legacyCss = self::readOption(self::OPTION_CSS, '');
         if (is_string($legacyCss) && trim($legacyCss) !== '') {
             $converted = self::convertCssToRegistry($legacyCss);
             $result = self::normalizeRegistry($converted);
             $fromCss = $result['tokens'];
             if ($fromCss !== []) {
-                self::persistOption(self::OPTION_REGISTRY, $fromCss);
+                self::writeOption(self::OPTION_REGISTRY, $fromCss);
                 self::persistCss($fromCss);
                 return $fromCss;
             }
@@ -397,7 +397,7 @@ final class TokenRegistry
 
         $defaultsResult = self::normalizeRegistry(self::getDefaultRegistry());
         $defaults = $defaultsResult['tokens'];
-        self::persistOption(self::OPTION_REGISTRY, $defaults);
+        self::writeOption(self::OPTION_REGISTRY, $defaults);
         self::persistCss($defaults);
 
         return $defaults;
@@ -452,9 +452,9 @@ final class TokenRegistry
             return $result;
         }
 
-        $stored = get_option(self::OPTION_REGISTRY, null);
+        $stored = self::readOption(self::OPTION_REGISTRY, null);
         if (!is_array($stored) || $stored !== $normalized) {
-            self::persistOption(self::OPTION_REGISTRY, $normalized);
+            self::writeOption(self::OPTION_REGISTRY, $normalized);
         }
 
         self::persistCss($normalized);
@@ -1204,7 +1204,7 @@ final class TokenRegistry
     private static function persistCss(array $tokens): void
     {
         $css = self::tokensToCss($tokens);
-        self::persistOption(self::OPTION_CSS, $css);
+        self::writeOption(self::OPTION_CSS, $css);
 
         if (function_exists('\ssc_invalidate_css_cache')) {
             \ssc_invalidate_css_cache();
@@ -1212,10 +1212,23 @@ final class TokenRegistry
     }
 
     /**
+     * @param mixed $default
+     * @return mixed
+     */
+    private static function readOption(string $name, $default = false)
+    {
+        if (isset($GLOBALS['ssc_options_store']) && is_array($GLOBALS['ssc_options_store'])) {
+            return $GLOBALS['ssc_options_store'][$name] ?? $default;
+        }
+
+        return get_option($name, $default);
+    }
+
+    /**
      * @param mixed $value
      * @global array<string, mixed> $ssc_options_store
      */
-    private static function persistOption(string $name, $value, bool $autoload = false): void
+    private static function writeOption(string $name, $value): void
     {
         if (function_exists('update_option')) {
             update_option($name, $value, $autoload);
