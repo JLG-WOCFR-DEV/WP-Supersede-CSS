@@ -353,7 +353,7 @@ final class TokenApprovalStore
                 $triggerTimestamp = $requestedTimestamp + ($afterHours * HOUR_IN_SECONDS);
                 $existingEscalation = $this->findExistingEscalation($existing, $level);
                 $notifiedAt = $existingEscalation !== null && isset($existingEscalation['notified_at'])
-                    ? $this->sanitizeIsoDate((string) $existingEscalation['notified_at'])
+                    ? $this->sanitizeOptionalIsoDate((string) $existingEscalation['notified_at'])
                     : '';
 
                 if ($notifiedAt !== '') {
@@ -368,8 +368,8 @@ final class TokenApprovalStore
             }
         }
 
-        $breachedAt = isset($existing['breached_at']) ? $this->sanitizeIsoDate((string) $existing['breached_at']) : '';
-        $completedAt = isset($existing['completed_at']) ? $this->sanitizeIsoDate((string) $existing['completed_at']) : '';
+        $breachedAt = isset($existing['breached_at']) ? $this->sanitizeOptionalIsoDate((string) $existing['breached_at']) : '';
+        $completedAt = isset($existing['completed_at']) ? $this->sanitizeOptionalIsoDate((string) $existing['completed_at']) : '';
 
         if ($breachedAt !== '') {
             $deadlineTimestamp = min($deadlineTimestamp, $this->parseIsoDate($breachedAt) ?? $deadlineTimestamp);
@@ -389,7 +389,7 @@ final class TokenApprovalStore
         ];
 
         if (isset($existing['last_notified_at'])) {
-            $metadata['last_notified_at'] = $this->sanitizeIsoDate((string) $existing['last_notified_at']);
+            $metadata['last_notified_at'] = $this->sanitizeOptionalIsoDate((string) $existing['last_notified_at']);
         }
 
         return $metadata;
@@ -431,6 +431,17 @@ final class TokenApprovalStore
 
         if ($timestamp === null) {
             return gmdate('c');
+        }
+
+        return gmdate('c', $timestamp);
+    }
+
+    private function sanitizeOptionalIsoDate(string $value): string
+    {
+        $timestamp = $this->parseIsoDate($value);
+
+        if ($timestamp === null) {
+            return '';
         }
 
         return gmdate('c', $timestamp);
