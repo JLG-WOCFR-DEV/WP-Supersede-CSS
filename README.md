@@ -143,6 +143,10 @@ composer install
 vendor/bin/phpunit
 ```
 
+> ℹ️ Le fichier `tests/wp-tests-config.php` utilise par défaut l’utilisateur `root@127.0.0.1` avec le mot de passe `root`. Si
+> votre instance MySQL locale est configurée différemment, définissez les variables d’environnement `WP_TESTS_DB_USER`,
+> `WP_TESTS_DB_PASSWORD` et `WP_TESTS_DB_HOST` avant d’exécuter la suite.
+
 ### Tests UI
 
 Un scénario Playwright de bout en bout valide le gestionnaire de tokens réel contre une instance WordPress jetable démarrée avec `@wordpress/env`.
