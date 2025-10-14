@@ -1226,10 +1226,13 @@ final class TokenRegistry
 
     /**
      * @param mixed $value
+     * @global array<string, mixed> $ssc_options_store
      */
     private static function writeOption(string $name, $value): void
     {
-        update_option($name, $value, false);
+        if (function_exists('update_option')) {
+            update_option($name, $value, $autoload);
+        }
 
         if (isset($GLOBALS['ssc_options_store']) && is_array($GLOBALS['ssc_options_store'])) {
             $GLOBALS['ssc_options_store'][$name] = $value;
