@@ -71,10 +71,7 @@ final class WordPressInstaller
             ],
         ]);
 
-        $archive = file_get_contents($downloadUrl, false, $context);
-        if ($archive === false) {
-            throw new RuntimeException(sprintf('Unable to download WordPress from %s.', $downloadUrl));
-        }
+        $archive = self::downloadArchive($downloadUrl, $context);
 
         if (file_put_contents($tempFile, $archive) === false) {
             throw new RuntimeException('Failed to write the downloaded WordPress archive to disk.');
@@ -109,6 +106,44 @@ final class WordPressInstaller
 
         self::movePath($extractedWordPressPath, $destination);
         self::deletePath($extractPath);
+    }
+
+    /**
+     * @param resource $context
+     */
+    private static function downloadArchive(string $downloadUrl, $context): string
+    {
+        $errorMessage = null;
+
+        set_error_handler(static function (int $severity, string $message) use (&$errorMessage): bool {
+            unset($severity);
+            $errorMessage = $message;
+
+            return true;
+        });
+
+        try {
+            $archive = file_get_contents($downloadUrl, false, $context);
+        } finally {
+            restore_error_handler();
+        }
+
+        if ($archive === false) {
+            $message = sprintf('Unable to download WordPress from %s.', $downloadUrl);
+
+            if (is_string($errorMessage) && $errorMessage !== '') {
+                $cleanError = preg_replace('/^file_get_contents\([^)]*\):\s*/', '', $errorMessage);
+                if (!is_string($cleanError) || $cleanError === '') {
+                    $cleanError = $errorMessage;
+                }
+
+                $message .= ' ' . trim($cleanError);
+            }
+
+            throw new RuntimeException($message);
+        }
+
+        return $archive;
     }
 
     private static function createTempFile(): string
