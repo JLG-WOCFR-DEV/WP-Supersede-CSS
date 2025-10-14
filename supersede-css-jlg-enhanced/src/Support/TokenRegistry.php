@@ -1300,6 +1300,12 @@ final class TokenRegistry
      */
     private static function writeOption(string $name, $value): void
     {
+        $autoload = true;
+
+        if (function_exists('apply_filters')) {
+            $autoload = (bool) apply_filters('ssc_option_autoload', $autoload, $name, $value);
+        }
+
         if (function_exists('update_option')) {
             update_option($name, $value, $autoload);
         }

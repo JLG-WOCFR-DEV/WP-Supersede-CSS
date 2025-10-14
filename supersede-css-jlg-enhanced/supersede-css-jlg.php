@@ -19,8 +19,6 @@ use SSC\Support\CssSanitizer;
 use SSC\Support\PresetLibrary;
 use SSC\Support\TokenRegistry;
 
-use function wp_clear_scheduled_hook;
-
 define('SSC_VERSION','10.0.7');
 define('SSC_PLUGIN_FILE', __FILE__);
 define('SSC_PLUGIN_DIR', plugin_dir_path(__FILE__));
