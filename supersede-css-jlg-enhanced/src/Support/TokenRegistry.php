@@ -367,7 +367,7 @@ final class TokenRegistry
             $shouldPersistCss = false;
 
             if ($stored !== $normalized) {
-                update_option(self::OPTION_REGISTRY, $normalized, false);
+                self::persistOption(self::OPTION_REGISTRY, $normalized);
                 $shouldPersistCss = true;
             }
 
@@ -389,7 +389,7 @@ final class TokenRegistry
             $result = self::normalizeRegistry($converted);
             $fromCss = $result['tokens'];
             if ($fromCss !== []) {
-                update_option(self::OPTION_REGISTRY, $fromCss, false);
+                self::persistOption(self::OPTION_REGISTRY, $fromCss);
                 self::persistCss($fromCss);
                 return $fromCss;
             }
@@ -397,7 +397,7 @@ final class TokenRegistry
 
         $defaultsResult = self::normalizeRegistry(self::getDefaultRegistry());
         $defaults = $defaultsResult['tokens'];
-        update_option(self::OPTION_REGISTRY, $defaults, false);
+        self::persistOption(self::OPTION_REGISTRY, $defaults);
         self::persistCss($defaults);
 
         return $defaults;
@@ -454,7 +454,7 @@ final class TokenRegistry
 
         $stored = get_option(self::OPTION_REGISTRY, null);
         if (!is_array($stored) || $stored !== $normalized) {
-            update_option(self::OPTION_REGISTRY, $normalized, false);
+            self::persistOption(self::OPTION_REGISTRY, $normalized);
         }
 
         self::persistCss($normalized);
@@ -1204,10 +1204,25 @@ final class TokenRegistry
     private static function persistCss(array $tokens): void
     {
         $css = self::tokensToCss($tokens);
-        update_option(self::OPTION_CSS, $css, false);
+        self::persistOption(self::OPTION_CSS, $css);
 
         if (function_exists('\ssc_invalidate_css_cache')) {
             \ssc_invalidate_css_cache();
+        }
+    }
+
+    /**
+     * @param mixed $value
+     * @global array<string, mixed> $ssc_options_store
+     */
+    private static function persistOption(string $name, $value, bool $autoload = false): void
+    {
+        if (function_exists('update_option')) {
+            update_option($name, $value, $autoload);
+        }
+
+        if (isset($GLOBALS['ssc_options_store']) && is_array($GLOBALS['ssc_options_store'])) {
+            $GLOBALS['ssc_options_store'][$name] = $value;
         }
     }
 
