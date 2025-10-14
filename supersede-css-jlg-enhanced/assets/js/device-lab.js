@@ -235,7 +235,14 @@
             }
 
             try {
-                return new URL(rawUrl.trim(), window.location.origin).toString();
+                const normalizedUrl = new URL(rawUrl.trim(), window.location.origin);
+                const protocol = normalizedUrl.protocol.toLowerCase();
+
+                if (protocol !== 'http:' && protocol !== 'https:') {
+                    return null;
+                }
+
+                return normalizedUrl.toString();
             } catch (error) {
                 return null;
             }
