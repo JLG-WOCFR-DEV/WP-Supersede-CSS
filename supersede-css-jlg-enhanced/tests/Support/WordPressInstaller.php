@@ -210,6 +210,44 @@ final class WordPressInstaller
         return str_starts_with($path, 'phar://');
     }
 
+    /**
+     * @param resource $context
+     */
+    private static function downloadArchive(string $downloadUrl, $context): string
+    {
+        $errorMessage = null;
+
+        set_error_handler(static function (int $severity, string $message) use (&$errorMessage): bool {
+            unset($severity);
+            $errorMessage = $message;
+
+            return true;
+        });
+
+        try {
+            $archive = file_get_contents($downloadUrl, false, $context);
+        } finally {
+            restore_error_handler();
+        }
+
+        if ($archive === false) {
+            $message = sprintf('Unable to download WordPress from %s.', $downloadUrl);
+
+            if (is_string($errorMessage) && $errorMessage !== '') {
+                $cleanError = preg_replace('/^file_get_contents\([^)]*\):\s*/', '', $errorMessage);
+                if (!is_string($cleanError) || $cleanError === '') {
+                    $cleanError = $errorMessage;
+                }
+
+                $message .= ' ' . trim($cleanError);
+            }
+
+            throw new RuntimeException($message);
+        }
+
+        return $archive;
+    }
+
     private static function createTempFile(): string
     {
         $tempFile = tempnam(sys_get_temp_dir(), 'wp-');
