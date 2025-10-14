@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
-use ReflectionProperty;
 use SSC\Admin\Layout;
 
 if (!function_exists('esc_html__')) {
@@ -128,7 +127,7 @@ class LayoutTest extends TestCase
     {
         parent::setUp();
 
-        $property = new ReflectionProperty(Layout::class, 'allowedTagsCache');
+        $property = new \ReflectionProperty(Layout::class, 'allowedTagsCache');
         $property->setAccessible(true);
         $property->setValue(null, null);
     }

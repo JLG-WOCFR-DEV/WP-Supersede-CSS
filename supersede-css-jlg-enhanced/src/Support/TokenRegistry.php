@@ -361,7 +361,7 @@ final class TokenRegistry
      */
     public static function getRegistry(): array
     {
-        $stored = get_option(self::OPTION_REGISTRY, self::REGISTRY_NOT_FOUND);
+        $stored = self::readOption(self::OPTION_REGISTRY, self::REGISTRY_NOT_FOUND);
 
         if ($stored !== self::REGISTRY_NOT_FOUND && is_array($stored)) {
             $result = self::normalizeRegistry($stored);
@@ -391,7 +391,7 @@ final class TokenRegistry
             return $normalized;
         }
 
-        $legacyCss = get_option(self::OPTION_CSS, '');
+        $legacyCss = self::readOption(self::OPTION_CSS, '');
         if (is_string($legacyCss) && trim($legacyCss) !== '') {
             $converted = self::convertCssToRegistry($legacyCss);
             $result = self::normalizeRegistry($converted);
@@ -1274,10 +1274,38 @@ final class TokenRegistry
     private static function persistCss(array $tokens): void
     {
         $css = self::tokensToCss($tokens);
-        update_option(self::OPTION_CSS, $css, false);
+        self::writeOption(self::OPTION_CSS, $css);
 
         if (function_exists('\ssc_invalidate_css_cache')) {
             \ssc_invalidate_css_cache();
+        }
+    }
+
+    /**
+     * @param mixed $default
+     * @return mixed
+     */
+    private static function readOption(string $name, $default = false)
+    {
+        if (isset($GLOBALS['ssc_options_store']) && is_array($GLOBALS['ssc_options_store'])) {
+            return $GLOBALS['ssc_options_store'][$name] ?? $default;
+        }
+
+        return get_option($name, $default);
+    }
+
+    /**
+     * @param mixed $value
+     * @global array<string, mixed> $ssc_options_store
+     */
+    private static function writeOption(string $name, $value): void
+    {
+        if (function_exists('update_option')) {
+            update_option($name, $value, $autoload);
+        }
+
+        if (isset($GLOBALS['ssc_options_store']) && is_array($GLOBALS['ssc_options_store'])) {
+            $GLOBALS['ssc_options_store'][$name] = $value;
         }
     }
 
