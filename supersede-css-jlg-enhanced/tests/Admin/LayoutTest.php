@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
-use ReflectionProperty;
 use SSC\Admin\Layout;
 
 if (!function_exists('esc_html__')) {
