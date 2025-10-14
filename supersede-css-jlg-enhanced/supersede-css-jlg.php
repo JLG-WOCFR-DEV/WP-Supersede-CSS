@@ -12,10 +12,13 @@ if (!defined('ABSPATH')) { exit; }
 
 use SSC\Blocks\TokenPreview;
 use SSC\Infra\Activity\EventRecorder;
+use SSC\Infra\Approvals\ApprovalSlaMonitor;
 use SSC\Infra\Capabilities\CapabilityManager;
 use SSC\Infra\Cli\CssCacheCommand;
 use SSC\Support\CssSanitizer;
 use SSC\Support\PresetLibrary;
+
+use function wp_clear_scheduled_hook;
 
 define('SSC_VERSION','10.0.7');
 define('SSC_PLUGIN_FILE', __FILE__);
@@ -168,6 +171,11 @@ if (!function_exists('ssc_maybe_invalidate_css_cache_on_option_change')) {
 register_activation_hook(__FILE__, static function (): void {
     EventRecorder::install();
     CapabilityManager::grantDefaultCapabilities();
+    ApprovalSlaMonitor::registerSchedule();
+});
+
+register_deactivation_hook(__FILE__, static function (): void {
+    wp_clear_scheduled_hook(ApprovalSlaMonitor::HOOK);
 });
 
 add_action('switch_theme', static function (): void {
@@ -185,6 +193,7 @@ add_action('customize_save_after', static function (): void {
 add_action('plugins_loaded', function(){
     EventRecorder::maybeUpgrade();
     CapabilityManager::grantDefaultCapabilities();
+    ApprovalSlaMonitor::bootstrap();
 
     $cache_meta = get_option('ssc_css_cache_meta', []);
     $cached_version = is_array($cache_meta) && isset($cache_meta['version'])

@@ -52,11 +52,36 @@ class DebugCenter extends AbstractPage
         $canExportTokens = current_user_can(CapabilityManager::getExportCapability());
         $tokenRegistry = TokenRegistry::getRegistry();
         $tokenStatuses = TokenRegistry::getSupportedStatuses();
-        $approvalSlaRules = [
-            'low' => ['hours' => 120],
-            'normal' => ['hours' => 48],
-            'high' => ['hours' => 12],
-        ];
+        $slaRules = TokenApprovalStore::getSlaRules();
+        $approvalSlaRules = [];
+
+        foreach ($slaRules as $priority => $definition) {
+            if (!is_array($definition) || !isset($definition['deadline_hours'])) {
+                continue;
+            }
+
+            $escalations = [];
+
+            if (isset($definition['escalations']) && is_array($definition['escalations'])) {
+                $escalations = array_values(array_filter(array_map(static function ($escalation) {
+                    if (!is_array($escalation)) {
+                        return null;
+                    }
+
+                    return [
+                        'level' => isset($escalation['level']) ? (int) $escalation['level'] : 0,
+                        'after_hours' => isset($escalation['after_hours']) ? (int) $escalation['after_hours'] : 0,
+                    ];
+                }, $definition['escalations']), static function ($escalation): bool {
+                    return is_array($escalation) && $escalation['level'] > 0 && $escalation['after_hours'] > 0;
+                }));
+            }
+
+            $approvalSlaRules[$priority] = [
+                'hours' => (int) $definition['deadline_hours'],
+                'escalations' => $escalations,
+            ];
+        }
 
         if (function_exists('wp_localize_script')) {
             wp_localize_script(
@@ -153,6 +178,7 @@ class DebugCenter extends AbstractPage
                         'approvalsReviewSlaOverdue'      => __('Retard de %s', 'supersede-css-jlg'),
                         'approvalsReviewSlaMet'          => __('Revue clôturée dans les temps.', 'supersede-css-jlg'),
                         'approvalsReviewSlaLate'         => __('Clôturée avec %s de retard.', 'supersede-css-jlg'),
+                        'approvalsReviewSlaEscalated'    => __('Escalade niveau %s', 'supersede-css-jlg'),
                         'approvalsReviewOpenedAgo'       => __('Demande ouverte depuis %s', 'supersede-css-jlg'),
                         'approvalsReviewRequestedAt'     => __('Demande envoyée le %s', 'supersede-css-jlg'),
                         'approvalsReviewDecisionAt'      => __('Décision enregistrée le %s', 'supersede-css-jlg'),

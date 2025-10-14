@@ -98,8 +98,14 @@
     const dateTimeFormatter = (typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat === 'function')
         ? new Intl.DateTimeFormat(browserLocale, { dateStyle: 'medium', timeStyle: 'short' })
         : null;
+    const relativeTimeFormatter = (typeof Intl !== 'undefined' && typeof Intl.RelativeTimeFormat === 'function')
+        ? new Intl.RelativeTimeFormat(browserLocale, { numeric: 'auto' })
+        : null;
     const initialApprovals = Array.isArray(localized.approvals) ? localized.approvals : [];
     const approvalPriorityDefinitions = Array.isArray(localized.approvalPriorities) ? localized.approvalPriorities : [];
+    const approvalSlaRules = localized.approvalSlaRules && typeof localized.approvalSlaRules === 'object'
+        ? localized.approvalSlaRules
+        : {};
     const approvalPriorityMap = Object.create(null);
     const approvalPriorityOptions = [];
     let defaultApprovalPriority = 'normal';
@@ -1505,6 +1511,178 @@
         }
     }
 
+    function formatDuration(seconds) {
+        if (typeof seconds !== 'number' || Number.isNaN(seconds) || seconds <= 0) {
+            return translate('durationLessThanSecond', 'moins d’une seconde');
+        }
+
+        const units = [
+            { limit: 60, divisor: 1, unit: 'second', fallback: 'durationSeconds' },
+            { limit: 3600, divisor: 60, unit: 'minute', fallback: 'durationMinutes' },
+            { limit: 86400, divisor: 3600, unit: 'hour', fallback: 'durationHours' },
+            { limit: Infinity, divisor: 86400, unit: 'day', fallback: 'durationDays' },
+        ];
+
+        for (let i = 0; i < units.length; i += 1) {
+            const { limit, divisor, unit, fallback } = units[i];
+
+            if (seconds < limit) {
+                const value = Math.max(1, Math.round(seconds / divisor));
+
+                if (relativeTimeFormatter) {
+                    try {
+                        return relativeTimeFormatter.format(value, unit);
+                    } catch (err) {
+                        // Continue with fallback below.
+                    }
+                }
+
+                return sprintf(translate(fallback, '%d'), value);
+            }
+        }
+
+        return sprintf(translate('durationDays', '%d'), Math.round(seconds / 86400));
+    }
+
+    function computeApprovalSlaMeta(approval) {
+        if (!approval) {
+            return null;
+        }
+
+        const requestedAtIso = approval.requested_at || '';
+        if (!requestedAtIso) {
+            return null;
+        }
+
+        const requestedAt = new Date(requestedAtIso);
+        if (Number.isNaN(requestedAt.getTime())) {
+            return null;
+        }
+
+        const priority = normalizeApprovalPriority(approval.priority);
+        const sla = approval.sla && typeof approval.sla === 'object' ? approval.sla : null;
+
+        let targetTime = null;
+        let deadlineIso = '';
+
+        if (sla && sla.deadline_at) {
+            const deadline = new Date(sla.deadline_at);
+            if (!Number.isNaN(deadline.getTime())) {
+                targetTime = deadline.getTime();
+                deadlineIso = deadline.toISOString();
+            }
+        }
+
+        if (!targetTime) {
+            const rule = approvalSlaRules[priority];
+            if (!rule || typeof rule.hours !== 'number' || Number.isNaN(rule.hours) || rule.hours <= 0) {
+                return null;
+            }
+
+            targetTime = requestedAt.getTime() + (rule.hours * 60 * 60 * 1000);
+            deadlineIso = new Date(targetTime).toISOString();
+        }
+
+        const status = (approval.status || 'pending').toLowerCase();
+        const now = Date.now();
+
+        let state = 'pending';
+        let diffSeconds = Math.max(1, Math.round(Math.abs(targetTime - now) / 1000));
+        let escalationLevel = 0;
+
+        if (sla && typeof sla.current_level === 'number') {
+            escalationLevel = Math.max(0, Math.floor(sla.current_level));
+        } else if (sla && Array.isArray(sla.escalations)) {
+            sla.escalations.forEach((escalation) => {
+                if (escalation && escalation.notified_at) {
+                    const level = parseInt(escalation.level, 10);
+                    if (!Number.isNaN(level)) {
+                        escalationLevel = Math.max(escalationLevel, level);
+                    }
+                }
+            });
+        }
+
+        if (status === 'pending') {
+            if (sla && sla.breached_at) {
+                const breached = new Date(sla.breached_at);
+                if (!Number.isNaN(breached.getTime())) {
+                    state = 'overdue';
+                    diffSeconds = Math.max(1, Math.round((now - breached.getTime()) / 1000));
+                }
+            }
+
+            if (state !== 'overdue') {
+                diffSeconds = Math.round((targetTime - now) / 1000);
+                if (diffSeconds < 0) {
+                    state = 'overdue';
+                    diffSeconds = Math.abs(diffSeconds);
+                }
+            }
+        } else {
+            const completionIso = (sla && sla.completed_at)
+                || (approval.decision && approval.decision.decided_at)
+                || '';
+            const completion = completionIso ? new Date(completionIso) : null;
+
+            if (completion && !Number.isNaN(completion.getTime())) {
+                const delta = completion.getTime() - targetTime;
+                diffSeconds = Math.max(1, Math.round(Math.abs(delta) / 1000));
+                state = delta <= 0 ? 'fulfilled' : 'fulfilled_late';
+            } else {
+                diffSeconds = Math.max(1, Math.round(Math.abs(targetTime - now) / 1000));
+                state = targetTime < now ? 'overdue' : 'pending';
+            }
+        }
+
+        return {
+            state,
+            diffSeconds,
+            deadlineIso,
+            escalationLevel,
+        };
+    }
+
+    function buildApprovalSlaDisplay(approval) {
+        const meta = computeApprovalSlaMeta(approval);
+        if (!meta) {
+            return null;
+        }
+
+        const targetLabel = formatDateTimeValue(meta.deadlineIso) || meta.deadlineIso;
+        let text = '';
+        let cssClass = '';
+
+        if (meta.state === 'pending') {
+            text = translate('approvalsReviewSlaRemaining', 'Temps restant : %s')
+                .replace('%s', formatDuration(Math.max(1, meta.diffSeconds)));
+        } else if (meta.state === 'overdue') {
+            text = translate('approvalsReviewSlaOverdue', 'Retard de %s')
+                .replace('%s', formatDuration(Math.max(1, meta.diffSeconds)));
+            cssClass = 'is-overdue';
+        } else if (meta.state === 'fulfilled') {
+            text = translate('approvalsReviewSlaMet', 'Revue clôturée dans les temps.');
+            cssClass = 'is-success';
+        } else if (meta.state === 'fulfilled_late') {
+            text = translate('approvalsReviewSlaLate', 'Clôturée avec %s de retard.')
+                .replace('%s', formatDuration(Math.max(1, meta.diffSeconds)));
+            cssClass = 'is-overdue';
+        }
+
+        if (meta.escalationLevel > 0) {
+            const escalationText = translate('approvalsReviewSlaEscalated', 'Escalade niveau %s')
+                .replace('%s', meta.escalationLevel);
+            text = `${escalationText} — ${text}`;
+        }
+
+        return {
+            text,
+            cssClass,
+            meta,
+            title: translate('approvalsReviewSlaTarget', 'Délai cible : %s').replace('%s', targetLabel),
+        };
+    }
+
     function formatApprovalTooltip(approval) {
         if (!approval || typeof approval !== 'object') {
             return '';
@@ -1522,6 +1700,10 @@
         const priorityLabel = getApprovalPriorityLabel(approval.priority);
         if (priorityLabel) {
             pieces.push(`${translate('approvalTooltipPriority', 'Priorité')}: ${priorityLabel}`);
+        }
+        const slaDisplay = buildApprovalSlaDisplay(approval);
+        if (slaDisplay && slaDisplay.text) {
+            pieces.push(`${translate('approvalsReviewSlaLabel', 'SLA')}: ${slaDisplay.text}`);
         }
         return pieces.join('\n');
     }
@@ -1909,6 +2091,25 @@
                     text: approvalPriorityLabel,
                 });
                 metaPrimary.append(approvalPriorityChip);
+            }
+            const slaDisplay = buildApprovalSlaDisplay(approval);
+            if (slaDisplay && slaDisplay.text) {
+                const slaChip = $('<span>', {
+                    class: 'ssc-token-approval-sla',
+                    text: slaDisplay.text,
+                    title: slaDisplay.title,
+                });
+
+                if (slaDisplay.cssClass) {
+                    slaChip.addClass(slaDisplay.cssClass);
+                }
+
+                if (slaDisplay.meta && slaDisplay.meta.escalationLevel > 0) {
+                    slaChip.addClass('is-escalated');
+                    slaChip.attr('data-escalation-level', slaDisplay.meta.escalationLevel);
+                }
+
+                metaPrimary.append(slaChip);
             }
             hasPendingApproval = approvalStatus === 'pending';
         }

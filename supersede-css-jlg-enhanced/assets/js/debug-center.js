@@ -1550,36 +1550,77 @@
             }
 
             const priority = normalizePriorityValue(entry.priority);
-            const rule = approvalsSlaRules[priority];
-            if (!rule || typeof rule.hours !== 'number' || Number.isNaN(rule.hours) || rule.hours <= 0) {
-                return null;
+            const sla = entry.sla && typeof entry.sla === 'object' ? entry.sla : null;
+            let targetTime = null;
+            let deadlineIso = '';
+
+            if (sla && sla.deadline_at) {
+                const deadline = new Date(sla.deadline_at);
+                if (!Number.isNaN(deadline.getTime())) {
+                    targetTime = deadline.getTime();
+                    deadlineIso = deadline.toISOString();
+                }
+            }
+
+            if (!targetTime) {
+                const rule = approvalsSlaRules[priority];
+                if (!rule || typeof rule.hours !== 'number' || Number.isNaN(rule.hours) || rule.hours <= 0) {
+                    return null;
+                }
+                targetTime = requestedAt.getTime() + (rule.hours * 60 * 60 * 1000);
+                deadlineIso = new Date(targetTime).toISOString();
             }
 
             const status = (entry.status || 'pending').toLowerCase();
-            const targetTime = requestedAt.getTime() + (rule.hours * 60 * 60 * 1000);
             const now = Date.now();
 
             let state = 'pending';
-            let diffSeconds;
+            let diffSeconds = Math.max(1, Math.round(Math.abs(targetTime - now) / 1000));
             let decisionAtTime = null;
+            let escalationLevel = 0;
+
+            if (sla && typeof sla.current_level === 'number') {
+                escalationLevel = Math.max(0, Math.floor(sla.current_level));
+            } else if (sla && Array.isArray(sla.escalations)) {
+                sla.escalations.forEach((escalation) => {
+                    if (escalation && escalation.notified_at) {
+                        const level = parseInt(escalation.level, 10);
+                        if (!Number.isNaN(level)) {
+                            escalationLevel = Math.max(escalationLevel, level);
+                        }
+                    }
+                });
+            }
 
             if (status === 'pending') {
-                diffSeconds = Math.round((targetTime - now) / 1000);
-                if (diffSeconds < 0) {
-                    state = 'overdue';
-                    diffSeconds = Math.abs(diffSeconds);
+                if (sla && sla.breached_at) {
+                    const breached = new Date(sla.breached_at);
+                    if (!Number.isNaN(breached.getTime())) {
+                        state = 'overdue';
+                        diffSeconds = Math.max(1, Math.round((now - breached.getTime()) / 1000));
+                    }
+                }
+
+                if (state !== 'overdue') {
+                    diffSeconds = Math.round((targetTime - now) / 1000);
+                    if (diffSeconds < 0) {
+                        state = 'overdue';
+                        diffSeconds = Math.abs(diffSeconds);
+                    }
                 }
             } else {
-                const decisionAtIso = entry.decision && entry.decision.decided_at ? entry.decision.decided_at : '';
-                const decisionAt = decisionAtIso ? new Date(decisionAtIso) : null;
+                const completionIso = (sla && sla.completed_at)
+                    || (entry.decision && entry.decision.decided_at)
+                    || '';
+                const completion = completionIso ? new Date(completionIso) : null;
 
-                if (decisionAt && !Number.isNaN(decisionAt.getTime())) {
-                    decisionAtTime = decisionAt.getTime();
+                if (completion && !Number.isNaN(completion.getTime())) {
+                    decisionAtTime = completion.getTime();
                     const delta = decisionAtTime - targetTime;
-                    diffSeconds = Math.round(Math.abs(delta) / 1000);
+                    diffSeconds = Math.max(1, Math.round(Math.abs(delta) / 1000));
                     state = delta <= 0 ? 'fulfilled' : 'fulfilled_late';
                 } else {
-                    diffSeconds = Math.round(Math.abs(targetTime - now) / 1000);
+                    diffSeconds = Math.max(1, Math.round(Math.abs(targetTime - now) / 1000));
                     state = targetTime < now ? 'overdue' : 'pending';
                 }
             }
@@ -1591,6 +1632,8 @@
                 targetTime,
                 requestedAt: requestedAt.getTime(),
                 decisionAt: decisionAtTime,
+                escalationLevel,
+                deadlineIso,
             };
         }
 
@@ -1600,7 +1643,7 @@
                 return null;
             }
 
-            const targetIso = new Date(meta.targetTime).toISOString();
+            const targetIso = meta.deadlineIso || new Date(meta.targetTime).toISOString();
             const targetLabel = formatDateTime(targetIso) || targetIso;
 
             let text = '';
@@ -1637,6 +1680,7 @@
 
             const slaDisplay = buildSlaDisplay(entry);
             const slaElement = row.find('.ssc-approval-sla');
+            const escalationElement = row.find('.ssc-approval-escalation');
 
             if (!slaElement.length) {
                 return;
@@ -1645,6 +1689,9 @@
             if (!slaDisplay || !slaDisplay.text) {
                 slaElement.attr('hidden', 'hidden').text('');
                 row.removeClass('ssc-approvals-row--overdue');
+                if (escalationElement.length) {
+                    escalationElement.attr('hidden', 'hidden').text('').removeClass('is-critical');
+                }
                 return;
             }
 
@@ -1654,6 +1701,25 @@
             slaElement.removeClass('is-overdue is-success');
             if (slaDisplay.cssClass) {
                 slaElement.addClass(slaDisplay.cssClass);
+            }
+
+            if (escalationElement.length) {
+                const level = slaDisplay.meta && slaDisplay.meta.escalationLevel
+                    ? parseInt(slaDisplay.meta.escalationLevel, 10)
+                    : 0;
+                if (level > 0) {
+                    escalationElement.text(
+                        translate('approvalsReviewSlaEscalated', 'Escalade niveau %s').replace('%s', level)
+                    );
+                    escalationElement.removeAttr('hidden');
+                    if (slaDisplay.meta && (slaDisplay.meta.state === 'overdue' || level >= 2)) {
+                        escalationElement.addClass('is-critical');
+                    } else {
+                        escalationElement.removeClass('is-critical');
+                    }
+                } else {
+                    escalationElement.attr('hidden', 'hidden').text('').removeClass('is-critical');
+                }
             }
 
             if (slaDisplay.meta && (slaDisplay.meta.state === 'overdue' || slaDisplay.meta.state === 'fulfilled_late')) {
