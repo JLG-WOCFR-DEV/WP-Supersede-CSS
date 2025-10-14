@@ -627,6 +627,7 @@ $format_datetime = static function (string $iso): string {
                                     <span class="ssc-approval-priority <?php echo esc_attr($priority_class); ?>">
                                         <?php echo esc_html($priority_label); ?>
                                     </span>
+                                    <span class="ssc-approval-escalation" hidden></span>
                                     <p class="ssc-approval-sla" hidden></p>
                                 </div>
                             </td>

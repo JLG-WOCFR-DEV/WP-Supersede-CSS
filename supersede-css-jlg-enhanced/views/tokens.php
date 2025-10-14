@@ -17,6 +17,42 @@ $approval_priorities = isset($approval_priorities) && is_array($approval_priorit
     ? $approval_priorities
     : \SSC\Infra\Approvals\TokenApprovalStore::getSupportedPriorities();
 
+$approval_sla_rules = [];
+$raw_sla_rules = \SSC\Infra\Approvals\TokenApprovalStore::getSlaRules();
+
+foreach ($raw_sla_rules as $priority_value => $rule) {
+    if (!is_array($rule) || !isset($rule['deadline_hours'])) {
+        continue;
+    }
+
+    $escalations = [];
+
+    if (isset($rule['escalations']) && is_array($rule['escalations'])) {
+        foreach ($rule['escalations'] as $escalation) {
+            if (!is_array($escalation)) {
+                continue;
+            }
+
+            $level = isset($escalation['level']) ? (int) $escalation['level'] : 0;
+            $after = isset($escalation['after_hours']) ? (int) $escalation['after_hours'] : 0;
+
+            if ($level <= 0 || $after <= 0) {
+                continue;
+            }
+
+            $escalations[] = [
+                'level' => $level,
+                'after_hours' => $after,
+            ];
+        }
+    }
+
+    $approval_sla_rules[$priority_value] = [
+        'hours' => (int) $rule['deadline_hours'],
+        'escalations' => $escalations,
+    ];
+}
+
 if (function_exists('wp_localize_script')) {
     $localized_types = [];
     foreach ($token_types as $type_key => $meta) {
@@ -53,6 +89,7 @@ if (function_exists('wp_localize_script')) {
         'statuses' => $token_statuses,
         'approvals' => $token_approvals,
         'approvalPriorities' => $approval_priorities,
+        'approvalSlaRules' => $approval_sla_rules,
         'collaborators' => $collaborators,
         'permissions' => [
             'canEdit' => $can_manage_tokens,
@@ -148,6 +185,13 @@ if (function_exists('wp_localize_script')) {
             'approvalPriorityNormal' => __('Normale', 'supersede-css-jlg'),
             'approvalPriorityHigh' => __('Haute', 'supersede-css-jlg'),
             'approvalPriorityUnknown' => __('Priorité inconnue', 'supersede-css-jlg'),
+            'approvalsReviewSlaLabel' => __('SLA', 'supersede-css-jlg'),
+            'approvalsReviewSlaTarget' => __('Délai cible : %s', 'supersede-css-jlg'),
+            'approvalsReviewSlaRemaining' => __('Temps restant : %s', 'supersede-css-jlg'),
+            'approvalsReviewSlaOverdue' => __('Retard de %s', 'supersede-css-jlg'),
+            'approvalsReviewSlaMet' => __('Revue clôturée dans les temps.', 'supersede-css-jlg'),
+            'approvalsReviewSlaLate' => __('Clôturée avec %s de retard.', 'supersede-css-jlg'),
+            'approvalsReviewSlaEscalated' => __('Escalade niveau %s', 'supersede-css-jlg'),
             'commentsPanelTitle' => __('Commentaires', 'supersede-css-jlg'),
             'commentsEmpty' => __('Aucun commentaire pour ce token pour le moment.', 'supersede-css-jlg'),
             'commentsPlaceholder' => __('Ajouter un commentaire…', 'supersede-css-jlg'),
@@ -165,6 +209,11 @@ if (function_exists('wp_localize_script')) {
             'readModeActivated' => __('Mode lecture activé — modifications désactivées.', 'supersede-css-jlg'),
             'readModeDeactivated' => __('Mode lecture désactivé.', 'supersede-css-jlg'),
             'readModeBadge' => __('Lecture seule', 'supersede-css-jlg'),
+            'durationLessThanSecond' => __('moins d’une seconde', 'supersede-css-jlg'),
+            'durationSeconds' => __('%d seconde(s)', 'supersede-css-jlg'),
+            'durationMinutes' => __('%d minute(s)', 'supersede-css-jlg'),
+            'durationHours' => __('%d heure(s)', 'supersede-css-jlg'),
+            'durationDays' => __('%d jour(s)', 'supersede-css-jlg'),
         ],
     ]);
 }

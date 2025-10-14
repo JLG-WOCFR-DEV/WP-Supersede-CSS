@@ -269,6 +269,34 @@
     color: color-mix(in srgb, #b91c1c 65%, var(--ssc-text) 35%);
 }
 
+.ssc-token-approval-sla {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    line-height: 1.2;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, #eff6ff 60%, transparent);
+    color: color-mix(in srgb, #1d4ed8 60%, var(--ssc-text) 40%);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.ssc-token-approval-sla.is-overdue {
+    background: color-mix(in srgb, #fee2e2 60%, transparent);
+    color: color-mix(in srgb, #b91c1c 65%, var(--ssc-text) 35%);
+}
+
+.ssc-token-approval-sla.is-success {
+    background: color-mix(in srgb, #dcfce7 55%, transparent);
+    color: color-mix(in srgb, #15803d 70%, var(--ssc-text) 30%);
+}
+
+.ssc-token-approval-sla.is-escalated {
+    box-shadow: 0 0 0 1px color-mix(in srgb, #f97316 55%, transparent);
+}
+
 .token-request-approval.is-busy,
 .ssc-token-row__meta-actions .token-request-approval[disabled] {
     pointer-events: none;
