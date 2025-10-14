@@ -17,6 +17,7 @@ use SSC\Infra\Capabilities\CapabilityManager;
 use SSC\Infra\Cli\CssCacheCommand;
 use SSC\Support\CssSanitizer;
 use SSC\Support\PresetLibrary;
+use SSC\Support\TokenRegistry;
 
 use function wp_clear_scheduled_hook;
 
@@ -155,6 +156,10 @@ if (!function_exists('ssc_maybe_invalidate_css_cache_on_option_change')) {
         ];
 
         if (!in_array($option, $watched, true)) {
+            return;
+        }
+
+        if (class_exists(TokenRegistry::class) && TokenRegistry::isOptionPersistenceInProgress()) {
             return;
         }
 
