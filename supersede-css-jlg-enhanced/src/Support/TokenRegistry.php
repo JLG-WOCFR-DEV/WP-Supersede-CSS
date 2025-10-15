@@ -1274,10 +1274,26 @@ final class TokenRegistry
     private static function persistCss(array $tokens): void
     {
         $css = self::tokensToCss($tokens);
-        self::writeOption(self::OPTION_CSS, $css);
+        $existingCss = self::readOption(self::OPTION_CSS, null);
 
+        if (is_string($existingCss) && $existingCss === $css) {
+            return;
+        }
+
+        self::writeOption(self::OPTION_CSS, $css);
+        self::invalidateCssCache();
+    }
+
+    private static function invalidateCssCache(): void
+    {
         if (function_exists('\ssc_invalidate_css_cache')) {
             \ssc_invalidate_css_cache();
+
+            return;
+        }
+
+        if (function_exists('\do_action')) {
+            \do_action('ssc_css_cache_invalidated');
         }
     }
 
