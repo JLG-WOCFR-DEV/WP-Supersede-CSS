@@ -84,6 +84,31 @@
     --ssc-radius-pill: 999px;
     --ssc-shadow-soft: 0 24px 55px rgba(45, 32, 89, 0.12);
     --ssc-shadow-elevated: 0 30px 70px rgba(45, 32, 89, 0.18);
+
+    /* Button tokens */
+    --ssc-button-height: 2.75rem;
+    --ssc-button-radius: var(--ssc-radius-pill);
+    --ssc-button-padding-x: 1.2rem;
+    --ssc-button-padding-y: 0.55rem;
+    --ssc-button-gap: var(--ssc-space-2xs);
+    --ssc-button-font-weight: var(--ssc-font-weight-medium);
+    --ssc-button-letter-spacing: 0.02em;
+
+    --ssc-button-primary-bg: var(--ssc-accent);
+    --ssc-button-primary-bg-hover: var(--ssc-accent-hover);
+    --ssc-button-primary-bg-active: var(--ssc-accent-active);
+    --ssc-button-primary-color: var(--ssc-text-contrast);
+    --ssc-button-primary-shadow: 0 10px 30px rgba(94, 82, 175, 0.32);
+
+    --ssc-button-secondary-bg: color-mix(in srgb, var(--ssc-card) 88%, var(--ssc-surface-muted) 12%);
+    --ssc-button-secondary-bg-hover: color-mix(in srgb, var(--ssc-card) 70%, var(--ssc-surface-muted) 30%);
+    --ssc-button-secondary-bg-active: color-mix(in srgb, var(--ssc-card) 55%, var(--ssc-surface-muted) 45%);
+    --ssc-button-secondary-border: color-mix(in srgb, var(--ssc-border) 65%, transparent 35%);
+    --ssc-button-secondary-color: var(--ssc-text);
+
+    --ssc-button-tertiary-color: var(--ssc-muted);
+    --ssc-button-tertiary-color-hover: var(--ssc-text);
+    --ssc-button-tertiary-underline: color-mix(in srgb, var(--ssc-muted) 70%, transparent 30%);
 }
 
 .ssc-dark:root,
@@ -109,6 +134,22 @@
     --ssc-focus-ring: rgba(177, 166, 255, 0.32);
     --ssc-shadow-soft: 0 24px 55px rgba(8, 6, 16, 0.65);
     --ssc-shadow-elevated: 0 34px 80px rgba(12, 9, 24, 0.7);
+
+    --ssc-button-primary-bg: #c2b8ff;
+    --ssc-button-primary-bg-hover: #d3cbff;
+    --ssc-button-primary-bg-active: #ebe6ff;
+    --ssc-button-primary-color: #150d24;
+    --ssc-button-primary-shadow: 0 14px 42px rgba(30, 20, 63, 0.65);
+
+    --ssc-button-secondary-bg: color-mix(in srgb, #1f1833 80%, rgba(255, 255, 255, 0.06) 20%);
+    --ssc-button-secondary-bg-hover: color-mix(in srgb, #241c3b 75%, rgba(255, 255, 255, 0.08) 25%);
+    --ssc-button-secondary-bg-active: color-mix(in srgb, #2a2046 65%, rgba(255, 255, 255, 0.12) 35%);
+    --ssc-button-secondary-border: rgba(255, 255, 255, 0.08);
+    --ssc-button-secondary-color: var(--ssc-text);
+
+    --ssc-button-tertiary-color: rgba(237, 233, 255, 0.72);
+    --ssc-button-tertiary-color-hover: var(--ssc-text);
+    --ssc-button-tertiary-underline: rgba(237, 233, 255, 0.35);
 }
 
 /* Surface primitives ----------------------------------------------------- */

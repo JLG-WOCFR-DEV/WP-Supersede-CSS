@@ -541,8 +541,8 @@
 
         function generateBackgroundCSS() {
             const type = $('#ssc-bg-type').val();
-            $('#ssc-bg-controls-stars').toggle(type === 'stars');
-            $('#ssc-bg-controls-gradient').toggle(type === 'gradient');
+            $('#ssc-bg-controls-stars').toggleClass('ssc-hidden', type !== 'stars');
+            $('#ssc-bg-controls-gradient').toggleClass('ssc-hidden', type !== 'gradient');
             let css = '';
             const preview = $('#ssc-bg-preview');
             preview.empty().removeAttr('style').css('animation', '').removeClass('ssc-bg-stars ssc-bg-gradient');

@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
     </div>
 
     <div id="ssc-ve-panel-crt" class="ssc-ve-panel" role="tabpanel" aria-labelledby="ssc-ve-tab-crt" tabindex="0" hidden>
-        <div class="ssc-two" style="align-items: flex-start;">
+        <div class="ssc-two ssc-two--align-start">
             <div class="ssc-pane">
                 <h3><?php esc_html_e('Paramètres de l\'effet CRT', 'supersede-css-jlg'); ?></h3>
                 <p class="description"><?php esc_html_e('Cet effet est purement décoratif et ne génère pas de CSS à exporter.', 'supersede-css-jlg'); ?></p>
@@ -49,30 +49,30 @@ if (!defined('ABSPATH')) {
     </div>
 
     <div id="ssc-ve-panel-ecg" class="ssc-ve-panel" role="tabpanel" aria-labelledby="ssc-ve-tab-ecg" tabindex="0" hidden>
-         <div class="ssc-two" style="align-items: flex-start;">
+         <div class="ssc-two ssc-two--align-start">
             <div class="ssc-pane">
                 <h3><?php esc_html_e('Paramètres de l\'ECG', 'supersede-css-jlg'); ?></h3>
-                <label for="ssc-ecg-preset"><strong><?php esc_html_e('Preset de rythme', 'supersede-css-jlg'); ?></strong></label>
+                <label for="ssc-ecg-preset" class="ssc-form-label"><?php esc_html_e('Preset de rythme', 'supersede-css-jlg'); ?></label>
                 <select id="ssc-ecg-preset" class="regular-text"><option value="stable"><?php esc_html_e('Stable', 'supersede-css-jlg'); ?></option><option value="fast"><?php esc_html_e('Rapide', 'supersede-css-jlg'); ?></option><option value="critical"><?php esc_html_e('Critique', 'supersede-css-jlg'); ?></option></select>
-                <label for="ssc-ecg-color" style="margin-top:16px;"><strong><?php esc_html_e('Couleur de la ligne', 'supersede-css-jlg'); ?></strong></label>
+                <label for="ssc-ecg-color" class="ssc-form-label ssc-mt-200"><?php esc_html_e('Couleur de la ligne', 'supersede-css-jlg'); ?></label>
                 <input type="color" id="ssc-ecg-color" value="#00ff00">
-                <label for="ssc-ecg-top" style="margin-top:16px;"><strong><?php esc_html_e('Positionnement (top)', 'supersede-css-jlg'); ?></strong></label>
+                <label for="ssc-ecg-top" class="ssc-form-label ssc-mt-200"><?php esc_html_e('Positionnement (top)', 'supersede-css-jlg'); ?></label>
                 <input type="range" id="ssc-ecg-top" min="0" max="100" value="50" step="1"><span id="ssc-ecg-top-val"><?php echo esc_html__('50%', 'supersede-css-jlg'); ?></span>
-                <label for="ssc-ecg-z-index" style="margin-top:16px;"><strong><?php esc_html_e('Superposition (z-index)', 'supersede-css-jlg'); ?></strong></label>
+                <label for="ssc-ecg-z-index" class="ssc-form-label ssc-mt-200"><?php esc_html_e('Superposition (z-index)', 'supersede-css-jlg'); ?></label>
                 <input type="range" id="ssc-ecg-z-index" min="-10" max="10" value="1" step="1"><span id="ssc-ecg-z-index-val"><?php echo esc_html__('1', 'supersede-css-jlg'); ?></span>
                 <hr>
-                <label for="ssc-ecg-upload-btn"><strong><?php esc_html_e('Logo/Image au centre', 'supersede-css-jlg'); ?></strong></label>
+                <label for="ssc-ecg-upload-btn" class="ssc-form-label"><?php esc_html_e('Logo/Image au centre', 'supersede-css-jlg'); ?></label>
                 <button id="ssc-ecg-upload-btn" class="button"><?php esc_html_e('Choisir une image', 'supersede-css-jlg'); ?></button>
-                <label for="ssc-ecg-logo-size" style="margin-top:16px;"><strong><?php esc_html_e('Taille du logo', 'supersede-css-jlg'); ?></strong></label>
+                <label for="ssc-ecg-logo-size" class="ssc-form-label ssc-mt-200"><?php esc_html_e('Taille du logo', 'supersede-css-jlg'); ?></label>
                 <input type="range" id="ssc-ecg-logo-size" min="20" max="200" value="100" step="1"><span id="ssc-ecg-logo-size-val"><?php echo esc_html__('100px', 'supersede-css-jlg'); ?></span>
                 <hr>
-                <pre id="ssc-ecg-css" class="ssc-code ssc-code-small" style="margin-top:16px;"></pre>
-                <button id="ssc-ecg-apply" class="button button-primary" style="margin-top:8px;"><?php esc_html_e('Appliquer l\'Effet', 'supersede-css-jlg'); ?></button>
+                <pre id="ssc-ecg-css" class="ssc-code ssc-code-small ssc-mt-200"></pre>
+                <button id="ssc-ecg-apply" class="button button-primary ssc-mt-100"><?php esc_html_e('Appliquer l\'Effet', 'supersede-css-jlg'); ?></button>
             </div>
             <div class="ssc-pane">
                 <h3><?php esc_html_e('Aperçu', 'supersede-css-jlg'); ?></h3>
                 <div id="ssc-ecg-preview-container" class="ssc-ve-preview-box">
-                    <img id="ssc-ecg-logo-preview" src="" alt="<?php echo esc_attr__('Logo Preview', 'supersede-css-jlg'); ?>" style="display:none;">
+                    <img id="ssc-ecg-logo-preview" src="" alt="<?php echo esc_attr__('Logo Preview', 'supersede-css-jlg'); ?>">
                     <svg id="ssc-ecg-preview-svg" viewBox="0 0 400 60" preserveAspectRatio="none"><path id="ssc-ecg-preview-path" class="ssc-ecg-path" d="M0,30 L100,30 L110,18 L120,42 L130,26 L140,30 L240,30 L250,20 L260,40 L270,28 L280,30 L400,30"/></svg>
                 </div>
             </div>
@@ -80,13 +80,13 @@ if (!defined('ABSPATH')) {
     </div>
 
     <div id="ssc-ve-panel-backgrounds" class="ssc-ve-panel active" role="tabpanel" aria-labelledby="ssc-ve-tab-backgrounds" tabindex="0">
-         <div class="ssc-two" style="align-items: flex-start;">
+         <div class="ssc-two ssc-two--align-start">
             <div class="ssc-pane">
                 <h3><?php esc_html_e('Paramètres du Fond', 'supersede-css-jlg'); ?></h3>
                 <label for="ssc-bg-type" class="screen-reader-text"><?php esc_html_e('Type de fond', 'supersede-css-jlg'); ?></label>
                 <select id="ssc-bg-type" class="regular-text"><option value="stars"><?php esc_html_e('Étoiles', 'supersede-css-jlg'); ?></option><option value="gradient"><?php esc_html_e('Dégradé', 'supersede-css-jlg'); ?></option></select>
                 <div id="ssc-bg-controls-stars"><label for="starColor"><?php esc_html_e('Couleur', 'supersede-css-jlg'); ?></label><input type="color" id="starColor" value="#FFFFFF"><label for="starCount"><?php esc_html_e('Nombre', 'supersede-css-jlg'); ?></label><input type="range" id="starCount" min="50" max="500" value="200" step="10"></div>
-                <div id="ssc-bg-controls-gradient" style="display:none;">
+                <div id="ssc-bg-controls-gradient" class="ssc-ve-gradient-controls ssc-hidden">
                     <div class="ssc-gradient-angle">
                         <label for="gradientAngle"><?php esc_html_e('Angle du dégradé', 'supersede-css-jlg'); ?></label>
                         <input type="number" id="gradientAngle" min="0" max="360" step="1" value="135" class="small-text">°
@@ -98,36 +98,36 @@ if (!defined('ABSPATH')) {
                         </div>
                         <div id="ssc-gradient-stops-list" class="ssc-gradient-stops" role="list"></div>
                         <p class="description"><?php esc_html_e('Chaque arrêt doit avoir une position entre 0% et 100%. Un minimum de deux arrêts est requis.', 'supersede-css-jlg'); ?></p>
-                        <div id="ssc-gradient-errors" class="notice notice-error" style="display:none;"></div>
+                        <div id="ssc-gradient-errors" class="notice notice-error ssc-ve-gradient-errors"></div>
                     </div>
                     <label for="gradientSpeed"><?php esc_html_e('Vitesse', 'supersede-css-jlg'); ?></label>
                     <input type="range" id="gradientSpeed" min="2" max="20" value="10" step="1">
                 </div>
-                <label for="ssc-bg-preset-name" style="margin-top:16px;"><strong><?php esc_html_e('Nom du preset', 'supersede-css-jlg'); ?></strong></label>
-                <div class="ssc-ve-preset-save" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                    <input type="text" id="ssc-bg-preset-name" class="regular-text" placeholder="<?php echo esc_attr__('Nom du preset…', 'supersede-css-jlg'); ?>" style="flex:1 1 220px;">
+                <label for="ssc-bg-preset-name" class="ssc-form-label ssc-mt-200"><?php esc_html_e('Nom du preset', 'supersede-css-jlg'); ?></label>
+                <div class="ssc-ve-preset-save">
+                    <input type="text" id="ssc-bg-preset-name" class="regular-text ssc-ve-preset-save__input" placeholder="<?php echo esc_attr__('Nom du preset…', 'supersede-css-jlg'); ?>">
                     <button type="button" id="ssc-bg-save-preset" class="button button-secondary"><?php esc_html_e('Enregistrer le preset', 'supersede-css-jlg'); ?></button>
                 </div>
-                <div class="ssc-ve-code-actions" style="margin-top:16px; display:flex; gap:8px; align-items:flex-start; flex-wrap:wrap;">
-                    <pre id="ssc-bg-css" class="ssc-code" style="flex:1 1 100%;"></pre>
-                    <button type="button" id="ssc-bg-copy-css" class="button"><?php esc_html_e('Copier le CSS', 'supersede-css-jlg'); ?></button>
+                <div class="ssc-ve-code-actions">
+                    <pre id="ssc-bg-css" class="ssc-code"></pre>
+                    <button type="button" id="ssc-bg-copy-css" class="button button-secondary"><?php esc_html_e('Copier le CSS', 'supersede-css-jlg'); ?></button>
                 </div>
-                <button id="ssc-bg-apply" class="button button-primary" style="margin-top:8px;">
+                <button id="ssc-bg-apply" class="button button-primary ssc-mt-100">
                     <?php esc_html_e('Appliquer', 'supersede-css-jlg'); ?>
                 </button>
-                <div class="ssc-ve-presets-section" style="margin-top:24px;">
+                <div class="ssc-ve-presets-section">
                     <h4><?php esc_html_e('Presets enregistrés', 'supersede-css-jlg'); ?></h4>
-                    <p id="ssc-bg-presets-empty" class="description" style="display:none;">
+                    <p id="ssc-bg-presets-empty" class="description ssc-ve-presets-empty">
                         <?php esc_html_e('Aucun preset enregistré pour le moment.', 'supersede-css-jlg'); ?>
                     </p>
-                    <table class="widefat striped" style="margin-top:12px;">
+                    <table class="widefat striped ssc-ve-presets-table ssc-mt-150">
                         <thead>
                             <tr>
                                 <th scope="col"><?php esc_html_e('Nom', 'supersede-css-jlg'); ?></th>
-                                <th scope="col" style="width:120px;">
+                                <th scope="col" class="ssc-ve-presets-table__col ssc-ve-presets-table__col--small">
                                     <?php esc_html_e('Type', 'supersede-css-jlg'); ?>
                                 </th>
-                                <th scope="col" style="width:220px;">
+                                <th scope="col" class="ssc-ve-presets-table__col ssc-ve-presets-table__col--medium">
                                     <?php esc_html_e('Actions', 'supersede-css-jlg'); ?>
                                 </th>
                             </tr>
