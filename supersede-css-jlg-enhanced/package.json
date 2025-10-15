@@ -10,6 +10,7 @@
     "test:ui:shell": "playwright test tests/ui/shell-accessibility.spec.js"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
     "@playwright/test": "^1.55.1",
     "@wordpress/env": "^10.11.0"
   }
