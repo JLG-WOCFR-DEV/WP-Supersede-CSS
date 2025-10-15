@@ -1127,11 +1127,17 @@
 }
 
 .ssc-visual-debug-legend {
+    margin-top: var(--ssc-space-sm);
+}
+
+.ssc-visual-debug-legend__list {
     display: flex;
     flex-wrap: wrap;
     gap: var(--ssc-space-xs);
-    margin-top: var(--ssc-space-sm);
     align-items: center;
+    margin: 0;
+    padding: 0;
+    list-style: none;
 }
 
 .ssc-visual-debug-legend__item {

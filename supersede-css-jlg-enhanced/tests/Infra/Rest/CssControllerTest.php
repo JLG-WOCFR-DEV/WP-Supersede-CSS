@@ -2,6 +2,7 @@
 
 use SSC\Infra\Import\Sanitizer;
 use SSC\Infra\Rest\CssController;
+use SSC\Support\CssRevisions;
 use SSC\Support\CssSanitizer;
 use SSC\Support\TokenRegistry;
 
@@ -229,5 +230,71 @@ final class CssControllerTest extends WP_UnitTestCase
         $this->assertSame($revisionsBefore, get_option('ssc_css_revisions', []));
         $this->assertSame('cached', get_option('ssc_css_cache'));
         $this->assertSame(['version' => 'legacy'], get_option('ssc_css_cache_meta'));
+    }
+
+    public function test_save_css_rejects_non_string_segments(): void
+    {
+        $request = $this->createRequest([
+            'option_name' => 'ssc_active_css',
+            'css_desktop' => ['invalid'],
+        ]);
+
+        $response = $this->controller->saveCss($request);
+
+        $this->assertInstanceOf(WP_REST_Response::class, $response);
+        $this->assertSame(400, $response->get_status());
+        $data = $response->get_data();
+        $this->assertIsArray($data);
+        $this->assertArrayHasKey('ok', $data);
+        $this->assertFalse($data['ok']);
+        $this->assertSame(
+            __('Invalid CSS segment.', 'supersede-css-jlg'),
+            $data['message']
+        );
+    }
+
+    public function test_restore_css_revision_returns_not_found_for_unknown_id(): void
+    {
+        $request = new WP_REST_Request('POST', '/ssc/v1/css-revisions/missing/restore');
+        $request->set_param('revision', 'missing');
+
+        $response = $this->controller->restoreCssRevision($request);
+
+        $this->assertInstanceOf(WP_REST_Response::class, $response);
+        $this->assertSame(404, $response->get_status());
+        $data = $response->get_data();
+        $this->assertIsArray($data);
+        $this->assertFalse($data['ok']);
+        $this->assertSame(
+            __('Revision not found.', 'supersede-css-jlg'),
+            $data['message']
+        );
+    }
+
+    public function test_restore_css_revision_reports_token_conflicts(): void
+    {
+        $duplicateCss = ":root {\n    --duplicate: 10px;\n}\n:root {\n    --duplicate: 12px;\n}";
+        CssRevisions::record('ssc_tokens_css', $duplicateCss);
+
+        $revisions = CssRevisions::all();
+        $this->assertNotEmpty($revisions);
+        $revisionId = $revisions[0]['id'];
+
+        $request = new WP_REST_Request(
+            'POST',
+            sprintf('/ssc/v1/css-revisions/%s/restore', $revisionId)
+        );
+        $request->set_param('revision', $revisionId);
+
+        $response = $this->controller->restoreCssRevision($request);
+
+        $this->assertInstanceOf(WP_Error::class, $response);
+        $this->assertSame('ssc_tokens_conflict', $response->get_error_code());
+        $data = $response->get_error_data();
+        $this->assertIsArray($data);
+        $this->assertSame(409, $data['status']);
+        $this->assertArrayHasKey('duplicates', $data);
+        $this->assertNotEmpty($data['duplicates']);
+        $this->assertSame($revisionId, $data['revision']);
     }
 }
