@@ -1278,6 +1278,12 @@ final class TokenRegistry
     private static function persistCss(array $tokens): void
     {
         $css = self::tokensToCss($tokens);
+        $existingCss = self::readOption(self::OPTION_CSS, null);
+
+        if (is_string($existingCss) && $existingCss === $css) {
+            return;
+        }
+
         self::writeOption(self::OPTION_CSS, $css);
         self::invalidateCssCache();
     }
