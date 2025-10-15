@@ -96,13 +96,14 @@ final class WordPressInstaller
             ],
         ]);
 
-        $handler = static function (int $severity, string $message, string $file = '', int $line = 0) use ($downloadUrl): bool {
-            unset($severity, $file, $line);
+        $downloadError = null;
+        set_error_handler(static function (int $severity, string $message) use (&$downloadError): bool {
+            if ($downloadError === null) {
+                $downloadError = $message;
+            }
 
-            throw new RuntimeException(sprintf('Unable to download WordPress from %s: %s', $downloadUrl, $message));
-        };
-
-        set_error_handler($handler);
+            return true;
+        });
 
         try {
             $archive = file_get_contents($downloadUrl, false, $context);
@@ -111,6 +112,14 @@ final class WordPressInstaller
         }
 
         if ($archive === false) {
+            if ($downloadError !== null) {
+                throw new RuntimeException(sprintf(
+                    'Unable to download WordPress from %s: %s',
+                    $downloadUrl,
+                    $downloadError
+                ));
+            }
+
             throw new RuntimeException(sprintf('Unable to download WordPress from %s.', $downloadUrl));
         }
 
