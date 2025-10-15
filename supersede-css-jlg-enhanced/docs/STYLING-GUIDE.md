@@ -12,6 +12,7 @@ Tous les tokens de base sont définis dans `foundation.css` au niveau de `:root`
 - **Typographie** (famille, graisses, échelles `--ssc-font-size-xs` → `--ssc-font-size-2xl`)
 - **Espacements** (`--ssc-space-050` → `--ssc-space-500`)
 - **Rayons & ombres**
+- **Boutons** (`--ssc-button-primary-bg`, `--ssc-button-secondary-bg`, `--ssc-button-height`, etc.)
 
 Pour garantir la compatibilité avec les anciens écrans, des alias ont été ajoutés :
 
@@ -62,4 +63,4 @@ En cas de doute, consultez `foundation.css` : chaque section est commentée et l
 
 - 🛠️ Mettre en place Stylelint + plugin `stylelint-declaration-strict-value` pour forcer l’usage des tokens.
 - 📚 Documenter les patterns dans Storybook (cartes, formulaires, toasts) et lier les snippets CSS.
-- 🧹 Migrer les derniers styles inline des vues `animation-studio.php`, `grid-editor.php` et `preset-designer.php` vers `assets/css/`.
+- 🧹 Migrer les derniers styles inline des vues `animation-studio.php`, `grid-editor.php` et `preset-designer.php` vers `assets/css/` (**en cours** : `visual-effects.php`, `scope-builder.php`, `preset-designer.php` et `tron-grid.php` sont désormais adossés aux tokens).
