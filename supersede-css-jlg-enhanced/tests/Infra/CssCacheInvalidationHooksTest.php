@@ -25,6 +25,18 @@ final class CssCacheInvalidationHooksTest extends WP_UnitTestCase
         update_option('ssc_css_cache_meta', ['version' => '1'], false);
     }
 
+    private function assertCacheMeta(array $expected): void
+    {
+        $meta = get_option('ssc_css_cache_meta');
+
+        $this->assertIsArray($meta);
+
+        foreach ($expected as $key => $value) {
+            $this->assertArrayHasKey($key, $meta);
+            $this->assertSame($value, $meta[$key]);
+        }
+    }
+
     public function test_cache_is_invalidated_when_managed_option_is_updated(): void
     {
         $this->primeCache();
@@ -32,7 +44,13 @@ final class CssCacheInvalidationHooksTest extends WP_UnitTestCase
         update_option('ssc_active_css', 'body {color:red;}', false);
 
         $this->assertFalse(get_option('ssc_css_cache'));
-        $this->assertFalse(get_option('ssc_css_cache_meta'));
+        $this->assertCacheMeta([
+            'version' => null,
+            'status' => 'stale',
+        ]);
+        $meta = get_option('ssc_css_cache_meta');
+        $this->assertArrayHasKey('last_invalidated_at', $meta);
+        $this->assertIsInt($meta['last_invalidated_at']);
     }
 
     public function test_cache_is_not_touched_for_unrelated_options(): void
@@ -53,7 +71,10 @@ final class CssCacheInvalidationHooksTest extends WP_UnitTestCase
         delete_option('ssc_active_css');
 
         $this->assertFalse(get_option('ssc_css_cache'));
-        $this->assertFalse(get_option('ssc_css_cache_meta'));
+        $this->assertCacheMeta([
+            'version' => null,
+            'status' => 'stale',
+        ]);
     }
 
     public function test_cache_is_invalidated_when_theme_switches(): void
@@ -63,7 +84,10 @@ final class CssCacheInvalidationHooksTest extends WP_UnitTestCase
         do_action('switch_theme');
 
         $this->assertFalse(get_option('ssc_css_cache'));
-        $this->assertFalse(get_option('ssc_css_cache_meta'));
+        $this->assertCacheMeta([
+            'version' => null,
+            'status' => 'stale',
+        ]);
     }
 
     public function test_cache_is_invalidated_when_customizer_saves(): void
@@ -73,6 +97,9 @@ final class CssCacheInvalidationHooksTest extends WP_UnitTestCase
         do_action('customize_save_after', null);
 
         $this->assertFalse(get_option('ssc_css_cache'));
-        $this->assertFalse(get_option('ssc_css_cache_meta'));
+        $this->assertCacheMeta([
+            'version' => null,
+            'status' => 'stale',
+        ]);
     }
 }

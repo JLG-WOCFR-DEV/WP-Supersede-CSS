@@ -11,6 +11,7 @@ if (!defined('ABSPATH')) {
 /** @var array<int, array{name: string, value: string, type: string, description: string, group: string, context: string, status: string, owner: int, version: string, changelog: string, linked_components: array<int, string>}> $token_registry */
 /** @var array<int, array{value: string, label: string, description: string}> $token_statuses */
 /** @var array<string, array<string, int>> $approval_sla_rules */
+/** @var array<string, mixed> $css_cache */
 $can_export_tokens = isset($can_export_tokens) ? (bool) $can_export_tokens : false;
 $plugin_version    = $system_info['plugin_version'] ?? __('N/A', 'supersede-css-jlg');
 $wordpress_version = $system_info['wordpress_version'] ?? '';
@@ -202,6 +203,70 @@ $format_datetime = static function (string $iso): string {
 
     return wp_date($format, $timestamp);
 };
+
+$css_cache = isset($css_cache) && is_array($css_cache) ? $css_cache : [];
+$css_cache_has_value = isset($css_cache['has_cache_value']) ? (bool) $css_cache['has_cache_value'] : false;
+$css_cache_status = isset($css_cache['status']) ? (string) $css_cache['status'] : 'stale';
+$css_cache_had_cache_before = isset($css_cache['had_cache_before']) ? (bool) $css_cache['had_cache_before'] : false;
+$css_cache_version = isset($css_cache['version']) && is_string($css_cache['version']) ? $css_cache['version'] : '';
+$css_cache_generation_method = isset($css_cache['generation_method']) && is_string($css_cache['generation_method'])
+    ? $css_cache['generation_method']
+    : (isset($css_cache['last_generation_method']) && is_string($css_cache['last_generation_method'])
+        ? $css_cache['last_generation_method']
+        : 'unknown');
+
+$format_timestamp = static function ($value): string {
+    if (!is_int($value) || $value <= 0) {
+        return '';
+    }
+
+    $format = trim(get_option('date_format', 'Y-m-d') . ' ' . get_option('time_format', 'H:i'));
+
+    return wp_date($format, $value);
+};
+
+$css_cache_generated_at = $format_timestamp($css_cache['generated_at'] ?? null);
+$css_cache_invalidated_at = $format_timestamp($css_cache['last_invalidated_at'] ?? null);
+
+if ($css_cache_version === '' && isset($css_cache['last_version']) && is_string($css_cache['last_version'])) {
+    $css_cache_version = $css_cache['last_version'];
+}
+
+if ($css_cache_status !== 'warm' && $css_cache_has_value) {
+    $css_cache_status = 'warm';
+}
+
+if ($css_cache_status !== 'warm' && !$css_cache_has_value && !$css_cache_had_cache_before) {
+    $css_cache_status = 'idle';
+}
+
+switch ($css_cache_status) {
+    case 'warm':
+        $css_cache_status_label = __('Cache actif', 'supersede-css-jlg');
+        $css_cache_status_tone = 'success';
+        break;
+    case 'idle':
+        $css_cache_status_label = __('Jamais généré', 'supersede-css-jlg');
+        $css_cache_status_tone = 'info';
+        break;
+    default:
+        $css_cache_status_label = __('À régénérer', 'supersede-css-jlg');
+        $css_cache_status_tone = 'warning';
+        break;
+}
+
+$css_cache_origin_label = $css_cache_has_value
+    ? __('Cache persistant (servi sans recalcul)', 'supersede-css-jlg')
+    : __('Recalcul à la volée (cache vide)', 'supersede-css-jlg');
+
+switch ($css_cache_generation_method) {
+    case 'regenerated':
+        $css_cache_generation_label = __('Regénéré par Supersede CSS', 'supersede-css-jlg');
+        break;
+    default:
+        $css_cache_generation_label = __('Méthode de génération inconnue', 'supersede-css-jlg');
+        break;
+}
 ?>
 <div class="ssc-wrap ssc-debug-center">
     <h1><?php echo esc_html__('Supersede CSS — Debug Center', 'supersede-css-jlg'); ?></h1>
@@ -265,6 +330,59 @@ $format_datetime = static function (string $iso): string {
                 </details>
             </div>
         </div>
+        <div class="ssc-pane ssc-cache-pane" data-ssc-debug-label="<?php echo esc_attr__('Cache CSS', 'supersede-css-jlg'); ?>">
+            <h2><?php echo esc_html__('Cache CSS', 'supersede-css-jlg'); ?></h2>
+            <p class="description ssc-description--flush">
+                <?php esc_html_e('Suivez la version CSS actuellement servie et l’état du cache pour investiguer les écarts d’affichage.', 'supersede-css-jlg'); ?>
+            </p>
+            <dl class="ssc-cache-telemetry" role="list">
+                <div class="ssc-cache-telemetry__item" role="listitem">
+                    <dt><?php esc_html_e('Version servie', 'supersede-css-jlg'); ?></dt>
+                    <dd>
+                        <?php if ($css_cache_version !== '') : ?>
+                            <span class="ssc-cache-telemetry__value"><?php echo esc_html($css_cache_version); ?></span>
+                        <?php else : ?>
+                            <span class="ssc-cache-telemetry__value ssc-cache-telemetry__value--muted"><?php esc_html_e('Aucune version disponible', 'supersede-css-jlg'); ?></span>
+                        <?php endif; ?>
+                    </dd>
+                </div>
+                <div class="ssc-cache-telemetry__item" role="listitem">
+                    <dt><?php esc_html_e('Statut du cache', 'supersede-css-jlg'); ?></dt>
+                    <dd>
+                        <span class="ssc-badge ssc-badge--<?php echo esc_attr($css_cache_status_tone); ?>">
+                            <?php echo esc_html($css_cache_status_label); ?>
+                        </span>
+                    </dd>
+                </div>
+                <div class="ssc-cache-telemetry__item" role="listitem">
+                    <dt><?php esc_html_e('Origine actuelle', 'supersede-css-jlg'); ?></dt>
+                    <dd>
+                        <span class="ssc-cache-telemetry__value"><?php echo esc_html($css_cache_origin_label); ?></span>
+                    </dd>
+                </div>
+                <div class="ssc-cache-telemetry__item" role="listitem">
+                    <dt><?php esc_html_e('Dernière génération', 'supersede-css-jlg'); ?></dt>
+                    <dd>
+                        <?php if ($css_cache_generated_at !== '') : ?>
+                            <span class="ssc-cache-telemetry__value"><?php echo esc_html($css_cache_generated_at); ?></span>
+                            <span class="ssc-cache-telemetry__meta"><?php echo esc_html($css_cache_generation_label); ?></span>
+                        <?php else : ?>
+                            <span class="ssc-cache-telemetry__value ssc-cache-telemetry__value--muted"><?php esc_html_e('Jamais généré', 'supersede-css-jlg'); ?></span>
+                        <?php endif; ?>
+                    </dd>
+                </div>
+                <div class="ssc-cache-telemetry__item" role="listitem">
+                    <dt><?php esc_html_e('Dernière invalidation', 'supersede-css-jlg'); ?></dt>
+                    <dd>
+                        <?php if ($css_cache_invalidated_at !== '') : ?>
+                            <span class="ssc-cache-telemetry__value"><?php echo esc_html($css_cache_invalidated_at); ?></span>
+                        <?php else : ?>
+                            <span class="ssc-cache-telemetry__value ssc-cache-telemetry__value--muted"><?php esc_html_e('Aucune invalidation enregistrée', 'supersede-css-jlg'); ?></span>
+                        <?php endif; ?>
+                    </dd>
+                </div>
+            </dl>
+        </div>
     </div>
 
     <div class="ssc-panel ssc-mt-200" id="ssc-visual-debug-panel" data-ssc-debug-label="<?php echo esc_attr__('Débogage visuel', 'supersede-css-jlg'); ?>">
@@ -285,19 +403,37 @@ $format_datetime = static function (string $iso): string {
             <p id="ssc-visual-debug-status" class="description" role="status" aria-live="polite"></p>
         </div>
         <p id="ssc-visual-debug-note" class="description ssc-visual-debug-note" hidden></p>
-        <div class="ssc-visual-debug-legend" aria-hidden="true">
-            <span class="ssc-visual-debug-legend__item">
-                <span class="ssc-visual-debug-legend__swatch ssc-visual-debug-legend__swatch--surface" aria-hidden="true"></span>
-                <?php echo esc_html__('Contours des panneaux', 'supersede-css-jlg'); ?>
-            </span>
-            <span class="ssc-visual-debug-legend__item">
-                <span class="ssc-visual-debug-legend__swatch ssc-visual-debug-legend__swatch--grid" aria-hidden="true"></span>
-                <?php echo esc_html__('Grilles & espacements', 'supersede-css-jlg'); ?>
-            </span>
-            <span class="ssc-visual-debug-legend__item">
-                <span class="ssc-visual-debug-legend__swatch ssc-visual-debug-legend__swatch--focus" aria-hidden="true"></span>
-                <?php echo esc_html__('Points d’interaction', 'supersede-css-jlg'); ?>
-            </span>
+        <div
+            class="ssc-visual-debug-legend"
+            role="group"
+            aria-labelledby="ssc-visual-debug-legend-heading"
+        >
+            <p id="ssc-visual-debug-legend-heading" class="screen-reader-text">
+                <?php echo esc_html__('Légende du débogage visuel', 'supersede-css-jlg'); ?>
+            </p>
+            <ul class="ssc-visual-debug-legend__list">
+                <li class="ssc-visual-debug-legend__item">
+                    <span class="ssc-visual-debug-legend__swatch ssc-visual-debug-legend__swatch--surface" aria-hidden="true"></span>
+                    <div class="ssc-visual-debug-legend__content">
+                        <span class="ssc-visual-debug-legend__label"><?php esc_html_e('Contours des panneaux', 'supersede-css-jlg'); ?></span>
+                        <span class="ssc-visual-debug-legend__description"><?php esc_html_e('Cadre violet semi-transparent autour des blocs interactifs pour localiser les composants éditables.', 'supersede-css-jlg'); ?></span>
+                    </div>
+                </li>
+                <li class="ssc-visual-debug-legend__item">
+                    <span class="ssc-visual-debug-legend__swatch ssc-visual-debug-legend__swatch--grid" aria-hidden="true"></span>
+                    <div class="ssc-visual-debug-legend__content">
+                        <span class="ssc-visual-debug-legend__label"><?php esc_html_e('Grilles & espacements', 'supersede-css-jlg'); ?></span>
+                        <span class="ssc-visual-debug-legend__description"><?php esc_html_e('Quadrillage bleu indiquant les marges, gouttières et alignements pour mesurer l’espacement.', 'supersede-css-jlg'); ?></span>
+                    </div>
+                </li>
+                <li class="ssc-visual-debug-legend__item">
+                    <span class="ssc-visual-debug-legend__swatch ssc-visual-debug-legend__swatch--focus" aria-hidden="true"></span>
+                    <div class="ssc-visual-debug-legend__content">
+                        <span class="ssc-visual-debug-legend__label"><?php esc_html_e('Points d’interaction', 'supersede-css-jlg'); ?></span>
+                        <span class="ssc-visual-debug-legend__description"><?php esc_html_e('Surbrillance orange sur les boutons, liens et zones cliquables pour vérifier les parcours clavier.', 'supersede-css-jlg'); ?></span>
+                    </div>
+                </li>
+            </ul>
         </div>
     </div>
 

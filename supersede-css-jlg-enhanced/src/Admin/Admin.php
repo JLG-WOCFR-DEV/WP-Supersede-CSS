@@ -210,6 +210,12 @@ final class Admin
                 'clipboardSuccess' => esc_html__('Texte copié !', 'supersede-css-jlg'),
                 /* translators: Toast displayed when copying to the clipboard fails. */
                 'clipboardError' => esc_html__('Impossible de copier le texte.', 'supersede-css-jlg'),
+                /* translators: Label announced by assistive tech for the toast notifications history log. */
+                'toastHistoryLabel' => esc_html__('Historique des notifications Supersede CSS', 'supersede-css-jlg'),
+                /* translators: Description for each toast entry in the assistive history log. 1: timestamp, 2: toast message. */
+                'toastHistoryEntry' => esc_html__('Notification enregistrée à %1$s : %2$s', 'supersede-css-jlg'),
+                /* translators: Accessible label for the button that dismisses toast notifications. */
+                'toastDismissLabel' => esc_html__('Dismiss notification', 'supersede-css-jlg'),
             ],
         ]);
     }

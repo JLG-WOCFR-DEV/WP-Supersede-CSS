@@ -69,13 +69,14 @@ if (!function_exists('ssc_get_cached_css')) {
         }
 
         $cache_meta = get_option('ssc_css_cache_meta', []);
-        $cached_version = is_array($cache_meta) && isset($cache_meta['version'])
+        $cache_meta = is_array($cache_meta) ? $cache_meta : [];
+        $cached_version = isset($cache_meta['version']) && is_string($cache_meta['version']) && $cache_meta['version'] !== ''
             ? (string) $cache_meta['version']
             : null;
 
         $cached = get_option('ssc_css_cache', false);
 
-        if ($cached_version !== SSC_VERSION) {
+        if ($cached_version !== null && $cached_version !== SSC_VERSION) {
             ssc_invalidate_css_cache();
             $cached = false;
         }
@@ -85,6 +86,25 @@ if (!function_exists('ssc_get_cached_css')) {
                 'css' => $cached,
                 'version' => SSC_VERSION,
             ];
+
+            $shouldUpdateMeta = false;
+
+            if (!isset($cache_meta['version']) || $cache_meta['version'] !== SSC_VERSION) {
+                $cache_meta['version'] = SSC_VERSION;
+                $shouldUpdateMeta = true;
+            }
+            if (!isset($cache_meta['last_version']) || $cache_meta['last_version'] !== SSC_VERSION) {
+                $cache_meta['last_version'] = SSC_VERSION;
+                $shouldUpdateMeta = true;
+            }
+            if (!isset($cache_meta['status']) || $cache_meta['status'] !== 'warm') {
+                $cache_meta['status'] = 'warm';
+                $shouldUpdateMeta = true;
+            }
+
+            if ($shouldUpdateMeta) {
+                update_option('ssc_css_cache_meta', $cache_meta, false);
+            }
 
             return $cached;
         }
@@ -99,9 +119,22 @@ if (!function_exists('ssc_get_cached_css')) {
         $css_filtered = CssSanitizer::sanitize($css_combined);
 
         update_option('ssc_css_cache', $css_filtered, false);
-        update_option('ssc_css_cache_meta', [
-            'version' => SSC_VERSION,
-        ], false);
+
+        $timestamp = time();
+
+        $meta = $cache_meta;
+        $meta['version'] = SSC_VERSION;
+        $meta['last_version'] = SSC_VERSION;
+        $meta['generated_at'] = $timestamp;
+        $meta['generated_at_gmt'] = gmdate('c', $timestamp);
+        $meta['status'] = 'warm';
+        $meta['generation_method'] = 'regenerated';
+
+        if (isset($meta['last_generation_method'])) {
+            unset($meta['last_generation_method']);
+        }
+
+        update_option('ssc_css_cache_meta', $meta, false);
 
         delete_option('ssc_css_cache_last_had_cache');
 
@@ -116,7 +149,32 @@ if (!function_exists('ssc_invalidate_css_cache')) {
         $hadCache = is_string($cached) && trim($cached) !== '';
 
         delete_option('ssc_css_cache');
-        delete_option('ssc_css_cache_meta');
+
+        $timestamp = time();
+        $meta = get_option('ssc_css_cache_meta', []);
+        $meta = is_array($meta) ? $meta : [];
+
+        $currentVersion = isset($meta['version']) && is_string($meta['version']) && $meta['version'] !== ''
+            ? $meta['version']
+            : null;
+
+        if ($currentVersion !== null) {
+            $meta['last_version'] = $currentVersion;
+        } elseif (!isset($meta['last_version'])) {
+            $meta['last_version'] = null;
+        }
+
+        if (isset($meta['generation_method'])) {
+            $meta['last_generation_method'] = $meta['generation_method'];
+            unset($meta['generation_method']);
+        }
+
+        $meta['version'] = null;
+        $meta['status'] = 'stale';
+        $meta['last_invalidated_at'] = $timestamp;
+        $meta['last_invalidated_at_gmt'] = gmdate('c', $timestamp);
+
+        update_option('ssc_css_cache_meta', $meta, false);
 
         if ($hadCache) {
             update_option('ssc_css_cache_last_had_cache', 1, false);
