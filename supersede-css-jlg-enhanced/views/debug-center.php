@@ -285,19 +285,28 @@ $format_datetime = static function (string $iso): string {
             <p id="ssc-visual-debug-status" class="description" role="status" aria-live="polite"></p>
         </div>
         <p id="ssc-visual-debug-note" class="description ssc-visual-debug-note" hidden></p>
-        <div class="ssc-visual-debug-legend" aria-hidden="true">
-            <span class="ssc-visual-debug-legend__item">
-                <span class="ssc-visual-debug-legend__swatch ssc-visual-debug-legend__swatch--surface" aria-hidden="true"></span>
-                <?php echo esc_html__('Contours des panneaux', 'supersede-css-jlg'); ?>
-            </span>
-            <span class="ssc-visual-debug-legend__item">
-                <span class="ssc-visual-debug-legend__swatch ssc-visual-debug-legend__swatch--grid" aria-hidden="true"></span>
-                <?php echo esc_html__('Grilles & espacements', 'supersede-css-jlg'); ?>
-            </span>
-            <span class="ssc-visual-debug-legend__item">
-                <span class="ssc-visual-debug-legend__swatch ssc-visual-debug-legend__swatch--focus" aria-hidden="true"></span>
-                <?php echo esc_html__('Points d’interaction', 'supersede-css-jlg'); ?>
-            </span>
+        <div
+            class="ssc-visual-debug-legend"
+            role="group"
+            aria-labelledby="ssc-visual-debug-legend-heading"
+        >
+            <p id="ssc-visual-debug-legend-heading" class="screen-reader-text">
+                <?php echo esc_html__('Légende du débogage visuel', 'supersede-css-jlg'); ?>
+            </p>
+            <ul class="ssc-visual-debug-legend__list">
+                <li class="ssc-visual-debug-legend__item">
+                    <span class="ssc-visual-debug-legend__swatch ssc-visual-debug-legend__swatch--surface" aria-hidden="true"></span>
+                    <?php echo esc_html__('Contours des panneaux', 'supersede-css-jlg'); ?>
+                </li>
+                <li class="ssc-visual-debug-legend__item">
+                    <span class="ssc-visual-debug-legend__swatch ssc-visual-debug-legend__swatch--grid" aria-hidden="true"></span>
+                    <?php echo esc_html__('Grilles & espacements', 'supersede-css-jlg'); ?>
+                </li>
+                <li class="ssc-visual-debug-legend__item">
+                    <span class="ssc-visual-debug-legend__swatch ssc-visual-debug-legend__swatch--focus" aria-hidden="true"></span>
+                    <?php echo esc_html__('Points d’interaction', 'supersede-css-jlg'); ?>
+                </li>
+            </ul>
         </div>
     </div>
 
