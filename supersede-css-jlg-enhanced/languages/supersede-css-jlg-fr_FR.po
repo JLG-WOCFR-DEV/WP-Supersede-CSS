@@ -201,3 +201,83 @@ msgstr "Notification enregistrée à %1$s : %2$s"
 #: src/Admin/Admin.php:212
 msgid "Dismiss notification"
 msgstr "Fermer la notification"
+
+#: views/debug-center.php:302
+msgid "Cache CSS"
+msgstr "Cache CSS"
+
+#: views/debug-center.php:304
+msgid "Suivez la version CSS actuellement servie et l’état du cache pour investiguer les écarts d’affichage."
+msgstr "Suivez la version CSS actuellement servie et l’état du cache pour investiguer les écarts d’affichage."
+
+#: views/debug-center.php:308
+msgid "Version servie"
+msgstr "Version servie"
+
+#: views/debug-center.php:314
+msgid "Aucune version disponible"
+msgstr "Aucune version disponible"
+
+#: views/debug-center.php:318
+msgid "Statut du cache"
+msgstr "Statut du cache"
+
+#: views/debug-center.php:324
+msgid "Origine actuelle"
+msgstr "Origine actuelle"
+
+#: views/debug-center.php:329
+msgid "Dernière génération"
+msgstr "Dernière génération"
+
+#: views/debug-center.php:333
+msgid "Jamais généré"
+msgstr "Jamais généré"
+
+#: views/debug-center.php:336
+msgid "Dernière invalidation"
+msgstr "Dernière invalidation"
+
+#: views/debug-center.php:340
+msgid "Aucune invalidation enregistrée"
+msgstr "Aucune invalidation enregistrée"
+
+#: views/debug-center.php:226
+msgid "Cache actif"
+msgstr "Cache actif"
+
+#: views/debug-center.php:229
+msgid "À régénérer"
+msgstr "À régénérer"
+
+#: views/debug-center.php:232
+msgid "Jamais généré"
+msgstr "Jamais généré"
+
+#: views/debug-center.php:238
+msgid "Cache persistant (servi sans recalcul)"
+msgstr "Cache persistant (servi sans recalcul)"
+
+#: views/debug-center.php:239
+msgid "Recalcul à la volée (cache vide)"
+msgstr "Recalcul à la volée (cache vide)"
+
+#: views/debug-center.php:243
+msgid "Regénéré par Supersede CSS"
+msgstr "Regénéré par Supersede CSS"
+
+#: views/debug-center.php:245
+msgid "Méthode de génération inconnue"
+msgstr "Méthode de génération inconnue"
+
+#: views/debug-center.php:363
+msgid "Cadre violet semi-transparent autour des blocs interactifs pour localiser les composants éditables."
+msgstr "Cadre violet semi-transparent autour des blocs interactifs pour localiser les composants éditables."
+
+#: views/debug-center.php:368
+msgid "Quadrillage bleu indiquant les marges, gouttières et alignements pour mesurer l’espacement."
+msgstr "Quadrillage bleu indiquant les marges, gouttières et alignements pour mesurer l’espacement."
+
+#: views/debug-center.php:373
+msgid "Surbrillance orange sur les boutons, liens et zones cliquables pour vérifier les parcours clavier."
+msgstr "Surbrillance orange sur les boutons, liens et zones cliquables pour vérifier les parcours clavier."

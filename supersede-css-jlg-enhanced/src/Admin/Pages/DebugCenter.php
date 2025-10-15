@@ -229,12 +229,53 @@ class DebugCenter extends AbstractPage
             );
         }
 
+        $cssCacheMeta = get_option('ssc_css_cache_meta', []);
+        $cssCacheMeta = is_array($cssCacheMeta) ? $cssCacheMeta : [];
+        $cssCacheRaw = get_option('ssc_css_cache', false);
+        $cssCacheHasValue = is_string($cssCacheRaw) && trim($cssCacheRaw) !== '';
+        $cssCacheLastHadCache = get_option('ssc_css_cache_last_had_cache', false) !== false;
+
+        $cssCacheTelemetry = [
+            'status' => $cssCacheHasValue
+                ? 'warm'
+                : (isset($cssCacheMeta['status']) && is_string($cssCacheMeta['status']) ? $cssCacheMeta['status'] : 'stale'),
+            'version' => isset($cssCacheMeta['version']) && is_string($cssCacheMeta['version']) && $cssCacheMeta['version'] !== ''
+                ? $cssCacheMeta['version']
+                : null,
+            'last_version' => isset($cssCacheMeta['last_version']) && is_string($cssCacheMeta['last_version']) && $cssCacheMeta['last_version'] !== ''
+                ? $cssCacheMeta['last_version']
+                : null,
+            'generated_at' => isset($cssCacheMeta['generated_at']) ? (int) $cssCacheMeta['generated_at'] : null,
+            'generated_at_gmt' => isset($cssCacheMeta['generated_at_gmt']) && is_string($cssCacheMeta['generated_at_gmt'])
+                ? $cssCacheMeta['generated_at_gmt']
+                : null,
+            'last_invalidated_at' => isset($cssCacheMeta['last_invalidated_at'])
+                ? (int) $cssCacheMeta['last_invalidated_at']
+                : null,
+            'last_invalidated_at_gmt' => isset($cssCacheMeta['last_invalidated_at_gmt']) && is_string($cssCacheMeta['last_invalidated_at_gmt'])
+                ? $cssCacheMeta['last_invalidated_at_gmt']
+                : null,
+            'generation_method' => isset($cssCacheMeta['generation_method']) && is_string($cssCacheMeta['generation_method'])
+                ? $cssCacheMeta['generation_method']
+                : null,
+            'last_generation_method' => isset($cssCacheMeta['last_generation_method']) && is_string($cssCacheMeta['last_generation_method'])
+                ? $cssCacheMeta['last_generation_method']
+                : null,
+            'has_cache_value' => $cssCacheHasValue,
+            'had_cache_before' => $cssCacheLastHadCache,
+        ];
+
+        if ($cssCacheTelemetry['version'] === null && $cssCacheTelemetry['last_version'] !== null) {
+            $cssCacheTelemetry['version'] = $cssCacheTelemetry['last_version'];
+        }
+
         $this->render_view('debug-center', [
             'system_info' => [
                 'plugin_version'    => defined('SSC_VERSION') ? SSC_VERSION : 'N/A',
                 'wordpress_version' => get_bloginfo('version'),
                 'php_version'       => phpversion(),
             ],
+            'css_cache' => $cssCacheTelemetry,
             'approvals' => $approvals,
             'approval_priorities' => TokenApprovalStore::getSupportedPriorities(),
             'can_review_approvals' => $canReviewApprovals,

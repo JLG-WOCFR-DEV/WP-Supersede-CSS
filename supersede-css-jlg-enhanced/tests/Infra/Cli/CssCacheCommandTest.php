@@ -25,7 +25,10 @@ final class CssCacheCommandTest extends WP_UnitTestCase
         $this->assertFalse($result['rebuilt']);
         $this->assertSame(0, $result['size']);
         $this->assertFalse(get_option('ssc_css_cache'));
-        $this->assertFalse(get_option('ssc_css_cache_meta'));
+        $meta = get_option('ssc_css_cache_meta');
+        $this->assertIsArray($meta);
+        $this->assertSame('stale', $meta['status']);
+        $this->assertNull($meta['version']);
         $this->assertStringContainsString('--rebuild', $result['message']);
     }
 
@@ -44,7 +47,11 @@ final class CssCacheCommandTest extends WP_UnitTestCase
         $this->assertTrue($result['rebuilt']);
         $this->assertSame(strlen($expectedCss), $result['size']);
         $this->assertSame($expectedCss, get_option('ssc_css_cache'));
-        $this->assertSame(['version' => SSC_VERSION], get_option('ssc_css_cache_meta'));
+        $meta = get_option('ssc_css_cache_meta');
+        $this->assertIsArray($meta);
+        $this->assertSame(SSC_VERSION, $meta['version']);
+        $this->assertSame('warm', $meta['status']);
+        $this->assertSame('regenerated', $meta['generation_method']);
         $this->assertStringContainsString('Nouveau cache généré', $result['message']);
     }
 
@@ -64,7 +71,10 @@ final class CssCacheCommandTest extends WP_UnitTestCase
         $this->assertTrue($result['had_cache']);
         $this->assertTrue($result['rebuilt']);
         $this->assertSame($expectedCss, get_option('ssc_css_cache'));
-        $this->assertSame(['version' => SSC_VERSION], get_option('ssc_css_cache_meta'));
+        $meta = get_option('ssc_css_cache_meta');
+        $this->assertIsArray($meta);
+        $this->assertSame(SSC_VERSION, $meta['version']);
+        $this->assertSame('warm', $meta['status']);
         $this->assertStringContainsString('Cache CSS vidé.', $result['message']);
     }
 

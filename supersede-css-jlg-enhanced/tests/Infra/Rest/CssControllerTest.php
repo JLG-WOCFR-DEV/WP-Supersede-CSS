@@ -166,7 +166,10 @@ final class CssControllerTest extends WP_UnitTestCase
             get_option('ssc_active_css')
         );
         $this->assertFalse(get_option('ssc_css_cache'));
-        $this->assertFalse(get_option('ssc_css_cache_meta'));
+        $meta = get_option('ssc_css_cache_meta');
+        $this->assertIsArray($meta);
+        $this->assertSame('stale', $meta['status']);
+        $this->assertNull($meta['version']);
     }
 
     public function test_save_css_skips_revision_and_cache_invalidation_when_unchanged(): void
