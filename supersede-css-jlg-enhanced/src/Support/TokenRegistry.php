@@ -383,6 +383,7 @@ final class TokenRegistry
 
                 if ($shouldPersistCss) {
                     self::persistCss($normalized);
+                    self::invalidateCssCache();
                 }
             } finally {
                 self::endOptionPersistence();
@@ -402,6 +403,7 @@ final class TokenRegistry
                 try {
                     update_option(self::OPTION_REGISTRY, $fromCss, false);
                     self::persistCss($fromCss);
+                    self::invalidateCssCache();
                 } finally {
                     self::endOptionPersistence();
                 }
@@ -417,6 +419,7 @@ final class TokenRegistry
         try {
             update_option(self::OPTION_REGISTRY, $defaults, false);
             self::persistCss($defaults);
+            self::invalidateCssCache();
         } finally {
             self::endOptionPersistence();
         }
@@ -525,6 +528,7 @@ final class TokenRegistry
             }
 
             self::persistCss($normalized);
+            self::invalidateCssCache();
         } finally {
             self::endOptionPersistence();
         }
@@ -1275,9 +1279,18 @@ final class TokenRegistry
     {
         $css = self::tokensToCss($tokens);
         self::writeOption(self::OPTION_CSS, $css);
+    }
 
+    private static function invalidateCssCache(): void
+    {
         if (function_exists('\ssc_invalidate_css_cache')) {
             \ssc_invalidate_css_cache();
+
+            return;
+        }
+
+        if (function_exists('\do_action')) {
+            \do_action('ssc_css_cache_invalidated');
         }
     }
 
