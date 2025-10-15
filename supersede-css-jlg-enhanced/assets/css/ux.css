@@ -330,6 +330,9 @@ body.ssc-no-scroll {
 }
 
 .ssc-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--ssc-space-xs, 8px);
     background: var(--ssc-card);
     border: 1px solid var(--ssc-border);
     border-radius: 10px;
@@ -339,6 +342,48 @@ body.ssc-no-scroll {
     transform: translateY(10px);
     animation: ssc-toast-in 0.3s ease forwards;
     pointer-events: auto;
+}
+
+.ssc-toast:focus-visible {
+    outline: 2px solid var(--ssc-accent, #2563eb);
+    outline-offset: 2px;
+}
+
+.ssc-toast__message {
+    flex: 1 1 auto;
+    line-height: 1.4;
+}
+
+.ssc-toast__dismiss {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin: -4px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.ssc-toast__dismiss span[aria-hidden="true"] {
+    font-size: 20px;
+    line-height: 1;
+}
+
+.ssc-toast__dismiss:hover,
+.ssc-toast__dismiss:focus-visible {
+    color: var(--ssc-accent, #2563eb);
+    background-color: rgba(37, 99, 235, 0.12);
+}
+
+.ssc-toast__dismiss:focus-visible {
+    outline: 2px solid var(--ssc-accent, #2563eb);
+    outline-offset: 2px;
 }
 
 @keyframes ssc-toast-in {
