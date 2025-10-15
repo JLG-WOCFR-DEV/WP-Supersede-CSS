@@ -1279,6 +1279,7 @@ final class TokenRegistry
     {
         $css = self::tokensToCss($tokens);
         self::writeOption(self::OPTION_CSS, $css);
+        self::invalidateCssCache();
     }
 
     private static function invalidateCssCache(): void
