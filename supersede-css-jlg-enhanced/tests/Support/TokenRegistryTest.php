@@ -181,7 +181,7 @@ if ($normalized === [] || $normalized[0]['name'] !== '--BrandPrimary') {
     exit(1);
 }
 
-$registryResult = TokenRegistry::saveRegistry([
+$initialTokens = [
     [
         'name' => '--BrandPrimary',
         'value' => '#3366ff',
@@ -189,7 +189,9 @@ $registryResult = TokenRegistry::saveRegistry([
         'description' => 'Primary brand color.',
         'group' => 'Brand',
     ],
-]);
+];
+
+$registryResult = TokenRegistry::saveRegistry($initialTokens);
 
 $registry = $registryResult['tokens'];
 
@@ -222,6 +224,14 @@ if (strpos($persistedCss, '--BrandPrimary') === false) {
 
 if ($ssc_css_invalidation_calls !== 1) {
     fwrite(STDERR, 'TokenRegistry::saveRegistry should invalidate the CSS cache once.' . PHP_EOL);
+    exit(1);
+}
+
+$invalidationsAfterFirstSave = $ssc_css_invalidation_calls;
+TokenRegistry::saveRegistry($initialTokens);
+
+if ($ssc_css_invalidation_calls !== $invalidationsAfterFirstSave) {
+    fwrite(STDERR, 'TokenRegistry::saveRegistry should avoid cache invalidation when the CSS output is unchanged.' . PHP_EOL);
     exit(1);
 }
 
