@@ -189,3 +189,15 @@ msgstr "CSS invalide."
 #: src/Infra/Rest/CssController.php:210
 msgid "All CSS options have been reset."
 msgstr "Toutes les options CSS ont été réinitialisées."
+
+#: src/Admin/Admin.php:206
+msgid "Historique des notifications Supersede CSS"
+msgstr "Historique des notifications Supersede CSS"
+
+#: src/Admin/Admin.php:209
+msgid "Notification enregistrée à %1$s : %2$s"
+msgstr "Notification enregistrée à %1$s : %2$s"
+
+#: src/Admin/Admin.php:212
+msgid "Dismiss notification"
+msgstr "Fermer la notification"

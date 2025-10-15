@@ -10,6 +10,9 @@
         mobileMenuToggleSrLabel: 'Menu',
         clipboardSuccess: 'Texte copié !',
         clipboardError: 'Impossible de copier le texte.',
+        toastHistoryLabel: 'Supersede CSS notifications history',
+        toastHistoryEntry: 'Notification recorded at %1$s: %2$s',
+        toastDismissLabel: 'Dismiss notification',
     };
 
     const getSscI18n = (() => {
@@ -95,8 +98,9 @@
     })();
 
     // --- Toast Notifications ---
-    const TOAST_DEFAULT_TIMEOUT = 3000;
+    const TOAST_DEFAULT_TIMEOUT = 6000;
     const TOAST_DEFAULT_POLITENESS = 'polite';
+    const TOAST_HISTORY_LIMIT = 10;
 
     const getToastContainer = (politeness = TOAST_DEFAULT_POLITENESS) => {
         let container = $('#ssc-toasts');
@@ -111,7 +115,27 @@
             container.attr('aria-live', normalizedPoliteness);
         }
 
-        return container;
+        const i18n = getSscI18n();
+        const historyLabel = (typeof i18n.toastHistoryLabel === 'string' && i18n.toastHistoryLabel.trim() !== '')
+            ? i18n.toastHistoryLabel
+            : DEFAULT_I18N.toastHistoryLabel;
+
+        let log = $('#ssc-toast-log');
+        if (!log.length) {
+            log = $('<div id="ssc-toast-log" class="screen-reader-text" role="log" aria-live="off"></div>')
+                .attr('aria-label', historyLabel)
+                .insertAfter(container);
+        } else if (log.attr('aria-label') !== historyLabel) {
+            log.attr('aria-label', historyLabel);
+        }
+
+        const describedby = (container.attr('aria-describedby') || '').split(/\s+/).filter(Boolean);
+        if (!describedby.includes('ssc-toast-log')) {
+            describedby.push('ssc-toast-log');
+            container.attr('aria-describedby', describedby.join(' '));
+        }
+
+        return { container, log, i18n };
     };
 
     window.sscToast = function(message, {
@@ -119,21 +143,125 @@
         role,
         timeout = TOAST_DEFAULT_TIMEOUT
     } = {}) {
-        const container = getToastContainer(politeness);
+        const { container, log, i18n } = getToastContainer(politeness);
         const toastRole = role || (politeness === 'assertive' ? 'alert' : 'status');
         const toast = $('<div class="ssc-toast"></div>')
             .attr('role', toastRole)
-            .text(message);
+            .attr('tabindex', '0');
+
+        const messageEl = $('<span class="ssc-toast__message"></span>').text(message);
+
+        const dismissLabel = (typeof i18n.toastDismissLabel === 'string' && i18n.toastDismissLabel.trim() !== '')
+            ? i18n.toastDismissLabel
+            : DEFAULT_I18N.toastDismissLabel;
+
+        const dismissButton = $('<button type="button" class="ssc-toast__dismiss"></button>')
+            .attr('aria-label', dismissLabel)
+            .append($('<span aria-hidden="true"></span>').text('×'));
+
+        toast.append(messageEl, dismissButton);
 
         container.append(toast);
 
-        setTimeout(() => {
+        const normalizedTimeout = (typeof timeout === 'number' && isFinite(timeout) && timeout >= 0)
+            ? timeout
+            : TOAST_DEFAULT_TIMEOUT;
+
+        let removalTimeoutId = null;
+
+        const clearRemoval = () => {
+            if (removalTimeoutId) {
+                window.clearTimeout(removalTimeoutId);
+                removalTimeoutId = null;
+            }
+        };
+
+        const removeToast = () => {
+            clearRemoval();
             toast.remove();
 
             if (!container.children().length) {
                 container.attr('aria-live', TOAST_DEFAULT_POLITENESS);
             }
-        }, timeout);
+        };
+
+        dismissButton.on('click', (event) => {
+            event.preventDefault();
+            removeToast();
+        });
+
+        const scheduleRemoval = () => {
+            if (normalizedTimeout <= 0) {
+                return;
+            }
+
+            clearRemoval();
+
+            removalTimeoutId = window.setTimeout(() => {
+                if (toast.is(':focus') || toast.is(':hover')) {
+                    scheduleRemoval();
+                    return;
+                }
+
+                removeToast();
+            }, normalizedTimeout);
+        };
+
+        const pauseRemoval = () => {
+            if (normalizedTimeout > 0) {
+                clearRemoval();
+            }
+        };
+
+        const resumeRemoval = () => {
+            if (normalizedTimeout > 0) {
+                scheduleRemoval();
+            }
+        };
+
+        toast.on('focusin mouseenter', pauseRemoval);
+        toast.on('focusout mouseleave', resumeRemoval);
+        toast.on('keydown', (event) => {
+            if (event && (event.key === 'Escape' || event.key === 'Esc')) {
+                event.preventDefault();
+                removeToast();
+            }
+        });
+
+        scheduleRemoval();
+
+        const historyTemplate = (typeof i18n.toastHistoryEntry === 'string' && i18n.toastHistoryEntry.trim() !== '')
+            ? i18n.toastHistoryEntry
+            : DEFAULT_I18N.toastHistoryEntry;
+
+        if (log && log.length) {
+            const timestamp = new Date();
+            let timestampText = '';
+
+            try {
+                timestampText = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            } catch (e) {
+                timestampText = timestamp.toISOString();
+            }
+
+            const historyLabel = historyTemplate
+                .replace('%1$s', timestampText)
+                .replace('%2$s', message);
+
+            const entry = $('<p class="ssc-toast-log__entry"></p>')
+                .attr('aria-label', historyLabel);
+
+            entry.append($('<span class="ssc-toast-log__timestamp"></span>').text(timestampText));
+            entry.append(' ');
+            entry.append($('<span class="ssc-toast-log__message"></span>').text(message));
+
+            log.append(entry);
+
+            const entries = log.children('.ssc-toast-log__entry');
+            if (entries.length > TOAST_HISTORY_LIMIT) {
+                entries.slice(0, entries.length - TOAST_HISTORY_LIMIT).remove();
+            }
+        }
     };
 
     // --- Plugin Asset URL Helper ---
