@@ -527,7 +527,13 @@ final class TokenRegistry
                 update_option(self::OPTION_REGISTRY, $normalized, false);
             }
 
-            self::persistCss($normalized);
+            $existingCss = self::readOption(self::OPTION_CSS, null);
+            $newCss = self::tokensToCss($normalized);
+
+            if (!is_string($existingCss) || $existingCss !== $newCss) {
+                self::writeOption(self::OPTION_CSS, $newCss);
+                self::invalidateCssCache();
+            }
         } finally {
             self::endOptionPersistence();
         }
