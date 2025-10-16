@@ -161,6 +161,37 @@ final class CssPerformanceAnalyzerTest extends TestCase
         self::assertTrue($this->arrayContainsString($diff['alerts'], 'tokens CSS'));
     }
 
+    public function testRecommendationsArePrioritizedBySeverity(): void
+    {
+        $active = [
+            'empty'      => false,
+            'rule_count' => 0,
+        ];
+
+        $tokens = [
+            'empty'          => false,
+            'rule_count'     => 0,
+            'selector_count' => 0,
+        ];
+
+        $combined = [
+            'size_bytes'                 => 151 * 1024,
+            'important_count'            => 3,
+            'atrule_count'               => 40,
+            'selector_count'             => 100,
+            'specificity_average'        => 150,
+            'custom_property_definitions'=> 5,
+            'vendor_prefix_total'        => 4,
+        ];
+
+        $recommendations = $this->analyzer->buildRecommendations($active, $tokens, $combined);
+
+        self::assertCount(8, $recommendations);
+        self::assertSame('Activez la purge des classes inutilisées dans votre thème ou vos builds Tailwind/Supersede pour réduire le CSS livré.', $recommendations[0]);
+        self::assertSame('Le CSS actif est non structuré ou invalide. Lancez une validation CSS pour détecter les erreurs de syntaxe.', $recommendations[1]);
+        self::assertSame('Configurez Autoprefixer/Browserslist sur vos builds Supersede pour n’émettre que les préfixes nécessaires aux navigateurs ciblés.', $recommendations[7]);
+    }
+
     /**
      * @param list<string> $messages
      */

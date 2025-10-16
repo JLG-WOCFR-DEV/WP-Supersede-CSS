@@ -354,41 +354,73 @@ class CssPerformanceAnalyzer
         $recommendations = [];
 
         if ($combined['size_bytes'] > 150 * 1024) {
-            $recommendations[] = __('Activez la purge des classes inutilisées dans votre thème ou vos builds Tailwind/Supersede pour réduire le CSS livré.', 'supersede-css-jlg');
+            $recommendations[] = [
+                'priority' => 10,
+                'message'  => __('Activez la purge des classes inutilisées dans votre thème ou vos builds Tailwind/Supersede pour réduire le CSS livré.', 'supersede-css-jlg'),
+            ];
+        }
+
+        if (!$active['empty'] && $active['rule_count'] === 0) {
+            $recommendations[] = [
+                'priority' => 20,
+                'message'  => __('Le CSS actif est non structuré ou invalide. Lancez une validation CSS pour détecter les erreurs de syntaxe.', 'supersede-css-jlg'),
+            ];
         }
 
         if ($combined['important_count'] > 0) {
-            $recommendations[] = __('Cartographiez les composants qui utilisent !important pour vérifier si une meilleure architecture de tokens ou d’ordonnancement résout les conflits.', 'supersede-css-jlg');
+            $recommendations[] = [
+                'priority' => 30,
+                'message'  => __('Cartographiez les composants qui utilisent !important pour vérifier si une meilleure architecture de tokens ou d’ordonnancement résout les conflits.', 'supersede-css-jlg'),
+            ];
         }
 
         if ($combined['atrule_count'] > 0 && $combined['selector_count'] > 0) {
             $ratio = $combined['atrule_count'] / max(1, $combined['selector_count']);
             if ($ratio > 0.3) {
-                $recommendations[] = __('Vos feuilles contiennent beaucoup de media queries. Assurez-vous que les breakpoints sont mutualisés via les tokens responsive.', 'supersede-css-jlg');
+                $recommendations[] = [
+                    'priority' => 40,
+                    'message'  => __('Vos feuilles contiennent beaucoup de media queries. Assurez-vous que les breakpoints sont mutualisés via les tokens responsive.', 'supersede-css-jlg'),
+                ];
             }
         }
 
-        if (!$active['empty'] && $active['rule_count'] === 0) {
-            $recommendations[] = __('Le CSS actif est non structuré ou invalide. Lancez une validation CSS pour détecter les erreurs de syntaxe.', 'supersede-css-jlg');
+        if (($combined['specificity_average'] ?? 0) > 100) {
+            $recommendations[] = [
+                'priority' => 50,
+                'message'  => __('Cartographiez les composants critiques et introduisez des couches (ITCSS, Cascade Layers) pour contenir la spécificité.', 'supersede-css-jlg'),
+            ];
         }
 
         if (!$tokens['empty'] && $tokens['rule_count'] === 0 && $tokens['selector_count'] === 0) {
-            $recommendations[] = __('Vos tokens ne génèrent pas de règles directes. Pensez à vérifier leur injection dans vos presets ou modules Utilities.', 'supersede-css-jlg');
-        }
-
-        if (($combined['specificity_average'] ?? 0) > 100) {
-            $recommendations[] = __('Cartographiez les composants critiques et introduisez des couches (ITCSS, Cascade Layers) pour contenir la spécificité.', 'supersede-css-jlg');
+            $recommendations[] = [
+                'priority' => 60,
+                'message'  => __('Vos tokens ne génèrent pas de règles directes. Pensez à vérifier leur injection dans vos presets ou modules Utilities.', 'supersede-css-jlg'),
+            ];
         }
 
         if (($combined['custom_property_definitions'] ?? 0) > 0) {
-            $recommendations[] = __('Documentez vos tokens CSS (noms, portée, fallback) et alimentez le Design System afin que les équipes puissent les réutiliser.', 'supersede-css-jlg');
+            $recommendations[] = [
+                'priority' => 70,
+                'message'  => __('Documentez vos tokens CSS (noms, portée, fallback) et alimentez le Design System afin que les équipes puissent les réutiliser.', 'supersede-css-jlg'),
+            ];
         }
 
         if (($combined['vendor_prefix_total'] ?? 0) > 0) {
-            $recommendations[] = __('Configurez Autoprefixer/Browserslist sur vos builds Supersede pour n’émettre que les préfixes nécessaires aux navigateurs ciblés.', 'supersede-css-jlg');
+            $recommendations[] = [
+                'priority' => 80,
+                'message'  => __('Configurez Autoprefixer/Browserslist sur vos builds Supersede pour n’émettre que les préfixes nécessaires aux navigateurs ciblés.', 'supersede-css-jlg'),
+            ];
         }
 
-        return $recommendations;
+        if (empty($recommendations)) {
+            return [];
+        }
+
+        usort($recommendations, static function (array $left, array $right): int {
+            return $left['priority'] <=> $right['priority'];
+        });
+
+        return array_column($recommendations, 'message');
     }
 
     private function buildDelta(array $baseline, array $candidate, string $key, bool $allowFloat = false): array
