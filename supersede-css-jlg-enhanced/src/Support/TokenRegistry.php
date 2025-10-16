@@ -528,7 +528,6 @@ final class TokenRegistry
             }
 
             self::persistCss($normalized);
-            self::invalidateCssCache();
         } finally {
             self::endOptionPersistence();
         }
