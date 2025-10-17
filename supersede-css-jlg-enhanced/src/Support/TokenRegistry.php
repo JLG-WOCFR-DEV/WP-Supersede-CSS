@@ -379,8 +379,12 @@ final class TokenRegistry
                 }
 
                 if ($needsCssRegeneration) {
-                    self::persistCss($normalized, $generatedCss);
-                    self::invalidateCssCache();
+                    $cssUpdated = self::persistCss($normalized, $generatedCss);
+                    $existingCssWasMissing = !is_string($existingCss) || trim($existingCss) === '';
+
+                    if ($cssUpdated || $existingCssWasMissing) {
+                        self::invalidateCssCache();
+                    }
                 }
             } finally {
                 self::endOptionPersistence();
