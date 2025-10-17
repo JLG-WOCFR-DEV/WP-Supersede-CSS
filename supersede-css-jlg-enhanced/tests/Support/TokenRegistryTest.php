@@ -235,6 +235,17 @@ if ($ssc_css_invalidation_calls !== $invalidationsAfterFirstSave) {
     exit(1);
 }
 
+$whitespacePaddedCss = "\n  " . $persistedCss . "\n\n";
+update_option('ssc_tokens_css', $whitespacePaddedCss);
+
+$invalidationsAfterWhitespacePadding = $ssc_css_invalidation_calls;
+TokenRegistry::saveRegistry($initialTokens);
+
+if ($ssc_css_invalidation_calls !== $invalidationsAfterWhitespacePadding) {
+    fwrite(STDERR, 'TokenRegistry::saveRegistry should ignore cosmetic differences in stored CSS when deciding to invalidate the cache.' . PHP_EOL);
+    exit(1);
+}
+
 $cssInvalidationsBeforeRefresh = $ssc_css_invalidation_calls;
 ssc_test_delete_option('ssc_tokens_css');
 

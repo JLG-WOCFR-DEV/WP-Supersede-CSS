@@ -527,13 +527,7 @@ final class TokenRegistry
                 update_option(self::OPTION_REGISTRY, $normalized, false);
             }
 
-            $existingCss = self::readOption(self::OPTION_CSS, null);
-            $newCss = self::tokensToCss($normalized);
-
-            if (!is_string($existingCss) || $existingCss !== $newCss) {
-                self::writeOption(self::OPTION_CSS, $newCss);
-                self::invalidateCssCache();
-            }
+            self::persistCss($normalized);
         } finally {
             self::endOptionPersistence();
         }
@@ -1280,17 +1274,23 @@ final class TokenRegistry
     /**
      * @param array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}> $tokens
      */
-    private static function persistCss(array $tokens): void
+    private static function persistCss(array $tokens): bool
     {
         $css = self::tokensToCss($tokens);
         $existingCss = self::readOption(self::OPTION_CSS, null);
 
-        if (is_string($existingCss) && $existingCss === $css) {
-            return;
+        if (is_string($existingCss)) {
+            $normalizedExistingCss = CssSanitizer::sanitize($existingCss);
+
+            if ($normalizedExistingCss === $css) {
+                return false;
+            }
         }
 
         self::writeOption(self::OPTION_CSS, $css);
         self::invalidateCssCache();
+
+        return true;
     }
 
     private static function invalidateCssCache(): void
