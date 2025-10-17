@@ -530,7 +530,13 @@ final class TokenRegistry
             $existingCss = self::readOption(self::OPTION_CSS, null);
             $newCss = self::tokensToCss($normalized);
 
-            if (!is_string($existingCss) || $existingCss !== $newCss) {
+            $canonicalExistingCss = null;
+
+            if (is_string($existingCss)) {
+                $canonicalExistingCss = CssSanitizer::sanitize($existingCss);
+            }
+
+            if ($canonicalExistingCss !== $newCss) {
                 self::writeOption(self::OPTION_CSS, $newCss);
                 self::invalidateCssCache();
             }
