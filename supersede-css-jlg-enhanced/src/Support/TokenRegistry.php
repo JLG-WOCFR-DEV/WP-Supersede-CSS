@@ -366,6 +366,7 @@ final class TokenRegistry
         if ($stored !== self::REGISTRY_NOT_FOUND && is_array($stored)) {
             $result = self::normalizeRegistry($stored);
             $normalized = $result['tokens'];
+            $generatedCss = self::tokensToCss($normalized);
             $shouldPersistCss = false;
             $css = self::tokensToCss($normalized);
 
@@ -388,6 +389,11 @@ final class TokenRegistry
                     $shouldPersistCss = true;
                 } elseif ($sanitizedExistingCss !== $css) {
                     $shouldPersistCss = true;
+                } else {
+                    $sanitizedExistingCss = CssSanitizer::sanitize($existingCss);
+                    if ($sanitizedExistingCss !== $generatedCss) {
+                        $shouldPersistCss = true;
+                    }
                 }
 
                 if ($shouldPersistCss) {
@@ -1318,13 +1324,13 @@ final class TokenRegistry
 
     private static function invalidateCssCache(): void
     {
-        if (function_exists('\ssc_invalidate_css_cache')) {
+        if (function_exists('ssc_invalidate_css_cache') || function_exists('\\ssc_invalidate_css_cache')) {
             \ssc_invalidate_css_cache();
 
             return;
         }
 
-        if (function_exists('\do_action')) {
+        if (function_exists('do_action') || function_exists('\\do_action')) {
             \do_action('ssc_css_cache_invalidated');
         }
     }
