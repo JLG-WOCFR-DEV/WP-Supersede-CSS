@@ -57,12 +57,31 @@ if (!function_exists('__')) {
 /** @var array<string, mixed> $ssc_options_store */
 $ssc_options_store = [];
 
-global $ssc_options_store;
-
 /** @var int $ssc_css_invalidation_calls */
 $ssc_css_invalidation_calls = 0;
 
+global $ssc_options_store;
+
 global $ssc_css_invalidation_calls;
+
+if (!class_exists('SSC\\Infra\\Activity\\EventRecorder')) {
+    class ssc_test_EventRecorder
+    {
+        public static function install(): void
+        {
+        }
+
+        public static function maybeUpgrade(): void
+        {
+        }
+
+        public static function record(string $event, array $payload = []): void
+        {
+        }
+    }
+
+    class_alias(ssc_test_EventRecorder::class, 'SSC\\Infra\\Activity\\EventRecorder');
+}
 
 if (!function_exists('ssc_invalidate_css_cache')) {
     function ssc_invalidate_css_cache(): void
@@ -275,6 +294,79 @@ if (strpos($regeneratedCss, '--BrandPrimary') === false) {
     fwrite(STDERR, 'tokensToCss should keep the original casing when exporting.' . PHP_EOL);
     exit(1);
 }
+
+$ssc_css_invalidation_calls = 0;
+$ssc_options_store = [
+    'ssc_tokens_registry' => [
+        [
+            'name' => '--legacy-token',
+            'value' => '#f1f5f9',
+            'type' => 'color',
+            'description' => 'Legacy token with missing metadata.',
+            'group' => 'Legacy',
+        ],
+    ],
+    'ssc_tokens_css' => ":root {\n    --legacy-token: #0f172a;\n}",
+];
+
+$mismatchedRegistry = TokenRegistry::getRegistry();
+
+if ($ssc_css_invalidation_calls !== 1) {
+    fwrite(STDERR, 'TokenRegistry::getRegistry should invalidate the CSS cache once when normalizing legacy entries.' . PHP_EOL);
+    exit(1);
+}
+
+if ($mismatchedRegistry === [] || $mismatchedRegistry[0]['name'] !== '--legacy-token') {
+    fwrite(STDERR, 'TokenRegistry::getRegistry should keep legacy token names when normalizing entries.' . PHP_EOL);
+    exit(1);
+}
+
+if (!isset($mismatchedRegistry[0]['context']) || $mismatchedRegistry[0]['context'] !== TokenRegistry::getDefaultContext()) {
+    fwrite(STDERR, 'TokenRegistry::getRegistry should assign the default context to legacy entries missing metadata.' . PHP_EOL);
+    exit(1);
+}
+
+$normalizedLegacyCss = ssc_test_get_option_value('ssc_tokens_css');
+
+if (!is_string($normalizedLegacyCss) || strpos($normalizedLegacyCss, '--legacy-token') === false) {
+    fwrite(STDERR, 'TokenRegistry::getRegistry should regenerate CSS for legacy entries using normalized metadata.' . PHP_EOL);
+    exit(1);
+}
+
+$ssc_options_store = [];
+
+$ssc_css_invalidation_calls = 0;
+$ssc_options_store['ssc_tokens_css'] = ":root {\n    --fallback-token: 1rem;\n}";
+
+$fallbackRegistry = TokenRegistry::getRegistry();
+
+if ($ssc_css_invalidation_calls !== 1) {
+    fwrite(STDERR, 'TokenRegistry::getRegistry should invalidate the CSS cache once when importing legacy CSS.' . PHP_EOL);
+    exit(1);
+}
+
+if ($fallbackRegistry === [] || $fallbackRegistry[0]['name'] !== '--fallback-token') {
+    fwrite(STDERR, 'TokenRegistry::getRegistry should import tokens from legacy CSS.' . PHP_EOL);
+    exit(1);
+}
+
+$ssc_css_invalidation_calls = 0;
+$ssc_options_store = [];
+
+$defaultsRegistry = TokenRegistry::getRegistry();
+
+if ($ssc_css_invalidation_calls !== 1) {
+    fwrite(STDERR, 'TokenRegistry::getRegistry should invalidate the CSS cache once when bootstrapping defaults.' . PHP_EOL);
+    exit(1);
+}
+
+if ($defaultsRegistry === []) {
+    fwrite(STDERR, 'TokenRegistry::getRegistry should expose default tokens when no data is stored.' . PHP_EOL);
+    exit(1);
+}
+
+$ssc_css_invalidation_calls = 0;
+$ssc_options_store = [];
 
 $existingTokens = [
     [
