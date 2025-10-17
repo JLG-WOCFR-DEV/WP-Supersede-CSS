@@ -383,7 +383,6 @@ final class TokenRegistry
 
                 if ($shouldPersistCss) {
                     self::persistCss($normalized);
-                    self::invalidateCssCache();
                 }
             } finally {
                 self::endOptionPersistence();
@@ -403,7 +402,6 @@ final class TokenRegistry
                 try {
                     update_option(self::OPTION_REGISTRY, $fromCss, false);
                     self::persistCss($fromCss);
-                    self::invalidateCssCache();
                 } finally {
                     self::endOptionPersistence();
                 }
@@ -419,7 +417,6 @@ final class TokenRegistry
         try {
             update_option(self::OPTION_REGISTRY, $defaults, false);
             self::persistCss($defaults);
-            self::invalidateCssCache();
         } finally {
             self::endOptionPersistence();
         }
@@ -1222,6 +1219,10 @@ final class TokenRegistry
                 }
             }
 
+            if (!isset($token['context']) || trim((string) $token['context']) === '') {
+                $token['context'] = self::getDefaultContext();
+            }
+
             $merged[] = $token;
         }
 
@@ -1286,17 +1287,23 @@ final class TokenRegistry
     /**
      * @param array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}> $tokens
      */
-    private static function persistCss(array $tokens): void
+    private static function persistCss(array $tokens): bool
     {
         $css = self::tokensToCss($tokens);
         $existingCss = self::readOption(self::OPTION_CSS, null);
 
-        if (is_string($existingCss) && $existingCss === $css) {
-            return;
+        if (is_string($existingCss)) {
+            $normalizedExistingCss = CssSanitizer::sanitize($existingCss);
+
+            if ($normalizedExistingCss === $css) {
+                return false;
+            }
         }
 
         self::writeOption(self::OPTION_CSS, $css);
         self::invalidateCssCache();
+
+        return true;
     }
 
     private static function invalidateCssCache(): void
