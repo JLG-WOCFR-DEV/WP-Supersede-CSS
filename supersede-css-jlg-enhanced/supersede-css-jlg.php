@@ -266,8 +266,6 @@ add_action('plugins_loaded', function(){
         ssc_get_cached_css();
     }
 
-    PresetLibrary::ensureDefaults();
-
     if (is_admin()) {
         new SSC\Admin\Admin();
     }
@@ -276,6 +274,10 @@ add_action('plugins_loaded', function(){
     }
 
     add_action('wp_enqueue_scripts', 'ssc_enqueue_frontend_inline_css', 99);
+});
+
+add_action('init', static function (): void {
+    PresetLibrary::ensureDefaults();
 });
 
 if (!function_exists('ssc_get_inline_style_handle')) {
@@ -376,9 +378,9 @@ if (!function_exists('ssc_enqueue_block_editor_inline_css')) {
 
 add_action('enqueue_block_editor_assets', 'ssc_enqueue_block_editor_inline_css');
 
-add_action('plugins_loaded', function() {
+add_action('init', static function (): void {
     load_plugin_textdomain('supersede-css-jlg', false, dirname(plugin_basename(__FILE__)) . '/languages');
-});
+}, 0);
 
 if (defined('WP_CLI') && WP_CLI) {
     add_action('cli_init', static function (): void {
