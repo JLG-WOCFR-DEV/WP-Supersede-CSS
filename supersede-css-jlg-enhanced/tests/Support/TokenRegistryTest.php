@@ -247,6 +247,13 @@ if ($ssc_css_invalidation_calls !== 1) {
 }
 
 $invalidationsAfterFirstSave = $ssc_css_invalidation_calls;
+
+if (!is_array($ssc_options_store)) {
+    $ssc_options_store = [];
+}
+
+$ssc_options_store['ssc_tokens_css'] = "\n\n" . $persistedCss . "\n";
+
 TokenRegistry::saveRegistry($initialTokens);
 
 if ($ssc_css_invalidation_calls !== $invalidationsAfterFirstSave) {
