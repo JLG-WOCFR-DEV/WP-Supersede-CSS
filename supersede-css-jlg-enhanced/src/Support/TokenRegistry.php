@@ -367,37 +367,23 @@ final class TokenRegistry
             $result = self::normalizeRegistry($stored);
             $normalized = $result['tokens'];
             $generatedCss = self::tokensToCss($normalized);
-            $shouldPersistCss = false;
-            $css = self::tokensToCss($normalized);
+            $existingCss = self::readOption(self::OPTION_CSS, null);
+            $needsCssRegeneration = self::cssNeedsRegeneration($existingCss, $generatedCss);
 
             self::beginOptionPersistence();
 
             try {
                 if ($stored !== $normalized) {
                     update_option(self::OPTION_REGISTRY, $normalized, false);
-                    $shouldPersistCss = true;
+                    $needsCssRegeneration = true;
                 }
 
-                $existingCss = get_option(self::OPTION_CSS, null);
-                $sanitizedExistingCss = null;
+                if ($needsCssRegeneration) {
+                    $persisted = self::persistCss($normalized, $generatedCss);
 
-                if (is_string($existingCss)) {
-                    $sanitizedExistingCss = CssSanitizer::sanitize($existingCss);
-                }
-
-                if ($sanitizedExistingCss === null || trim($sanitizedExistingCss) === '') {
-                    $shouldPersistCss = true;
-                } elseif ($sanitizedExistingCss !== $css) {
-                    $shouldPersistCss = true;
-                } else {
-                    $sanitizedExistingCss = CssSanitizer::sanitize($existingCss);
-                    if ($sanitizedExistingCss !== $generatedCss) {
-                        $shouldPersistCss = true;
+                    if (!$persisted) {
+                        self::invalidateCssCache();
                     }
-                }
-
-                if ($shouldPersistCss) {
-                    self::persistCss($normalized, $css);
                 }
             } finally {
                 self::endOptionPersistence();
@@ -1297,6 +1283,24 @@ final class TokenRegistry
         $css = implode("\n\n", $blocks);
 
         return CssSanitizer::sanitize($css);
+    }
+
+    /**
+     * @param mixed $existingCss
+     */
+    private static function cssNeedsRegeneration($existingCss, string $generatedCss): bool
+    {
+        if (!is_string($existingCss)) {
+            return true;
+        }
+
+        $sanitizedExistingCss = CssSanitizer::sanitize($existingCss);
+
+        if ($sanitizedExistingCss === '') {
+            return true;
+        }
+
+        return $sanitizedExistingCss !== $generatedCss;
     }
 
     /**
