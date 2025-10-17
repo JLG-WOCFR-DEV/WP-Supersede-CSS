@@ -1308,13 +1308,13 @@ final class TokenRegistry
 
     private static function invalidateCssCache(): void
     {
-        if (function_exists('\ssc_invalidate_css_cache')) {
+        if (function_exists('ssc_invalidate_css_cache') || function_exists('\\ssc_invalidate_css_cache')) {
             \ssc_invalidate_css_cache();
 
             return;
         }
 
-        if (function_exists('\do_action')) {
+        if (function_exists('do_action') || function_exists('\\do_action')) {
             \do_action('ssc_css_cache_invalidated');
         }
     }
