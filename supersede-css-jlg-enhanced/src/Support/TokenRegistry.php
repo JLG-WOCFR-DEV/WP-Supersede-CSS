@@ -380,6 +380,7 @@ final class TokenRegistry
 
                 if ($needsCssRegeneration) {
                     self::persistCss($normalized, $generatedCss);
+                    self::invalidateCssCache();
                 }
             } finally {
                 self::endOptionPersistence();
@@ -399,6 +400,7 @@ final class TokenRegistry
                 try {
                     update_option(self::OPTION_REGISTRY, $fromCss, false);
                     self::persistCss($fromCss);
+                    self::invalidateCssCache();
                 } finally {
                     self::endOptionPersistence();
                 }
@@ -414,6 +416,7 @@ final class TokenRegistry
         try {
             update_option(self::OPTION_REGISTRY, $defaults, false);
             self::persistCss($defaults);
+            self::invalidateCssCache();
         } finally {
             self::endOptionPersistence();
         }
@@ -1317,7 +1320,6 @@ final class TokenRegistry
         }
 
         self::writeOption(self::OPTION_CSS, $css);
-        self::invalidateCssCache();
 
         return true;
     }
