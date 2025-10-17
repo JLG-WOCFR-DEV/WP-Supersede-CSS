@@ -366,6 +366,7 @@ final class TokenRegistry
         if ($stored !== self::REGISTRY_NOT_FOUND && is_array($stored)) {
             $result = self::normalizeRegistry($stored);
             $normalized = $result['tokens'];
+            $generatedCss = self::tokensToCss($normalized);
             $shouldPersistCss = false;
 
             self::beginOptionPersistence();
@@ -379,10 +380,15 @@ final class TokenRegistry
                 $existingCss = get_option(self::OPTION_CSS, null);
                 if (!is_string($existingCss) || trim($existingCss) === '') {
                     $shouldPersistCss = true;
+                } else {
+                    $sanitizedExistingCss = CssSanitizer::sanitize($existingCss);
+                    if ($sanitizedExistingCss !== $generatedCss) {
+                        $shouldPersistCss = true;
+                    }
                 }
 
                 if ($shouldPersistCss) {
-                    self::persistCss($normalized);
+                    self::persistCss($normalized, $generatedCss);
                 }
             } finally {
                 self::endOptionPersistence();
@@ -1286,10 +1292,11 @@ final class TokenRegistry
 
     /**
      * @param array<int, array{name: string, value: string, type: string, description: string, group: string, context: string}> $tokens
+     * @param string|null $precomputedCss
      */
-    private static function persistCss(array $tokens): bool
+    private static function persistCss(array $tokens, ?string $precomputedCss = null): bool
     {
-        $css = self::tokensToCss($tokens);
+        $css = $precomputedCss ?? self::tokensToCss($tokens);
         $existingCss = self::readOption(self::OPTION_CSS, null);
 
         if (is_string($existingCss)) {
