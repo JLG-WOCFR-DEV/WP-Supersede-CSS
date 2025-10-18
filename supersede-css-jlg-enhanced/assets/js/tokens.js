@@ -1928,6 +1928,9 @@
         if (tokenKey) {
             row.attr('data-token-key', tokenKey);
             row.data('tokenKey', tokenKey);
+            if (!tokenCommentMap.has(tokenKey)) {
+                tokenCommentMap.set(tokenKey, []);
+            }
         }
         const typeOptions = Object.keys(tokenTypes);
         const resolvedType = (token && typeof token.type === 'string' && tokenTypes[token.type])
@@ -2042,13 +2045,7 @@
             text: i18n.deleteLabel || 'Supprimer',
         });
 
-        const tokenKey = computeTokenKey(token);
-        if (tokenKey) {
-            row.attr('data-token-key', tokenKey);
-        }
-        if (tokenKey && !tokenCommentMap.has(tokenKey)) {
-            tokenCommentMap.set(tokenKey, []);
-        }
+        
 
         const isReadMode = readModeAvailable && readMode;
 
