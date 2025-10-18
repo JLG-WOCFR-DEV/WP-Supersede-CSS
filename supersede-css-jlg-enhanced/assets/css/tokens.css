@@ -367,6 +367,15 @@
     font-size: 12px;
     color: var(--ssc-muted);
     line-height: 1.4;
+    display: block;
+    margin-top: 2px;
+}
+
+.ssc-token-field input + .ssc-token-field__help,
+.ssc-token-field textarea + .ssc-token-field__help,
+.ssc-token-field select + .ssc-token-field__help,
+.ssc-token-field .ssc-token-field-input + .ssc-token-field__help {
+    margin-top: 6px;
 }
 
 .ssc-token-field-input {
