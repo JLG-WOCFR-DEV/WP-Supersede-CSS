@@ -95,7 +95,7 @@
     border-radius: 12px;
     background: repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 10px, #e2e8f0 10px, #e2e8f0 20px);
     overflow: auto;
-    min-height: 400px;
+    min-height: clamp(420px, 60vh, 780px);
 }
 
 .ssc-device-lab__viewport-wrapper {
