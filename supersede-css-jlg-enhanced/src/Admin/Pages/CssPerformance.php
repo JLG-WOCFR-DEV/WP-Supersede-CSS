@@ -3,6 +3,7 @@
 namespace SSC\Admin\Pages;
 
 use SSC\Admin\AbstractPage;
+use SSC\Admin\ModuleRegistry;
 use SSC\Support\CssPerformanceAnalyzer;
 
 if (!defined('ABSPATH')) {
@@ -11,7 +12,7 @@ if (!defined('ABSPATH')) {
 
 class CssPerformance extends AbstractPage
 {
-    private const PAGE_SLUG = 'supersede-css-css-performance';
+    private const PAGE_SLUG = ModuleRegistry::BASE_SLUG . '-css-performance';
 
     private CssPerformanceAnalyzer $analyzer;
 
