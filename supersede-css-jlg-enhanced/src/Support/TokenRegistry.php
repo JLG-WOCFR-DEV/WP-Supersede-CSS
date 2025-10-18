@@ -372,32 +372,20 @@ final class TokenRegistry
 
             self::beginOptionPersistence();
 
-            $didInvalidateCssCache = false;
-
             try {
                 if ($stored !== $normalized) {
                     update_option(self::OPTION_REGISTRY, $normalized, false);
                     $needsCssRegeneration = true;
                 }
 
-                $shouldInvalidateCssCache = false;
-
                 if ($needsCssRegeneration) {
-                    $cssUpdated = self::persistCss($normalized, $generatedCss);
-                    $existingCssWasMissing = !is_string($existingCss) || trim($existingCss) === '';
-
-                    $shouldInvalidateCssCache = $cssUpdated || $existingCssWasMissing || $needsCssRegeneration;
-                }
-
-                if ($shouldInvalidateCssCache) {
-                    self::invalidateCssCache();
-                    $didInvalidateCssCache = true;
+                    self::persistCss($normalized, $generatedCss);
                 }
             } finally {
                 self::endOptionPersistence();
             }
 
-            if (!$didInvalidateCssCache && $needsCssRegeneration) {
+            if ($needsCssRegeneration) {
                 self::invalidateCssCache();
             }
 
