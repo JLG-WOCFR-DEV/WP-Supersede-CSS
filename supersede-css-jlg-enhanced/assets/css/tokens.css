@@ -146,10 +146,10 @@
 }
 
 .ssc-token-row {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 12px;
-    align-items: flex-end;
+    align-items: start;
 }
 
 .ssc-token-row--highlight {
@@ -354,8 +354,8 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    flex: 1 1 180px;
-    min-width: 180px;
+    min-width: 0;
+    width: 100%;
 }
 
 .ssc-token-field__label {
@@ -843,11 +843,11 @@
 }
 
 .ssc-token-comments {
-    flex: 1 1 100%;
     border-top: 1px solid var(--ssc-border);
     padding-top: 12px;
     display: grid;
     gap: 12px;
+    grid-column: 1 / -1;
 }
 
 .ssc-token-comments__header {
