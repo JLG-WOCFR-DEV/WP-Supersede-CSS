@@ -40,6 +40,9 @@
         const status = document.getElementById('ssc-device-lab-status');
         const liveRegion = document.getElementById('ssc-device-lab-live');
         const rotationHelpId = 'ssc-device-lab-rotation-help';
+        const suppressedPreviewErrors = [
+            'a listener indicated an asynchronous response by returning true, but the message channel closed before a response was received',
+        ];
 
         if (!deviceSelect || !viewport || !viewportWrapper || !frame) {
             return;
@@ -50,6 +53,107 @@
         let currentZoom = clamp(Math.round(defaultZoom), 50, 150);
         let currentUrl = defaultUrl;
         let lastCssAnnouncement = '';
+
+        function extractErrorMessage(error) {
+            if (!error) {
+                return '';
+            }
+
+            if (typeof error === 'string') {
+                return error;
+            }
+
+            if (typeof error.message === 'string') {
+                return error.message;
+            }
+
+            return '';
+        }
+
+        function shouldSuppressPreviewError(message) {
+            if (typeof message !== 'string' || message.trim() === '') {
+                return false;
+            }
+
+            const normalized = message.toLowerCase();
+
+            return suppressedPreviewErrors.some(function(pattern) {
+                return normalized.indexOf(pattern) !== -1;
+            });
+        }
+
+        function attachFrameGuards() {
+            if (!frame) {
+                return;
+            }
+
+            try {
+                const previewWindow = frame.contentWindow;
+                if (!previewWindow || typeof previewWindow.addEventListener !== 'function') {
+                    return;
+                }
+
+                if (previewWindow.__sscDeviceLabGuardsAttached) {
+                    return;
+                }
+
+                const logSuppressed = function(message) {
+                    if (typeof window.console === 'undefined') {
+                        return;
+                    }
+
+                    const logger = window.console.debug || window.console.info || window.console.log;
+                    if (typeof logger === 'function') {
+                        logger.call(window.console, '[Supersede Device Lab] Ignored preview error:', message);
+                    }
+                };
+
+                previewWindow.addEventListener('unhandledrejection', function(event) {
+                    if (!event) {
+                        return;
+                    }
+
+                    const message = extractErrorMessage(event.reason);
+                    if (!shouldSuppressPreviewError(message)) {
+                        return;
+                    }
+
+                    if (typeof event.preventDefault === 'function') {
+                        event.preventDefault();
+                    }
+
+                    if (typeof event.stopPropagation === 'function') {
+                        event.stopPropagation();
+                    }
+
+                    logSuppressed(message);
+                });
+
+                previewWindow.addEventListener('error', function(event) {
+                    if (!event || typeof event.message !== 'string') {
+                        return;
+                    }
+
+                    if (!shouldSuppressPreviewError(event.message)) {
+                        return;
+                    }
+
+                    if (typeof event.preventDefault === 'function') {
+                        event.preventDefault();
+                    }
+
+                    if (typeof event.stopPropagation === 'function') {
+                        event.stopPropagation();
+                    }
+
+                    logSuppressed(event.message);
+                }, true);
+
+                previewWindow.__sscDeviceLabGuardsAttached = true;
+            } catch (error) {
+                // Accessing the preview window can throw for cross-origin URLs. Ignore silently.
+            }
+        }
 
         function announce(message) {
             if (!liveRegion || typeof message !== 'string' || message.trim() === '') {
@@ -214,6 +318,7 @@
                 frame.srcdoc = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Device Lab</title></head><body><main style="display:flex;align-items:center;justify-content:center;height:100%;font-family:system-ui, sans-serif;background:#f8fafc;color:#0f172a;"><div><h1 style="font-size:1.5rem;margin-bottom:0.5rem;">Supersede Device Lab</h1><p style="max-width:28rem;line-height:1.6;">Chargez une URL pour visualiser votre site. Les styles Supersede actifs sont injectés automatiquement.</p></div></main></body></html>';
                 currentUrl = '';
                 lastCssAnnouncement = '';
+                attachFrameGuards();
                 injectCssIntoFrame();
                 return;
             }
@@ -308,7 +413,13 @@
             });
         }
 
-        frame.addEventListener('load', injectCssIntoFrame);
+        frame.addEventListener('load', function() {
+            attachFrameGuards();
+            injectCssIntoFrame();
+        });
+
+        attachFrameGuards();
+        injectCssIntoFrame();
 
         const initialDevice = findDevice(currentDeviceId) || findDevice(defaultDevice) || devices[0] || null;
         if (initialDevice) {
