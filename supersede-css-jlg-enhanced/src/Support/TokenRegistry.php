@@ -372,6 +372,8 @@ final class TokenRegistry
 
             self::beginOptionPersistence();
 
+            $didInvalidateCssCache = false;
+
             try {
                 if ($stored !== $normalized) {
                     update_option(self::OPTION_REGISTRY, $normalized, false);
@@ -389,9 +391,14 @@ final class TokenRegistry
 
                 if ($shouldInvalidateCssCache) {
                     self::invalidateCssCache();
+                    $didInvalidateCssCache = true;
                 }
             } finally {
                 self::endOptionPersistence();
+            }
+
+            if (!$didInvalidateCssCache && $needsCssRegeneration) {
+                self::invalidateCssCache();
             }
 
             return $normalized;
