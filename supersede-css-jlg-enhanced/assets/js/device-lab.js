@@ -82,74 +82,78 @@
             });
         }
 
+        function attachSuppressionGuards(targetWindow) {
+            if (!targetWindow || typeof targetWindow.addEventListener !== 'function') {
+                return;
+            }
+
+            if (targetWindow.__sscDeviceLabGuardsAttached) {
+                return;
+            }
+
+            const logSuppressed = function(message) {
+                const consoleObject = targetWindow.console || window.console;
+                if (typeof consoleObject === 'undefined') {
+                    return;
+                }
+
+                const logger = consoleObject.debug || consoleObject.info || consoleObject.log;
+                if (typeof logger === 'function') {
+                    logger.call(consoleObject, '[Supersede Device Lab] Ignored preview error:', message);
+                }
+            };
+
+            targetWindow.addEventListener('unhandledrejection', function(event) {
+                if (!event) {
+                    return;
+                }
+
+                const message = extractErrorMessage(event.reason);
+                if (!shouldSuppressPreviewError(message)) {
+                    return;
+                }
+
+                if (typeof event.preventDefault === 'function') {
+                    event.preventDefault();
+                }
+
+                if (typeof event.stopPropagation === 'function') {
+                    event.stopPropagation();
+                }
+
+                logSuppressed(message);
+            });
+
+            targetWindow.addEventListener('error', function(event) {
+                if (!event || typeof event.message !== 'string') {
+                    return;
+                }
+
+                if (!shouldSuppressPreviewError(event.message)) {
+                    return;
+                }
+
+                if (typeof event.preventDefault === 'function') {
+                    event.preventDefault();
+                }
+
+                if (typeof event.stopPropagation === 'function') {
+                    event.stopPropagation();
+                }
+
+                logSuppressed(event.message);
+            }, true);
+
+            targetWindow.__sscDeviceLabGuardsAttached = true;
+        }
+
         function attachFrameGuards() {
             if (!frame) {
                 return;
             }
 
             try {
-                const previewWindow = frame.contentWindow;
-                if (!previewWindow || typeof previewWindow.addEventListener !== 'function') {
-                    return;
-                }
-
-                if (previewWindow.__sscDeviceLabGuardsAttached) {
-                    return;
-                }
-
-                const logSuppressed = function(message) {
-                    if (typeof window.console === 'undefined') {
-                        return;
-                    }
-
-                    const logger = window.console.debug || window.console.info || window.console.log;
-                    if (typeof logger === 'function') {
-                        logger.call(window.console, '[Supersede Device Lab] Ignored preview error:', message);
-                    }
-                };
-
-                previewWindow.addEventListener('unhandledrejection', function(event) {
-                    if (!event) {
-                        return;
-                    }
-
-                    const message = extractErrorMessage(event.reason);
-                    if (!shouldSuppressPreviewError(message)) {
-                        return;
-                    }
-
-                    if (typeof event.preventDefault === 'function') {
-                        event.preventDefault();
-                    }
-
-                    if (typeof event.stopPropagation === 'function') {
-                        event.stopPropagation();
-                    }
-
-                    logSuppressed(message);
-                });
-
-                previewWindow.addEventListener('error', function(event) {
-                    if (!event || typeof event.message !== 'string') {
-                        return;
-                    }
-
-                    if (!shouldSuppressPreviewError(event.message)) {
-                        return;
-                    }
-
-                    if (typeof event.preventDefault === 'function') {
-                        event.preventDefault();
-                    }
-
-                    if (typeof event.stopPropagation === 'function') {
-                        event.stopPropagation();
-                    }
-
-                    logSuppressed(event.message);
-                }, true);
-
-                previewWindow.__sscDeviceLabGuardsAttached = true;
+                attachSuppressionGuards(frame.contentWindow);
             } catch (error) {
                 // Accessing the preview window can throw for cross-origin URLs. Ignore silently.
             }
@@ -418,6 +422,7 @@
             injectCssIntoFrame();
         });
 
+        attachSuppressionGuards(window);
         attachFrameGuards();
         injectCssIntoFrame();
 
