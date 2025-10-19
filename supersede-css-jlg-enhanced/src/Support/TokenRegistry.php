@@ -1184,17 +1184,24 @@ final class TokenRegistry
             return [];
         }
 
-        $existingByName = [];
+        $existingByKey = [];
 
         $existingResult = self::normalizeRegistry($existing);
 
         foreach ($existingResult['tokens'] as $existingToken) {
-            $name = strtolower($existingToken['name']);
-            $existingByName[$name] = [
+            $normalizedContext = self::sanitizeContext($existingToken['context'] ?? self::DEFAULT_CONTEXT);
+            $key = strtolower($normalizedContext) . '|' . strtolower($existingToken['name']);
+
+            $existingByKey[$key] = [
                 'type' => $existingToken['type'],
                 'group' => $existingToken['group'],
                 'description' => $existingToken['description'],
-                'context' => $existingToken['context'],
+                'context' => $normalizedContext,
+                'status' => $existingToken['status'],
+                'owner' => $existingToken['owner'],
+                'version' => $existingToken['version'],
+                'changelog' => $existingToken['changelog'],
+                'linked_components' => $existingToken['linked_components'],
             ];
         }
 
@@ -1210,20 +1217,18 @@ final class TokenRegistry
                 continue;
             }
 
-            $key = strtolower($name);
+            $incomingContext = isset($token['context']) ? (string) $token['context'] : '';
+            $sanitizedContext = self::sanitizeContext($incomingContext === '' ? self::DEFAULT_CONTEXT : $incomingContext);
+            $lookupKey = strtolower($sanitizedContext) . '|' . strtolower($name);
 
-            if (isset($existingByName[$key])) {
-                $metadata = $existingByName[$key];
-                $token['type'] = $metadata['type'];
-                $token['group'] = $metadata['group'];
-                $token['description'] = $metadata['description'];
-                if (!isset($token['context']) || trim((string) $token['context']) === '') {
-                    $token['context'] = $metadata['context'];
+            if (isset($existingByKey[$lookupKey])) {
+                $metadata = $existingByKey[$lookupKey];
+                foreach (['type', 'group', 'description', 'status', 'owner', 'version', 'changelog', 'linked_components'] as $field) {
+                    $token[$field] = $metadata[$field];
                 }
-            }
-
-            if (!isset($token['context']) || trim((string) $token['context']) === '') {
-                $token['context'] = self::getDefaultContext();
+                $token['context'] = $metadata['context'];
+            } else {
+                $token['context'] = $sanitizedContext;
             }
 
             $merged[] = $token;

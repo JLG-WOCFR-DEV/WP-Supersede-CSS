@@ -452,6 +452,116 @@ if (!isset($mergedTokens[1]['context']) || $mergedTokens[1]['context'] !== Token
     exit(1);
 }
 
+$existingContextualTokens = [
+    [
+        'name' => '--brand-color',
+        'value' => '#111111',
+        'type' => 'color',
+        'description' => 'Default theme color.',
+        'group' => 'Brand',
+        'context' => TokenRegistry::getDefaultContext(),
+        'status' => TokenRegistry::STATUS_READY,
+        'owner' => 42,
+        'version' => '1.0.0',
+        'changelog' => 'Initial publication.',
+        'linked_components' => ['header'],
+    ],
+    [
+        'name' => '--brand-color',
+        'value' => '#000000',
+        'type' => 'color',
+        'description' => 'Dark theme override.',
+        'group' => 'Brand - Dark',
+        'context' => '[data-theme="dark"]',
+        'status' => TokenRegistry::STATUS_DEPRECATED,
+        'owner' => 84,
+        'version' => '2.0.0',
+        'changelog' => 'Deprecated in favor of gradient.',
+        'linked_components' => ['footer', 'header'],
+    ],
+];
+
+$incomingContextualTokens = [
+    [
+        'name' => '--brand-color',
+        'value' => '#123456',
+        'type' => 'text',
+        'description' => '',
+        'group' => 'Legacy',
+        'context' => TokenRegistry::getDefaultContext(),
+        'status' => TokenRegistry::STATUS_DRAFT,
+        'owner' => 0,
+        'version' => '',
+        'changelog' => '',
+        'linked_components' => [],
+    ],
+    [
+        'name' => '--brand-color',
+        'value' => '#654321',
+        'type' => 'text',
+        'description' => '',
+        'group' => 'Legacy',
+        'context' => '[data-theme="dark"]',
+        'status' => TokenRegistry::STATUS_DRAFT,
+        'owner' => 0,
+        'version' => '',
+        'changelog' => '',
+        'linked_components' => [],
+    ],
+];
+
+$mergedContextualTokens = TokenRegistry::mergeMetadata($incomingContextualTokens, $existingContextualTokens);
+
+if ($mergedContextualTokens === [] || count($mergedContextualTokens) !== 2) {
+    fwrite(STDERR, 'mergeMetadata should preserve tokens when multiple contexts share the same name.' . PHP_EOL);
+    exit(1);
+}
+
+if ($mergedContextualTokens[0]['group'] !== 'Brand' || $mergedContextualTokens[0]['description'] !== 'Default theme color.') {
+    fwrite(STDERR, 'mergeMetadata should restore per-context metadata without mixing contexts.' . PHP_EOL);
+    exit(1);
+}
+
+if ($mergedContextualTokens[0]['status'] !== TokenRegistry::STATUS_READY || $mergedContextualTokens[0]['owner'] !== 42 || $mergedContextualTokens[0]['version'] !== '1.0.0') {
+    fwrite(STDERR, 'mergeMetadata should keep governance metadata for each context.' . PHP_EOL);
+    exit(1);
+}
+
+if ($mergedContextualTokens[0]['changelog'] !== 'Initial publication.' || $mergedContextualTokens[0]['linked_components'] !== ['header']) {
+    fwrite(STDERR, 'mergeMetadata should preserve changelog and linked components metadata.' . PHP_EOL);
+    exit(1);
+}
+
+if ($mergedContextualTokens[0]['context'] !== TokenRegistry::getDefaultContext()) {
+    fwrite(STDERR, 'mergeMetadata should keep the default context for root tokens.' . PHP_EOL);
+    exit(1);
+}
+
+if ($mergedContextualTokens[1]['group'] !== 'Brand - Dark' || $mergedContextualTokens[1]['description'] !== 'Dark theme override.') {
+    fwrite(STDERR, 'mergeMetadata should preserve metadata for non-default contexts.' . PHP_EOL);
+    exit(1);
+}
+
+if ($mergedContextualTokens[1]['status'] !== TokenRegistry::STATUS_DEPRECATED || $mergedContextualTokens[1]['owner'] !== 84 || $mergedContextualTokens[1]['version'] !== '2.0.0') {
+    fwrite(STDERR, 'mergeMetadata should retain governance metadata for contextual overrides.' . PHP_EOL);
+    exit(1);
+}
+
+if ($mergedContextualTokens[1]['changelog'] !== 'Deprecated in favor of gradient.' || $mergedContextualTokens[1]['linked_components'] !== ['footer', 'header']) {
+    fwrite(STDERR, 'mergeMetadata should preserve complex metadata for contextual overrides.' . PHP_EOL);
+    exit(1);
+}
+
+if ($mergedContextualTokens[1]['context'] !== '[data-theme="dark"]') {
+    fwrite(STDERR, 'mergeMetadata should keep the context selector for overrides intact.' . PHP_EOL);
+    exit(1);
+}
+
+if ($mergedContextualTokens[0]['value'] !== '#123456' || $mergedContextualTokens[1]['value'] !== '#654321') {
+    fwrite(STDERR, 'mergeMetadata should keep incoming values when restoring metadata by context.' . PHP_EOL);
+    exit(1);
+}
+
 $ssc_options_store = [];
 
 $underscoredTokens = [
