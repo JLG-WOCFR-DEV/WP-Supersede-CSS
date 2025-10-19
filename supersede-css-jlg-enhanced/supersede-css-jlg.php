@@ -280,6 +280,56 @@ add_action('init', static function (): void {
     PresetLibrary::ensureDefaults();
 });
 
+if (!function_exists('ssc_register_admin_bar_shortcut')) {
+    /**
+     * Adds a shortcut to Supersede CSS screens in the WordPress admin bar.
+     */
+    function ssc_register_admin_bar_shortcut(\WP_Admin_Bar $admin_bar): void
+    {
+        if (!is_user_logged_in() || !is_admin_bar_showing()) {
+            return;
+        }
+
+        if (!current_user_can(ssc_get_required_capability())) {
+            return;
+        }
+
+        if (!class_exists('SSC\\Admin\\ModuleRegistry')) {
+            return;
+        }
+
+        $base_slug = \SSC\Admin\ModuleRegistry::BASE_SLUG;
+        $base_url  = admin_url('admin.php?page=' . $base_slug);
+
+        $admin_bar->add_node([
+            'id'    => 'ssc-admin',
+            'title' => __('Supersede CSS', 'supersede-css-jlg'),
+            'href'  => $base_url,
+            'meta'  => [
+                'class' => 'ssc-admin-bar-node',
+            ],
+        ]);
+
+        foreach (\SSC\Admin\ModuleRegistry::submenuModules() as $module) {
+            $page_slug = $module['page_slug'] ?? null;
+            $label     = $module['menu_label'] ?? $module['label'] ?? null;
+
+            if (!is_string($page_slug) || $page_slug === '' || !is_string($label) || $label === '') {
+                continue;
+            }
+
+            $admin_bar->add_node([
+                'id'     => 'ssc-admin-' . sanitize_key($page_slug),
+                'parent' => 'ssc-admin',
+                'title'  => $label,
+                'href'   => admin_url('admin.php?page=' . $page_slug),
+            ]);
+        }
+    }
+
+    add_action('admin_bar_menu', 'ssc_register_admin_bar_shortcut', 80);
+}
+
 if (!function_exists('ssc_get_inline_style_handle')) {
     /**
      * Returns the stylesheet handle used when outputting inline CSS.
