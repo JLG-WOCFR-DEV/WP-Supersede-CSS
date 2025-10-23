@@ -369,6 +369,7 @@ final class TokenRegistry
             $generatedCss = self::tokensToCss($normalized);
             $existingCss = self::readOption(self::OPTION_CSS, null);
             $needsCssRegeneration = self::cssNeedsRegeneration($existingCss, $generatedCss);
+            $cssWasPersisted = false;
 
             self::beginOptionPersistence();
 
@@ -378,8 +379,9 @@ final class TokenRegistry
                     $needsCssRegeneration = true;
                 }
 
-                if ($needsCssRegeneration) {
-                    self::persistCss($normalized, $generatedCss);
+                $cssWasPersisted = self::persistCss($normalized, $generatedCss);
+
+                if ($needsCssRegeneration || $cssWasPersisted) {
                     self::invalidateCssCache();
                 }
             } finally {
