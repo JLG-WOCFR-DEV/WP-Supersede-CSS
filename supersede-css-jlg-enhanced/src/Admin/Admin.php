@@ -115,6 +115,7 @@ final class Admin
         wp_enqueue_style('ssc-foundation', SSC_PLUGIN_URL . 'assets/css/foundation.css', [], SSC_VERSION);
         wp_enqueue_style('ssc-ux', SSC_PLUGIN_URL . 'assets/css/ux.css', ['ssc-foundation'], SSC_VERSION);
         wp_enqueue_style('ssc-admin', SSC_PLUGIN_URL . 'assets/css/admin.css', ['ssc-foundation'], SSC_VERSION);
+        wp_enqueue_script('ssc-error-guards', SSC_PLUGIN_URL . 'assets/js/error-guards.js', [], SSC_VERSION, false);
         wp_enqueue_script('ssc-ux', SSC_PLUGIN_URL . 'assets/js/ux.js', ['jquery'], SSC_VERSION, true);
 
         // Register heavy assets so modules can request them when needed.
