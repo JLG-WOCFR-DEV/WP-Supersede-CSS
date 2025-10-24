@@ -282,6 +282,26 @@ final class ModuleRegistry
                     ],
                 ],
             ],
+            'ecg' => [
+                'slug'          => 'ecg',
+                'page_slug'     => self::BASE_SLUG . '-ecg',
+                'label'         => __('ECG / Battement de Cœur', 'supersede-css-jlg'),
+                'class'         => '\\SSC\\Admin\\Pages\\EcgEffects',
+                'group'         => 'effects',
+                'enqueue_media' => true,
+                'assets'        => [
+                    'scripts' => [
+                        [
+                            'path' => 'assets/js/effects-ecg.js',
+                        ],
+                    ],
+                    'styles'  => [
+                        [
+                            'path' => 'assets/css/visual-effects.css',
+                        ],
+                    ],
+                ],
+            ],
             'scope' => [
                 'slug'      => 'scope',
                 'page_slug' => self::BASE_SLUG . '-scope',
