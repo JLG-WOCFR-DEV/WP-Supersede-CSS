@@ -340,6 +340,109 @@
         });
     };
 
+    (function attachGlobalAsyncGuards() {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        if (window.__sscAsyncGuardsAttached) {
+            return;
+        }
+
+        const suppressedMessages = [
+            'a listener indicated an asynchronous response by returning true, but the message channel closed before a response was received'
+        ];
+
+        const extractMessage = (source) => {
+            if (!source) {
+                return '';
+            }
+
+            if (typeof source === 'string') {
+                return source;
+            }
+
+            if (typeof source.message === 'string') {
+                return source.message;
+            }
+
+            if (typeof source.reason === 'string') {
+                return source.reason;
+            }
+
+            if (source.reason && typeof source.reason.message === 'string') {
+                return source.reason.message;
+            }
+
+            if (typeof source.error === 'string') {
+                return source.error;
+            }
+
+            if (source.error && typeof source.error.message === 'string') {
+                return source.error.message;
+            }
+
+            return '';
+        };
+
+        const shouldSuppress = (message) => {
+            if (typeof message !== 'string' || message.trim() === '') {
+                return false;
+            }
+
+            const normalized = message.toLowerCase();
+            return suppressedMessages.some((pattern) => normalized.indexOf(pattern) !== -1);
+        };
+
+        const logSuppressed = (message) => {
+            const consoleObject = window.console;
+            if (!consoleObject) {
+                return;
+            }
+
+            const logger = consoleObject.debug || consoleObject.info || consoleObject.log;
+            if (typeof logger === 'function') {
+                logger.call(consoleObject, '[Supersede CSS] Ignored async message:', message);
+            }
+        };
+
+        window.addEventListener('unhandledrejection', (event) => {
+            const message = extractMessage(event && event.reason);
+            if (!shouldSuppress(message)) {
+                return;
+            }
+
+            if (typeof event.preventDefault === 'function') {
+                event.preventDefault();
+            }
+
+            if (typeof event.stopPropagation === 'function') {
+                event.stopPropagation();
+            }
+
+            logSuppressed(message);
+        });
+
+        window.addEventListener('error', (event) => {
+            const message = extractMessage(event);
+            if (!shouldSuppress(message)) {
+                return;
+            }
+
+            if (typeof event.preventDefault === 'function') {
+                event.preventDefault();
+            }
+
+            if (typeof event.stopPropagation === 'function') {
+                event.stopPropagation();
+            }
+
+            logSuppressed(message);
+        }, true);
+
+        window.__sscAsyncGuardsAttached = true;
+    })();
+
     const commandPalette = (() => {
         const localized = getSscI18n();
         const sources = new Map();
