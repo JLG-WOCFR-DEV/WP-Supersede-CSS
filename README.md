@@ -111,7 +111,7 @@ supersede-css-jlg-enhanced/
 ├── blocks/                # Blocs Gutenberg personnalisés
 ├── docs/                  # Guides, diagrammes et notes techniques
 ├── src/                   # Classes PHP du noyau du plugin
-├── views/                 # Templates Twig utilisés dans l’admin
+├── views/                 # Vues PHP utilisées dans l’admin
 ├── tests/                 # Tests automatisés (PHPUnit & Playwright)
 └── manual-tests/          # Scénarios de QA manuelle documentés
 ```
@@ -119,19 +119,19 @@ supersede-css-jlg-enhanced/
 Cette cartographie permet de naviguer rapidement dans le projet :
 
 - Les classes de service et d’intégration WordPress résident dans `src/` et suivent une organisation PSR-4.
-- Les scripts front-end sont gérés via Vite ; les sources vivent dans `assets/` et sont packagées vers `build/` lors du `npm run build`.
-- Les gabarits Twig du back-office sont stockés dans `views/` afin de séparer structure HTML et logique PHP.
+- Les sources front-end vivent dans `assets/`. Les bundles livrés avec le plugin sont versionnés dans ce même dossier en attendant la réintroduction d’un pipeline Vite dédié.
+- Les vues PHP du back-office sont stockées dans `views/` afin de séparer structure HTML et logique applicative.
 - La documentation technique et les RFC expérimentales sont regroupées dans `docs/` pour guider les contributions futures.
 
 ## Commandes npm utiles
 
 | Commande | Description |
 | --- | --- |
-| `npm run dev` | Compile les assets avec Vite en mode développement (HMR et sourcemaps). |
-| `npm run build` | Génère les bundles optimisés utilisés en production dans WordPress. |
-| `npm run env:start` / `npm run env:stop` / `npm run env:destroy` | Démarre, arrête ou supprime l’instance WordPress de test orchestrée par `@wordpress/env`. |
-| `npm run lint` | Analyse le code JavaScript/TypeScript avec ESLint selon la configuration du projet. |
-| `npm run format` | Applique Prettier pour harmoniser le style des fichiers front-end. |
+| `npm run env:start` | Démarre l’instance WordPress de test orchestrée par `@wordpress/env`. |
+| `npm run env:stop` | Arrête l’instance WordPress de test. |
+| `npm run env:destroy` | Supprime l’instance WordPress de test (confirmation automatique). |
+| `npm run test:ui` | Lance l’intégralité de la suite Playwright. |
+| `npm run test:ui:shell` | N’exécute que le scénario Playwright axé sur le shell d’accessibilité. |
 
 ## Tests
 
