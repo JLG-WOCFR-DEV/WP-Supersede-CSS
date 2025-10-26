@@ -78,4 +78,67 @@ final class CommentStoreTest extends WP_UnitTestCase
         $this->assertSame($mentionId, $second['mentions'][0]['id']);
         $this->assertSame($authorId, $second['mentions'][1]['id']);
     }
+
+    public function test_add_comment_filters_duplicate_and_invalid_mentions(): void
+    {
+        $authorId = self::factory()->user->create([
+            'display_name' => 'Author',
+        ]);
+        $firstMentionId = self::factory()->user->create([
+            'display_name' => 'Bob',
+        ]);
+        $secondMentionId = self::factory()->user->create([
+            'display_name' => 'Carol',
+        ]);
+
+        $result = $this->store->addComment(
+            'post',
+            '42',
+            'Hello mentions',
+            [
+                $firstMentionId,
+                (string) $firstMentionId,
+                0,
+                -5,
+                'abc',
+                $secondMentionId,
+                99999,
+                $secondMentionId,
+            ],
+            $authorId
+        );
+
+        $stored = get_option('ssc_entity_comments');
+        $mentions = $stored['post']['42'][0]['mentions'] ?? null;
+
+        $this->assertSame([
+            $firstMentionId,
+            $secondMentionId,
+        ], $mentions);
+
+        $this->assertCount(2, $result['mentions']);
+        $this->assertSame($firstMentionId, $result['mentions'][0]['id']);
+        $this->assertSame($secondMentionId, $result['mentions'][1]['id']);
+    }
+
+    public function test_add_comment_discards_nonexistent_mentions(): void
+    {
+        $authorId = self::factory()->user->create([
+            'display_name' => 'Author',
+        ]);
+
+        $result = $this->store->addComment(
+            'post',
+            '99',
+            'No valid mentions',
+            [123456, 0, 'foo'],
+            $authorId
+        );
+
+        $stored = get_option('ssc_entity_comments');
+        $mentions = $stored['post']['99'][0]['mentions'] ?? null;
+
+        $this->assertSame([], $mentions);
+        $this->assertSame([], $result['mentions']);
+    }
 }
