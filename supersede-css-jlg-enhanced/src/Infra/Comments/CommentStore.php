@@ -69,7 +69,7 @@ final class CommentStore
         }
 
         $userId = (int) $userId;
-        $mentions = $this->sanitizeMentions($mentions);
+        $cleanMentions = $this->sanitizeMentions($mentions);
 
         $comments = $this->read();
         $entityComments = $comments[$entityType][$entityId] ?? [];
@@ -83,7 +83,7 @@ final class CommentStore
             'entity_type' => $entityType,
             'entity_id' => $entityId,
             'message' => $message,
-            'mentions' => $mentions,
+            'mentions' => $cleanMentions,
             'created_by' => $userId,
             'created_at' => $timestamp,
         ];
@@ -105,7 +105,7 @@ final class CommentStore
             'entity_id' => $entityId,
             'details' => [
                 'comment_id' => $commentId,
-                'mentions' => $mentions,
+                'mentions' => $cleanMentions,
             ],
         ]);
 
@@ -227,6 +227,16 @@ final class CommentStore
             if (isset($users[$id])) {
                 $existing[] = $id;
             }
+            $uniqueIds[] = $id;
+        }
+
+        if ($uniqueIds === []) {
+            return [];
+        }
+
+        $users = $this->loadUsers($uniqueIds);
+        if ($users === []) {
+            return [];
         }
 
         return $existing;

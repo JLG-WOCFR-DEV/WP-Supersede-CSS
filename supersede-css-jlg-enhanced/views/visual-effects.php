@@ -42,7 +42,16 @@ if (!defined('ABSPATH')) {
             </div>
             <div class="ssc-pane">
                 <h3><?php esc_html_e('Aperçu', 'supersede-css-jlg'); ?></h3>
-                <div class="ssc-ve-preview-box"><canvas id="ssc-crt-canvas"></canvas></div>
+                <?php
+                $crt_preview_description_attr = esc_attr__('Aperçu animé illustrant un effet CRT avec lignes de balayage, bruit vidéo et aberrations chromatiques.', 'supersede-css-jlg');
+                $crt_preview_description_text = esc_html__('Aperçu animé illustrant un effet CRT avec lignes de balayage, bruit vidéo et aberrations chromatiques.', 'supersede-css-jlg');
+                ?>
+                <div class="ssc-ve-preview-box">
+                    <canvas id="ssc-crt-canvas" role="img" aria-label="<?php echo $crt_preview_description_attr; ?>">
+                        <?php echo $crt_preview_description_text; ?>
+                    </canvas>
+                    <p class="screen-reader-text ssc-crt-canvas-description"><?php echo $crt_preview_description_text; ?></p>
+                </div>
             </div>
         </div>
     </div>
