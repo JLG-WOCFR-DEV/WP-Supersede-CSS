@@ -83,6 +83,7 @@ if (function_exists('wp_set_script_translations')) {
         </div>
         <div class="ssc-pane">
             <h3><?php esc_html_e('Importer', 'supersede-css-jlg'); ?></h3><p><?php esc_html_e('Importez un fichier de configuration (.json).', 'supersede-css-jlg'); ?></p>
+            <label for="ssc-import-file" class="screen-reader-text"><?php echo esc_html__('Fichier de configuration Supersede CSS', 'supersede-css-jlg'); ?></label>
             <input type="file" id="ssc-import-file" accept=".json">
             <button id="ssc-import-btn" class="button"><?php esc_html_e('Importer', 'supersede-css-jlg'); ?></button>
             <div id="ssc-import-msg" class="ssc-muted"></div>

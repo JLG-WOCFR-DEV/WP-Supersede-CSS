@@ -69,7 +69,7 @@ final class CommentStore
         }
 
         $userId = (int) $userId;
-        $mentions = $this->sanitizeMentions($mentions);
+        $cleanMentions = $this->sanitizeMentions($mentions);
 
         $comments = $this->read();
         $entityComments = $comments[$entityType][$entityId] ?? [];
@@ -83,7 +83,7 @@ final class CommentStore
             'entity_type' => $entityType,
             'entity_id' => $entityId,
             'message' => $message,
-            'mentions' => $mentions,
+            'mentions' => $cleanMentions,
             'created_by' => $userId,
             'created_at' => $timestamp,
         ];
@@ -105,7 +105,7 @@ final class CommentStore
             'entity_id' => $entityId,
             'details' => [
                 'comment_id' => $commentId,
-                'mentions' => $mentions,
+                'mentions' => $cleanMentions,
             ],
         ]);
 
@@ -205,19 +205,31 @@ final class CommentStore
      */
     private function sanitizeMentions(array $mentions): array
     {
-        $sanitized = [];
+        $uniqueIds = [];
         foreach ($mentions as $mention) {
             $id = is_int($mention) ? $mention : (int) $mention;
             if ($id <= 0) {
                 continue;
             }
-            $user = get_userdata($id);
-            if ($user instanceof WP_User) {
-                $sanitized[] = $user->ID;
+            if (in_array($id, $uniqueIds, true)) {
+                continue;
             }
+            $uniqueIds[] = $id;
         }
 
-        return array_values(array_unique($sanitized));
+        if ($uniqueIds === []) {
+            return [];
+        }
+
+        $users = $this->loadUsers($uniqueIds);
+        if ($users === []) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $uniqueIds,
+            static fn(int $id): bool => isset($users[$id])
+        ));
     }
 
     /**
