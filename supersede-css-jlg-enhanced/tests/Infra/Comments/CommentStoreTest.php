@@ -78,4 +78,44 @@ final class CommentStoreTest extends WP_UnitTestCase
         $this->assertSame($mentionId, $second['mentions'][0]['id']);
         $this->assertSame($authorId, $second['mentions'][1]['id']);
     }
+
+    public function test_add_comment_sanitizes_mentions(): void
+    {
+        $authorId = self::factory()->user->create([
+            'display_name' => 'Author',
+        ]);
+        $firstMentionId = self::factory()->user->create([
+            'display_name' => 'First Mention',
+        ]);
+        $secondMentionId = self::factory()->user->create([
+            'display_name' => 'Second Mention',
+        ]);
+
+        $result = $this->store->addComment(
+            'post',
+            '1',
+            'Hello world',
+            [
+                $firstMentionId,
+                (string) $firstMentionId,
+                0,
+                -5,
+                'foo',
+                $secondMentionId,
+                999999,
+            ],
+            $authorId
+        );
+
+        $this->assertCount(2, $result['mentions']);
+        $this->assertSame($firstMentionId, $result['mentions'][0]['id']);
+        $this->assertSame($secondMentionId, $result['mentions'][1]['id']);
+
+        $stored = get_option('ssc_entity_comments');
+        $this->assertIsArray($stored);
+        $this->assertSame(
+            [$firstMentionId, $secondMentionId],
+            $stored['post']['1'][0]['mentions']
+        );
+    }
 }

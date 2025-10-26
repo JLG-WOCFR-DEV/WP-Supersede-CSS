@@ -205,19 +205,31 @@ final class CommentStore
      */
     private function sanitizeMentions(array $mentions): array
     {
-        $sanitized = [];
+        $ids = [];
+
         foreach ($mentions as $mention) {
             $id = is_int($mention) ? $mention : (int) $mention;
-            if ($id <= 0) {
+            if ($id <= 0 || in_array($id, $ids, true)) {
                 continue;
             }
-            $user = get_userdata($id);
-            if ($user instanceof WP_User) {
-                $sanitized[] = $user->ID;
+
+            $ids[] = $id;
+        }
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $users = $this->loadUsers($ids);
+
+        $existing = [];
+        foreach ($ids as $id) {
+            if (isset($users[$id])) {
+                $existing[] = $id;
             }
         }
 
-        return array_values(array_unique($sanitized));
+        return $existing;
     }
 
     /**
