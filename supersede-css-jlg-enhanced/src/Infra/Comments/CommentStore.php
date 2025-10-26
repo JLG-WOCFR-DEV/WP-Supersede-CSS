@@ -205,14 +205,27 @@ final class CommentStore
      */
     private function sanitizeMentions(array $mentions): array
     {
-        $uniqueIds = [];
+        $ids = [];
+
         foreach ($mentions as $mention) {
             $id = is_int($mention) ? $mention : (int) $mention;
-            if ($id <= 0) {
+            if ($id <= 0 || in_array($id, $ids, true)) {
                 continue;
             }
-            if (in_array($id, $uniqueIds, true)) {
-                continue;
+
+            $ids[] = $id;
+        }
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $users = $this->loadUsers($ids);
+
+        $existing = [];
+        foreach ($ids as $id) {
+            if (isset($users[$id])) {
+                $existing[] = $id;
             }
             $uniqueIds[] = $id;
         }
@@ -226,10 +239,7 @@ final class CommentStore
             return [];
         }
 
-        return array_values(array_filter(
-            $uniqueIds,
-            static fn(int $id): bool => isset($users[$id])
-        ));
+        return $existing;
     }
 
     /**

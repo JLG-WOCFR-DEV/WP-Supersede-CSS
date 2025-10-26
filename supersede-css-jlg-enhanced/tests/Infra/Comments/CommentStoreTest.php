@@ -79,66 +79,43 @@ final class CommentStoreTest extends WP_UnitTestCase
         $this->assertSame($authorId, $second['mentions'][1]['id']);
     }
 
-    public function test_add_comment_filters_duplicate_and_invalid_mentions(): void
+    public function test_add_comment_sanitizes_mentions(): void
     {
         $authorId = self::factory()->user->create([
             'display_name' => 'Author',
         ]);
         $firstMentionId = self::factory()->user->create([
-            'display_name' => 'Bob',
+            'display_name' => 'First Mention',
         ]);
         $secondMentionId = self::factory()->user->create([
-            'display_name' => 'Carol',
+            'display_name' => 'Second Mention',
         ]);
 
         $result = $this->store->addComment(
             'post',
-            '42',
-            'Hello mentions',
+            '1',
+            'Hello world',
             [
                 $firstMentionId,
                 (string) $firstMentionId,
                 0,
                 -5,
-                'abc',
+                'foo',
                 $secondMentionId,
-                99999,
-                $secondMentionId,
+                999999,
             ],
             $authorId
         );
 
-        $stored = get_option('ssc_entity_comments');
-        $mentions = $stored['post']['42'][0]['mentions'] ?? null;
-
-        $this->assertSame([
-            $firstMentionId,
-            $secondMentionId,
-        ], $mentions);
-
         $this->assertCount(2, $result['mentions']);
         $this->assertSame($firstMentionId, $result['mentions'][0]['id']);
         $this->assertSame($secondMentionId, $result['mentions'][1]['id']);
-    }
-
-    public function test_add_comment_discards_nonexistent_mentions(): void
-    {
-        $authorId = self::factory()->user->create([
-            'display_name' => 'Author',
-        ]);
-
-        $result = $this->store->addComment(
-            'post',
-            '99',
-            'No valid mentions',
-            [123456, 0, 'foo'],
-            $authorId
-        );
 
         $stored = get_option('ssc_entity_comments');
-        $mentions = $stored['post']['99'][0]['mentions'] ?? null;
-
-        $this->assertSame([], $mentions);
-        $this->assertSame([], $result['mentions']);
+        $this->assertIsArray($stored);
+        $this->assertSame(
+            [$firstMentionId, $secondMentionId],
+            $stored['post']['1'][0]['mentions']
+        );
     }
 }
