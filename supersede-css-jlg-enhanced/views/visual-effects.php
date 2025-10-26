@@ -42,7 +42,18 @@ if (!defined('ABSPATH')) {
             </div>
             <div class="ssc-pane">
                 <h3><?php esc_html_e('Aperçu', 'supersede-css-jlg'); ?></h3>
-                <div class="ssc-ve-preview-box"><canvas id="ssc-crt-canvas"></canvas></div>
+                <?php
+                $crt_preview_label = esc_html__('Aperçu simulé d\'un écran cathodique avec lignes de balayage animées.', 'supersede-css-jlg');
+                $crt_preview_fallback = esc_html__('Votre navigateur ne prend pas en charge le canevas HTML. L\'aperçu de l\'effet CRT présente normalement un écran sombre parcouru de lignes de balayage vertes et ponctué de bruit vidéo.', 'supersede-css-jlg');
+                ?>
+                <div class="ssc-ve-preview-box">
+                    <canvas id="ssc-crt-canvas" role="img" aria-labelledby="ssc-crt-canvas-description">
+                        <?php echo $crt_preview_fallback; ?>
+                    </canvas>
+                    <p id="ssc-crt-canvas-description" class="screen-reader-text ssc-crt-canvas-description">
+                        <?php echo $crt_preview_label; ?>
+                    </p>
+                </div>
             </div>
         </div>
     </div>
