@@ -1532,6 +1532,31 @@ body[class*="page_supersede-css-jlg"] .ssc-layout .ssc-main-content {
     padding-right: 16px;
     min-height: 0;
 }
+
+/* Keep the WordPress sidebar legible on Supersede pages -------------------- */
+body[class*="page_supersede-css-jlg"] #adminmenu .toplevel_page_supersede-css-jlg > a,
+body[class*="page_supersede-css-jlg"] #adminmenu .toplevel_page_supersede-css-jlg > a .wp-menu-name {
+    color: #f0f0f1;
+}
+
+body[class*="page_supersede-css-jlg"] #adminmenu .toplevel_page_supersede-css-jlg > a .wp-menu-image:before {
+    color: #f0f0f1;
+}
+
+body[class*="page_supersede-css-jlg"] #adminmenu .toplevel_page_supersede-css-jlg.wp-has-current-submenu > a,
+body[class*="page_supersede-css-jlg"] #adminmenu .toplevel_page_supersede-css-jlg.wp-has-current-submenu > a .wp-menu-name {
+    color: #fff;
+    font-weight: 600;
+}
+
+body[class*="page_supersede-css-jlg"] #adminmenu .toplevel_page_supersede-css-jlg .wp-submenu a {
+    color: #d4d6d8;
+}
+
+body[class*="page_supersede-css-jlg"] #adminmenu .toplevel_page_supersede-css-jlg .wp-submenu a:hover,
+body[class*="page_supersede-css-jlg"] #adminmenu .toplevel_page_supersede-css-jlg .wp-submenu a:focus {
+    color: #fff;
+}
 @media (max-width: 960px) {
     body[class*="page_supersede-css-jlg"] .ssc-viewport {
         margin-top: 12px;
