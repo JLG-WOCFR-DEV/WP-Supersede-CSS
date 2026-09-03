@@ -71,6 +71,10 @@ final class Admin
                 echo wp_kses($page_content, wp_kses_allowed_html('post'));
             }
         });
+
+        if ($page_slug !== $this->slug) {
+            remove_submenu_page($this->slug, $page_slug);
+        }
     }
 
     public function renderDashboard(): void {

@@ -314,6 +314,7 @@ class Layout {
         $mobile_menu_sr_label = esc_html__('Menu', 'supersede-css-jlg');
 
         ?>
+        <div class="wrap">
         <div class="ssc-viewport">
             <div class="ssc-shell">
                 <a class="ssc-skip-link" href="#ssc-main-content"><?php echo esc_html__('Passer au contenu principal', 'supersede-css-jlg'); ?></a>
@@ -376,6 +377,7 @@ class Layout {
                 </main>
             </div>
             </div>
+        </div>
         </div>
         <?php
     }
