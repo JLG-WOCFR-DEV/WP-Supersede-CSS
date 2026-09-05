@@ -812,10 +812,56 @@
         const mobileMenuToggle = $('#ssc-mobile-menu');
         const overlay = $('.ssc-shell-overlay');
         const bodyEl = $('body');
-        const focusableSelectors = 'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+        const focusableSelectors = 'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
         let lastFocusedElement = null;
 
         const isMobileViewport = () => window.matchMedia('(max-width: 960px)').matches;
+
+        const SIDEBAR_GROUPS_STORAGE_KEY = 'ssc-sidebar-groups';
+        const sidebarGroups = sidebar.find('details.ssc-sidebar-group[data-ssc-group]');
+
+        const readSidebarGroupState = () => {
+            try {
+                const raw = window.localStorage.getItem(SIDEBAR_GROUPS_STORAGE_KEY);
+                if (!raw) {
+                    return {};
+                }
+                const parsed = JSON.parse(raw);
+                return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+            } catch (error) {
+                return {};
+            }
+        };
+
+        const persistSidebarGroupState = () => {
+            try {
+                const state = {};
+                sidebarGroups.each(function() {
+                    const key = this.getAttribute('data-ssc-group');
+                    if (key) {
+                        state[key] = !!this.open;
+                    }
+                });
+                window.localStorage.setItem(SIDEBAR_GROUPS_STORAGE_KEY, JSON.stringify(state));
+            } catch (error) {
+                // Ignore quota/security errors.
+            }
+        };
+
+        const storedGroupState = readSidebarGroupState();
+        sidebarGroups.each(function() {
+            const key = this.getAttribute('data-ssc-group');
+            const hasCurrentPage = this.querySelector('a[aria-current="page"]') !== null;
+            if (hasCurrentPage) {
+                this.open = true;
+                return;
+            }
+            if (key && Object.prototype.hasOwnProperty.call(storedGroupState, key)) {
+                this.open = !!storedGroupState[key];
+            }
+        });
+        persistSidebarGroupState();
+        sidebarGroups.on('toggle', persistSidebarGroupState);
 
         const updateSidebarAria = () => {
             if (isMobileViewport() && !shell.hasClass('ssc-shell--menu-open')) {

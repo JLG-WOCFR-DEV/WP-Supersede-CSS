@@ -37,8 +37,69 @@
     let focusAnnouncer = null;
     let focusAnnouncementTimeout = null;
     let lastFocusedView = 'desktop';
-    const codeMirrorAvailable = typeof window !== 'undefined' && typeof window.CodeMirror !== 'undefined';
     let codeMirrorWarningShown = false;
+
+    const getCodeMirrorConstructor = () => {
+        if (typeof window === 'undefined') {
+            return null;
+        }
+        if (typeof window.CodeMirror === 'function') {
+            return window.CodeMirror;
+        }
+        if (window.wp && typeof window.wp.CodeMirror === 'function') {
+            return window.wp.CodeMirror;
+        }
+        return null;
+    };
+
+    const isCodeEditorAvailable = () => {
+        if (typeof window === 'undefined') {
+            return false;
+        }
+        if (window.wp && window.wp.codeEditor && typeof window.wp.codeEditor.initialize === 'function') {
+            return true;
+        }
+        const constructor = getCodeMirrorConstructor();
+        return !!(constructor && typeof constructor.fromTextArea === 'function');
+    };
+
+    const createEditorInstance = (textarea) => {
+        if (!textarea) {
+            return null;
+        }
+
+        if (window.wp && window.wp.codeEditor && typeof window.wp.codeEditor.initialize === 'function') {
+            try {
+                const result = window.wp.codeEditor.initialize(textarea, {
+                    codemirror: {
+                        indentUnit: 2,
+                        tabSize: 2,
+                        mode: 'text/css',
+                        lineNumbers: true,
+                        lineWrapping: true,
+                        lint: false,
+                        gutters: [],
+                    },
+                });
+                if (result && result.codemirror) {
+                    return result.codemirror;
+                }
+            } catch (error) {
+                // Fall through to the bundled constructor.
+            }
+        }
+
+        const constructor = getCodeMirrorConstructor();
+        if (!constructor || typeof constructor.fromTextArea !== 'function') {
+            return null;
+        }
+
+        return constructor.fromTextArea(textarea, {
+            lineNumbers: true,
+            mode: 'css',
+            lineWrapping: true,
+        });
+    };
 
     const getViewLabel = (view) => {
         if (typeof viewLabels[view] === 'string' && viewLabels[view].trim() !== '') {
@@ -173,7 +234,7 @@
     }
 
     function initCodeMirrors() {
-        if (!codeMirrorAvailable) {
+        if (!isCodeEditorAvailable()) {
             notifyCodeMirrorUnavailable();
             return;
         }
@@ -184,12 +245,11 @@
                 return;
             }
 
-            const instance = CodeMirror.fromTextArea(textarea, {
-                lineNumbers: true,
-                mode: 'css',
-                theme: 'material-darker',
-                lineWrapping: true,
-            });
+            const instance = createEditorInstance(textarea);
+            if (!instance) {
+                notifyCodeMirrorUnavailable();
+                return;
+            }
 
             instance.on('focus', () => {
                 lastFocusedView = view;

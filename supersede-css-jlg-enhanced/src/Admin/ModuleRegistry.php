@@ -427,7 +427,9 @@ final class ModuleRegistry
     }
 
     /**
-     * @return array<string, array<string, string>>
+     * Returns sidebar groups keyed by a stable identifier (not the translated label).
+     *
+     * @return array<string, array{key: string, label: string, items: array<string, string>}>
      */
     public static function groupedMenu(): array
     {
@@ -435,21 +437,20 @@ final class ModuleRegistry
         $grouped = [];
 
         foreach ($groups as $key => $label) {
-            $grouped[$label] = [];
+            $grouped[$key] = [
+                'key'   => $key,
+                'label' => $label,
+                'items' => [],
+            ];
         }
 
         foreach (self::modules() as $module) {
             $group_key = $module['group'] ?? null;
-            if ($group_key === null || !isset($groups[$group_key])) {
+            if ($group_key === null || !isset($grouped[$group_key])) {
                 continue;
             }
 
-            $group_label = $groups[$group_key];
-            if (!isset($grouped[$group_label])) {
-                $grouped[$group_label] = [];
-            }
-
-            $grouped[$group_label][$module['page_slug']] = $module['label'];
+            $grouped[$group_key]['items'][$module['page_slug']] = $module['label'];
         }
 
         return $grouped;

@@ -122,7 +122,7 @@ final class Admin
         wp_enqueue_script('ssc-error-guards', SSC_PLUGIN_URL . 'assets/js/error-guards.js', [], SSC_VERSION, false);
         wp_enqueue_script('ssc-ux', SSC_PLUGIN_URL . 'assets/js/ux.js', ['jquery'], SSC_VERSION, true);
 
-        // Register heavy assets so modules can request them when needed.
+        // Register bundled CodeMirror as a fallback when WordPress core's editor is unavailable.
         wp_register_style('ssc-codemirror-style', SSC_PLUGIN_URL . 'assets/codemirror/lib/codemirror.css', [], SSC_VERSION);
         wp_register_script('ssc-codemirror', SSC_PLUGIN_URL . 'assets/codemirror/lib/codemirror.js', [], SSC_VERSION, true);
         wp_register_script('ssc-codemirror-css', SSC_PLUGIN_URL . 'assets/codemirror/mode/css/css.js', ['ssc-codemirror'], SSC_VERSION, true);
@@ -138,11 +138,7 @@ final class Admin
             }
         }
 
-        if ($requires_codemirror) {
-            wp_enqueue_style('ssc-codemirror-style');
-            wp_enqueue_script('ssc-codemirror');
-            wp_enqueue_script('ssc-codemirror-css');
-        }
+        $codemirror_handle = $requires_codemirror ? $this->enqueue_codemirror() : '';
 
         foreach ($module['assets']['scripts'] ?? [] as $script) {
             if (empty($script['path'])) {
@@ -150,6 +146,19 @@ final class Admin
             }
 
             $deps = $script['deps'] ?? ['jquery'];
+            if ($codemirror_handle !== '') {
+                $deps = array_map(
+                    static function ($dep) use ($codemirror_handle) {
+                        if ($dep === 'ssc-codemirror' || $dep === 'ssc-codemirror-css') {
+                            return $codemirror_handle;
+                        }
+
+                        return $dep;
+                    },
+                    $deps
+                );
+                $deps = array_values(array_unique($deps));
+            }
             $in_footer = $script['in_footer'] ?? true;
             $handle = $script['handle'] ?? 'ssc-' . sanitize_key(str_replace(['.min', '.'], ['-', '-'], basename($script['path'], '.js')));
             $full_path = SSC_PLUGIN_DIR . $script['path'];
@@ -223,6 +232,41 @@ final class Admin
                 'toastDismissLabel' => esc_html__('Dismiss notification', 'supersede-css-jlg'),
             ],
         ]);
+    }
+
+    /**
+     * Prefer WordPress core CodeMirror (`wp_enqueue_code_editor`) and fall back to the bundled copy.
+     *
+     * @return string Script handle that provides the editor (for script dependencies).
+     */
+    private function enqueue_codemirror(): string
+    {
+        $settings = false;
+
+        if (function_exists('wp_enqueue_code_editor')) {
+            $settings = wp_enqueue_code_editor([
+                'type' => 'text/css',
+                'codemirror' => [
+                    'indentUnit'   => 2,
+                    'tabSize'      => 2,
+                    'mode'         => 'text/css',
+                    'lineNumbers'  => true,
+                    'lineWrapping' => true,
+                    'lint'         => false,
+                    'gutters'      => [],
+                ],
+            ]);
+        }
+
+        if (is_array($settings)) {
+            return 'code-editor';
+        }
+
+        wp_enqueue_style('ssc-codemirror-style');
+        wp_enqueue_script('ssc-codemirror');
+        wp_enqueue_script('ssc-codemirror-css');
+
+        return 'ssc-codemirror-css';
     }
 }
 

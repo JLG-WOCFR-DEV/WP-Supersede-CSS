@@ -163,4 +163,30 @@ class LayoutTest extends TestCase
         $this->assertStringNotContainsString('behavior', $rendered);
         $this->assertStringContainsString('.foo {color:red}', $rendered);
     }
+
+    public function test_sidebar_collapses_inactive_groups_and_opens_the_active_group(): void
+    {
+        ob_start();
+        Layout::render('<p>Contenu</p>', 'supersede-css-jlg');
+        $rendered = ob_get_clean();
+
+        $this->assertStringContainsString('<summary class="ssc-sidebar-heading">', $rendered);
+        $this->assertStringContainsString('data-ssc-group="fundamentals" open', $rendered);
+        $this->assertStringContainsString('data-ssc-group="visual-builders">', $rendered);
+        $this->assertStringNotContainsString('data-ssc-group="visual-builders" open', $rendered);
+        $this->assertStringNotContainsString('data-ssc-group="effects" open', $rendered);
+        $this->assertStringNotContainsString('data-ssc-group="tools" open', $rendered);
+    }
+
+    public function test_sidebar_opens_the_tools_group_on_debug_center(): void
+    {
+        ob_start();
+        Layout::render('<p>Contenu</p>', 'supersede-css-jlg-debug-center');
+        $rendered = ob_get_clean();
+
+        $this->assertStringContainsString('data-ssc-group="tools" open', $rendered);
+        $this->assertStringContainsString('aria-current="page"', $rendered);
+        $this->assertStringNotContainsString('data-ssc-group="fundamentals" open', $rendered);
+        $this->assertStringNotContainsString('data-ssc-group="visual-builders" open', $rendered);
+    }
 }

@@ -355,10 +355,27 @@ class Layout {
             <div class="ssc-layout">
                 <aside>
                     <nav class="ssc-sidebar" id="ssc-sidebar" aria-label="<?php echo esc_attr__('Navigation Supersede CSS', 'supersede-css-jlg'); ?>">
-                    <?php foreach ($menu_items as $group_label => $items): ?>
-                        <div class="ssc-sidebar-group">
-                            <h4 class="ssc-sidebar-heading"><?php echo esc_html($group_label); ?></h4>
-                            <?php foreach ($items as $slug => $label): ?>
+                    <?php
+                    $active_group_key = '';
+                    foreach ($menu_items as $group) {
+                        if (isset($group['items'][$current_page_slug])) {
+                            $active_group_key = $group['key'];
+                            break;
+                        }
+                    }
+                    ?>
+                    <?php foreach ($menu_items as $group): ?>
+                        <?php
+                        if (empty($group['items'])) {
+                            continue;
+                        }
+                        $group_key = $group['key'];
+                        $group_label = $group['label'];
+                        $is_open = ($active_group_key === $group_key);
+                        ?>
+                        <details class="ssc-sidebar-group" data-ssc-group="<?php echo esc_attr($group_key); ?>"<?php echo $is_open ? ' open' : ''; ?>>
+                            <summary class="ssc-sidebar-heading"><?php echo esc_html($group_label); ?></summary>
+                            <?php foreach ($group['items'] as $slug => $label): ?>
                                 <?php $is_active = ($current_page_slug === $slug); ?>
                                 <a
                                     href="<?php echo esc_url(admin_url('admin.php?page=' . $slug)); ?>"
@@ -368,7 +385,7 @@ class Layout {
                                     <?php echo esc_html($label); ?>
                                 </a>
                             <?php endforeach; ?>
-                        </div>
+                        </details>
                     <?php endforeach; ?>
                     </nav>
                 </aside>

@@ -1,5 +1,5 @@
 === Supersede CSS JLG (Enhanced) ===
-Stable tag: 10.0.7
+Stable tag: 10.0.8
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -20,6 +20,10 @@ Cette version a été entièrement refactorisée pour améliorer la stabilité, 
 * `ssc_inline_css` — Offre un point d'entrée pour modifier ou enrichir le CSS assaini juste avant sa sortie (par exemple pour injecter un nonce CSP ou des métriques d'observabilité).
 
 == Changelog ==
+= 10.0.8 =
+* IMPROVEMENT: La sidebar admin replie les groupes inactifs (seul le groupe de la page courante reste ouvert) et mémorise l'état dans `localStorage`.
+* IMPROVEMENT: L'éditeur CSS utilise CodeMirror de WordPress (`wp_enqueue_code_editor`) ; le bundle local n'est chargé qu'en repli.
+
 = 10.0.7 =
 * NEW: Commande `wp ssc css flush` pour vider manuellement le cache CSS généré par le plugin.
 * IMPROVEMENT: Option `--rebuild` pour régénérer immédiatement un CSS assaini lors des déploiements automatisés.
