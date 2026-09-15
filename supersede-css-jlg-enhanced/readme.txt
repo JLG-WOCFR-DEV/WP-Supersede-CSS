@@ -1,5 +1,5 @@
 === Supersede CSS JLG (Enhanced) ===
-Stable tag: 10.0.9
+Stable tag: 10.0.10
 Requires at least: 6.3
 Tested up to: 7.1
 Requires PHP: 8.0
@@ -22,6 +22,10 @@ Cette version a été entièrement refactorisée pour améliorer la stabilité, 
 * `ssc_inline_css` — Offre un point d'entrée pour modifier ou enrichir le CSS assaini juste avant sa sortie (par exemple pour injecter un nonce CSP ou des métriques d'observabilité).
 
 == Changelog ==
+= 10.0.10 =
+* FIX: Les pages Tokens / Utilities / Typographie restent enregistrées dans `$submenu` (plus de `remove_submenu_page`) pour que WordPress 7.1 autorise les nav-tab `admin.php?page=…`.
+* COMPAT: Feuille `editor-canvas.css` réelle + filtre `block_editor_settings_all` pour injecter le CSS SuperSede dans l’iframe Gutenberg même si le cache est vide.
+
 = 10.0.9 =
 * COMPAT: Déclare `Requires at least: 6.3` et `Tested up to: 7.1`.
 * COMPAT: Le CSS généré est chargé via `enqueue_block_assets` dans l’iframe du canevas Gutenberg.

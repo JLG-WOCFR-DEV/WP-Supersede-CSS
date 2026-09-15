@@ -185,6 +185,8 @@ class LayoutTest extends TestCase
             $rendered
         );
         $this->assertStringContainsString('class="current"', $rendered);
+        $this->assertStringContainsString('admin.php?page=supersede-css-jlg-tokens', $rendered);
+        $this->assertStringContainsString('admin.php?page=supersede-css-jlg-utilities', $rendered);
         $this->assertStringNotContainsString('ssc-sidebar-heading', $rendered);
     }
 
@@ -203,6 +205,19 @@ class LayoutTest extends TestCase
         $this->assertDoesNotMatchRegularExpression(
             '/class="nav-tab nav-tab-active"[^>]*>\s*Fondamentaux/s',
             $rendered
+        );
+    }
+
+    public function test_typography_nav_href_matches_registered_page_slug(): void
+    {
+        ob_start();
+        Layout::render('<p>Typo</p>', 'supersede-css-jlg-typography');
+        $typography = ob_get_clean();
+
+        $this->assertStringContainsString('admin.php?page=supersede-css-jlg-typography', $typography);
+        $this->assertMatchesRegularExpression(
+            '/class="nav-tab nav-tab-active"[^>]*>\s*Générateurs Visuels/s',
+            $typography
         );
     }
 }

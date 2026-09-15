@@ -1,0 +1,7 @@
+/**
+ * SuperSede CSS — Gutenberg canvas iframe (WP 6.3+ / 7.1).
+ *
+ * Loaded via enqueue_block_assets so WordPress copies a real stylesheet into
+ * the iframed editor canvas. Inline-only handles (src = false) are skipped.
+ */
+/* SuperSede CSS (Editor iframe) */

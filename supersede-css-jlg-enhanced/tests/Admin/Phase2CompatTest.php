@@ -28,6 +28,7 @@ final class Phase2CompatTest extends TestCase
     public function test_editor_css_loads_on_block_assets_for_iframed_canvas(): void
     {
         $plugin = (string) file_get_contents($this->pluginDir() . '/supersede-css-jlg.php');
+        $canvasCss = $this->pluginDir() . '/assets/css/editor-canvas.css';
 
         $this->assertMatchesRegularExpression(
             "/add_action\(\s*'enqueue_block_assets',\s*'ssc_enqueue_block_canvas_inline_css'\s*\)/",
@@ -40,6 +41,25 @@ final class Phase2CompatTest extends TestCase
             'Canvas CSS must not print from enqueue_block_editor_assets (parent frame).'
         );
         $this->assertStringContainsString('if (!is_admin())', $plugin);
+        $this->assertStringContainsString("add_filter('block_editor_settings_all'", $plugin);
+        $this->assertStringContainsString('assets/css/editor-canvas.css', $plugin);
+        $this->assertFileExists($canvasCss);
+        $this->assertStringContainsString(
+            '/* SuperSede CSS (Editor iframe) */',
+            (string) file_get_contents($canvasCss)
+        );
+    }
+
+    public function test_admin_keeps_module_submenu_pages_registered(): void
+    {
+        $admin = (string) file_get_contents($this->pluginDir() . '/src/Admin/Admin.php');
+
+        $this->assertStringContainsString('add_submenu_page', $admin);
+        $this->assertDoesNotMatchRegularExpression(
+            '/remove_submenu_page\s*\(/',
+            $admin,
+            'Module slugs must stay in $submenu so WP 7.1 user_can_access_admin_page() allows nav-tab URLs.'
+        );
     }
 
     public function test_token_preview_editor_script_is_iframe_safe(): void

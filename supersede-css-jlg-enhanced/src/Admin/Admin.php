@@ -73,9 +73,9 @@ final class Admin
             }
         });
 
-        if ($page_slug !== $this->slug) {
-            remove_submenu_page($this->slug, $page_slug);
-        }
+        // Keep every module in $submenu. Unregistering those items emptied the
+        // parent used by get_admin_page_parent(), so WP 7.1 denied nav-tab URLs
+        // such as admin.php?page=supersede-css-jlg-tokens|utilities|typography.
     }
 
     public function renderDashboard(): void {

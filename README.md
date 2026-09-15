@@ -1,6 +1,6 @@
 # Supersede CSS JLG (Enhanced)
 
-**Version:** 10.0.9
+**Version:** 10.0.10
 **Author:** JLG (Enhanced by AI)
 
 Supersede CSS JLG (Enhanced) est une boîte à outils visuelle pour accélérer la création de styles WordPress. Elle combine des éditeurs temps réel, des générateurs de presets et un moteur de tokens pour produire un CSS cohérent sans écrire de code à la main.
@@ -30,7 +30,7 @@ Supersede CSS JLG (Enhanced) est une boîte à outils visuelle pour accélérer 
 ## Fonctionnalités clés
 
 - **Interface modulaire** – Chaque éditeur vit dans un onglet dédié : effets visuels, tokens, layouts, animations, etc., afin de limiter le contexte à manipuler.
-- **CSS mis en cache et assaini** – Le CSS généré est concaténé, filtré et mis en cache à la volée pour le frontal. Dans Gutenberg (WordPress 7.1, canevas iframé), il est chargé via `enqueue_block_assets` pour s’appliquer au contenu, pas au chrome de l’éditeur.
+- **CSS mis en cache et assaini** – Le CSS généré est concaténé, filtré et mis en cache à la volée pour le frontal. Dans Gutenberg (WordPress 7.1, canevas iframé), une feuille `editor-canvas.css` est chargée via `enqueue_block_assets` et réinjectée dans `block_editor_settings_all` pour s’appliquer au contenu, pas au chrome de l’éditeur.
 - **Bloc Gutenberg « Token Preview »** – Un bloc dédié affiche la bibliothèque de tokens dans Gutenberg en se connectant à l’API REST Supersede.
 - **Filtre de capacité** – Ajustez la capacité requise (`manage_options` par défaut) via le hook `ssc_required_capability` pour déléguer l’accès à vos équipes.
 - **Tests automatisés** – Playwright valide l’interface du gestionnaire de tokens contre un WordPress de test orchestré par `@wordpress/env` et PHPUnit couvre la couche PHP.
