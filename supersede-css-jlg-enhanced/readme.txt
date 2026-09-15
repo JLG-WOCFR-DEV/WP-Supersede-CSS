@@ -1,5 +1,7 @@
 === Supersede CSS JLG (Enhanced) ===
-Stable tag: 10.0.8
+Stable tag: 10.0.9
+Requires at least: 6.3
+Tested up to: 7.1
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -20,6 +22,11 @@ Cette version a été entièrement refactorisée pour améliorer la stabilité, 
 * `ssc_inline_css` — Offre un point d'entrée pour modifier ou enrichir le CSS assaini juste avant sa sortie (par exemple pour injecter un nonce CSP ou des métriques d'observabilité).
 
 == Changelog ==
+= 10.0.9 =
+* COMPAT: Déclare `Requires at least: 6.3` et `Tested up to: 7.1`.
+* COMPAT: Le CSS généré est chargé via `enqueue_block_assets` dans l’iframe du canevas Gutenberg.
+* UX: Chrome wp-admin (`wrap`, `h1`, `nav-tab`, `subsubsub`, `form-table`, `button-primary`, `notice-*`) ; plus de shell Inter / violet.
+
 = 10.0.8 =
 * IMPROVEMENT: La sidebar admin replie les groupes inactifs (seul le groupe de la page courante reste ouvert) et mémorise l'état dans `localStorage`.
 * IMPROVEMENT: L'éditeur CSS utilise CodeMirror de WordPress (`wp_enqueue_code_editor`) ; le bundle local n'est chargé qu'en repli.

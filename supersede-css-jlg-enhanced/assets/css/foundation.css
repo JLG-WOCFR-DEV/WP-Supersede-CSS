@@ -7,30 +7,31 @@
  * anything reusable here.
  */
 
-:root {
-    /* Color palette inspired by Radix UI */
-    --ssc-bg: #fdfcfe;
+.wrap,
+.ssc-app {
+    /* Align with wp-admin; do not paint WordPress chrome. */
+    --ssc-bg: transparent;
     --ssc-card: #ffffff;
-    --ssc-surface-muted: #f5f2ff;
-    --ssc-border: #e4e1f4;
-    --ssc-border-subtle: #edeafd;
-    --ssc-border-strong: #c9c4e8;
-    --ssc-text: #1f1d2b;
+    --ssc-surface-muted: #f6f7f7;
+    --ssc-border: #c3c4c7;
+    --ssc-border-subtle: #dcdcde;
+    --ssc-border-strong: #8c8f94;
+    --ssc-text: #1d2327;
     --ssc-text-contrast: #ffffff;
-    --ssc-muted: #6f6c8f;
+    --ssc-muted: #646970;
     --ssc-muted-soft: color-mix(in srgb, var(--ssc-muted) 22%, var(--ssc-card) 78%);
-    --ssc-accent: #6e56cf;
-    --ssc-accent-hover: #5b3fc4;
-    --ssc-accent-active: #4a32b6;
-    --ssc-accent-soft: #f4f0ff;
-    --ssc-success: #30a46c;
-    --ssc-danger: #e54d2e;
-    --ssc-warning: #f9a826;
-    --ssc-info: #3e63dd;
-    --ssc-focus-ring: rgba(94, 82, 175, 0.28);
+    --ssc-accent: var(--wp-admin-theme-color, #2271b1);
+    --ssc-accent-hover: var(--wp-admin-theme-color-darker-10, #135e96);
+    --ssc-accent-active: var(--wp-admin-theme-color-darker-20, #0a4b78);
+    --ssc-accent-soft: #f0f6fc;
+    --ssc-success: #00a32a;
+    --ssc-danger: #d63638;
+    --ssc-warning: #dba617;
+    --ssc-info: var(--wp-admin-theme-color, #2271b1);
+    --ssc-focus-ring: var(--wp-admin-theme-color, #2271b1);
 
     /* Typography scale */
-    --ssc-font-family-base: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    --ssc-font-family-base: inherit;
     --ssc-font-size-xs: 0.75rem;   /* 12px */
     --ssc-font-size-sm: 0.875rem;  /* 14px */
     --ssc-font-size-md: 1rem;      /* 16px */
@@ -98,7 +99,7 @@
     --ssc-button-primary-bg-hover: var(--ssc-accent-hover);
     --ssc-button-primary-bg-active: var(--ssc-accent-active);
     --ssc-button-primary-color: var(--ssc-text-contrast);
-    --ssc-button-primary-shadow: 0 10px 30px rgba(94, 82, 175, 0.32);
+    --ssc-button-primary-shadow: none;
 
     --ssc-button-secondary-bg: color-mix(in srgb, var(--ssc-card) 88%, var(--ssc-surface-muted) 12%);
     --ssc-button-secondary-bg-hover: color-mix(in srgb, var(--ssc-card) 70%, var(--ssc-surface-muted) 30%);

@@ -38,4 +38,12 @@ class ModuleRegistryTest extends TestCase
         $this->assertArrayHasKey(ModuleRegistry::BASE_SLUG . '-layout-builder', $grouped['visual-builders']['items']);
         $this->assertArrayHasKey(ModuleRegistry::BASE_SLUG . '-anim', $grouped['effects']['items']);
     }
+
+    public function test_group_helpers_resolve_active_tab_and_first_page(): void
+    {
+        $this->assertSame('fundamentals', ModuleRegistry::groupKeyForPage(ModuleRegistry::BASE_SLUG));
+        $this->assertSame('tools', ModuleRegistry::groupKeyForPage(ModuleRegistry::BASE_SLUG . '-debug-center'));
+        $this->assertSame(ModuleRegistry::BASE_SLUG, ModuleRegistry::firstPageSlugForGroup('fundamentals'));
+        $this->assertSame(ModuleRegistry::BASE_SLUG . '-scope', ModuleRegistry::firstPageSlugForGroup('tools'));
+    }
 }

@@ -5,8 +5,7 @@ if (!defined('ABSPATH')) {
 /** @var array{utilities?:string,tokens?:string,avatar?:string,debug_center?:string} $quick_links */
 ?>
 <div class="ssc-app ssc-dashboard">
-    <h1><?php echo esc_html__('Supersede CSS — Dashboard', 'supersede-css-jlg'); ?></h1>
-    <p class="ssc-dashboard-intro"><?php echo esc_html__('Bienvenue ! Utilisez le menu latéral ou la palette de commande (⌘/Ctrl + K) pour accéder à vos studios créatifs, ou choisissez un raccourci ci-dessous.', 'supersede-css-jlg'); ?></p>
+    <p class="ssc-dashboard-intro"><?php echo esc_html__('Bienvenue. Utilisez les onglets, les liens du groupe ou la palette de commandes (⌘/Ctrl + K) pour ouvrir un studio, ou choisissez un raccourci ci-dessous.', 'supersede-css-jlg'); ?></p>
 
     <div class="ssc-dashboard-grid">
         <section class="ssc-dashboard-card" aria-labelledby="ssc-dashboard-quick-title">
@@ -42,8 +41,16 @@ if (!defined('ABSPATH')) {
             </ul>
             <p class="ssc-dashboard-note">
                 <span class="dashicons dashicons-visibility" aria-hidden="true"></span>
-                <span><?php echo esc_html__('Besoin d’un autre module ? Utilisez la palette de commande ou la navigation pour accéder aux générateurs d’effets, layouts et animations.', 'supersede-css-jlg'); ?></span>
+                <span><?php echo esc_html__('Besoin d’un autre module ? Utilisez la palette de commandes ou les onglets pour accéder aux générateurs d’effets, layouts et animations.', 'supersede-css-jlg'); ?></span>
             </p>
+        </section>
+
+        <section class="ssc-dashboard-card" aria-labelledby="ssc-dashboard-settings">
+            <div class="ssc-dashboard-card__header">
+                <h2 id="ssc-dashboard-settings"><?php echo esc_html__('Réglages', 'supersede-css-jlg'); ?></h2>
+                <p><?php echo esc_html__('Options enregistrées via l’API Réglages de WordPress.', 'supersede-css-jlg'); ?></p>
+            </div>
+            <?php \SSC\Admin\PluginSettings::renderForm(); ?>
         </section>
 
         <section class="ssc-dashboard-card" aria-labelledby="ssc-dashboard-token-preview">

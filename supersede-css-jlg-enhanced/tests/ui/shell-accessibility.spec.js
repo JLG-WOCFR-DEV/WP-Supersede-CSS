@@ -22,8 +22,8 @@ async function authenticate(page, adminUrl, credentials) {
   await page.goto(adminUrl, { waitUntil: 'networkidle' });
 }
 
-test.describe('Supersede CSS shell accessibility', () => {
-  test('mobile sidebar toggle updates ARIA attributes in narrow viewport', async ({ page }, testInfo) => {
+test.describe('Supersede CSS admin charter', () => {
+  test('uses wrap, heading and nav-tabs instead of a custom shell', async ({ page }, testInfo) => {
     const baseURL = testInfo.project.use.baseURL || 'http://localhost:8889';
     const adminShellUrl = new URL(ADMIN_SHELL_PATH, baseURL).toString();
 
@@ -34,25 +34,12 @@ test.describe('Supersede CSS shell accessibility', () => {
       password: DEFAULT_PASSWORD,
     });
 
-    await page.waitForSelector('#ssc-mobile-menu');
-    await page.waitForSelector('#ssc-sidebar');
-
-    const mobileMenuButton = page.locator('#ssc-mobile-menu');
-    const sidebar = page.locator('#ssc-sidebar');
-
-    await expect(mobileMenuButton).toBeVisible();
-    await expect.poll(async () => mobileMenuButton.getAttribute('aria-expanded')).toBe('false');
-    await expect.poll(async () => sidebar.getAttribute('aria-hidden')).toBe('true');
-
-    await mobileMenuButton.click();
-
-    await expect.poll(async () => mobileMenuButton.getAttribute('aria-expanded')).toBe('true');
-    await expect.poll(async () => sidebar.getAttribute('aria-hidden')).toBeNull();
-
-    await mobileMenuButton.click();
-
-    await expect.poll(async () => mobileMenuButton.getAttribute('aria-expanded')).toBe('false');
-    await expect.poll(async () => sidebar.getAttribute('aria-hidden')).toBe('true');
+    await expect(page.locator('.wrap > h1.wp-heading-inline')).toBeVisible();
+    await expect(page.locator('.nav-tab-wrapper')).toBeVisible();
+    await expect(page.locator('.subsubsub')).toBeVisible();
+    await expect(page.locator('#ssc-cmdk')).toBeVisible();
+    await expect(page.locator('#ssc-sidebar')).toHaveCount(0);
+    await expect(page.locator('#ssc-mobile-menu')).toHaveCount(0);
   });
 
   test('command palette hides background content and closes on Escape', async ({ page }, testInfo) => {

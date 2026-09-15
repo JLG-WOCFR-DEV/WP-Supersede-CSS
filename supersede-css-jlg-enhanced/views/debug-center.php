@@ -269,7 +269,7 @@ switch ($css_cache_generation_method) {
 }
 ?>
 <div class="ssc-wrap ssc-debug-center">
-    <h1><?php echo esc_html__('Supersede CSS — Debug Center', 'supersede-css-jlg'); ?></h1>
+    <h2><?php echo esc_html__('Supersede CSS — Debug Center', 'supersede-css-jlg'); ?></h2>
     <p><?php echo esc_html__('Un hub centralisé pour la santé du système, la gestion des modules et le journal d\'activité.', 'supersede-css-jlg'); ?></p>
 
     <div class="ssc-two ssc-two--align-start ssc-mt-200">

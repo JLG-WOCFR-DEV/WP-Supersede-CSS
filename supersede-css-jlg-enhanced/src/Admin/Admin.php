@@ -14,6 +14,7 @@ final class Admin
 
         add_action('admin_menu', [$this, 'menu']);
         add_action('admin_enqueue_scripts', [$this, 'assets']);
+        PluginSettings::register();
     }
 
     public function menu(): void {

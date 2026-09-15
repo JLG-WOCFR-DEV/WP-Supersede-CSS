@@ -2,7 +2,9 @@
 /**
  * Plugin Name: Supersede CSS JLG (Enhanced)
  * Description: Boîte à outils visuelle pour CSS avec presets, éditeurs live, tokens, et un centre de débogage amélioré.
- * Version: 10.0.8
+ * Version: 10.0.9
+ * Requires at least: 6.3
+ * Tested up to: 7.1
  * Requires PHP: 8.0
  * Author: JLG (Enhanced by AI)
  * Text Domain: supersede-css-jlg
@@ -19,7 +21,7 @@ use SSC\Support\CssSanitizer;
 use SSC\Support\PresetLibrary;
 use SSC\Support\TokenRegistry;
 
-define('SSC_VERSION','10.0.8');
+define('SSC_VERSION','10.0.9');
 define('SSC_PLUGIN_FILE', __FILE__);
 define('SSC_PLUGIN_DIR', plugin_dir_path(__FILE__));
 // CORRECTION : Déclaration de l'URL plus robuste pour éviter les erreurs 404.
@@ -408,7 +410,7 @@ if (!function_exists('ssc_enqueue_frontend_inline_css')) {
 
 if (!function_exists('ssc_enqueue_block_editor_inline_css')) {
     /**
-     * Injecte le CSS Supersede dans l'éditeur de blocs.
+     * Injecte le CSS Supersede dans le canevas de l'éditeur de blocs.
      */
     function ssc_enqueue_block_editor_inline_css(): void
     {
@@ -426,7 +428,29 @@ if (!function_exists('ssc_enqueue_block_editor_inline_css')) {
     }
 }
 
-add_action('enqueue_block_editor_assets', 'ssc_enqueue_block_editor_inline_css');
+if (!function_exists('ssc_enqueue_block_canvas_inline_css')) {
+    /**
+     * Charge le CSS généré dans l'iframe du canevas Gutenberg (WP 6.3+ / 7.1).
+     *
+     * `enqueue_block_editor_assets` imprime dans le document parent (inspecteur),
+     * donc le CSS n'atteindrait pas le contenu. `enqueue_block_assets` est copié
+     * dans l'iframe. Le frontal reste sur `wp_enqueue_scripts`.
+     */
+    function ssc_enqueue_block_canvas_inline_css(): void
+    {
+        if (!is_admin()) {
+            return;
+        }
+
+        if (class_exists('\\SSC\\Admin\\PluginSettings') && !\SSC\Admin\PluginSettings::injectEditorCssEnabled()) {
+            return;
+        }
+
+        ssc_enqueue_block_editor_inline_css();
+    }
+}
+
+add_action('enqueue_block_assets', 'ssc_enqueue_block_canvas_inline_css');
 
 add_action('init', static function (): void {
     load_plugin_textdomain('supersede-css-jlg', false, dirname(plugin_basename(__FILE__)) . '/languages');

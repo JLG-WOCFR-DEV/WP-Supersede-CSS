@@ -145,7 +145,9 @@
     } = {}) {
         const { container, log, i18n } = getToastContainer(politeness);
         const toastRole = role || (politeness === 'assertive' ? 'alert' : 'status');
+        const toastTypeClass = politeness === 'assertive' ? 'notice notice-error' : 'notice notice-success';
         const toast = $('<div class="ssc-toast"></div>')
+            .addClass(toastTypeClass)
             .attr('role', toastRole)
             .attr('tabindex', '0');
 
@@ -790,7 +792,7 @@
             visualDebug.set(!!state, meta);
         });
 
-        if (localStorage.getItem('ssc-theme') === 'dark') {
+        if (themeToggle.length && localStorage.getItem('ssc-theme') === 'dark') {
             body.addClass('ssc-dark');
         }
 
@@ -1015,7 +1017,7 @@
 
             paletteApi.registerSource('primary-navigation', () => {
                 const items = [];
-                $('.ssc-sidebar a').each(function() {
+                $('.ssc-admin-nav a, .subsubsub a').each(function() {
                     const link = $(this);
                     const text = (link.text() || '').trim();
                     if (!text) {
