@@ -60,6 +60,12 @@ final class Phase2CompatTest extends TestCase
             $admin,
             'Module slugs must stay in $submenu so WP 7.1 user_can_access_admin_page() allows nav-tab URLs.'
         );
+        $this->assertStringContainsString('hideExtraSubmenuItems', $admin);
+        $this->assertStringContainsString(
+            "add_action('admin_menu', [\$this, 'hideExtraSubmenuItems'], 999)",
+            $admin,
+            'Extra submenu rows must be hidden after admin_menu without unregistering the slugs.'
+        );
     }
 
     public function test_token_preview_editor_script_is_iframe_safe(): void

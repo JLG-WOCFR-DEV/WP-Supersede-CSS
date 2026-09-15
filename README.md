@@ -1,6 +1,6 @@
 # Supersede CSS JLG (Enhanced)
 
-**Version:** 10.0.10
+**Version:** 10.0.11
 **Author:** JLG (Enhanced by AI)
 
 Supersede CSS JLG (Enhanced) est une boîte à outils visuelle pour accélérer la création de styles WordPress. Elle combine des éditeurs temps réel, des générateurs de presets et un moteur de tokens pour produire un CSS cohérent sans écrire de code à la main.

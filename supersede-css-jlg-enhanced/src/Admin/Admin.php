@@ -13,6 +13,7 @@ final class Admin
         $this->cap  = \ssc_get_required_capability();
 
         add_action('admin_menu', [$this, 'menu']);
+        add_action('admin_menu', [$this, 'hideExtraSubmenuItems'], 999);
         add_action('admin_enqueue_scripts', [$this, 'assets']);
         PluginSettings::register();
     }
@@ -72,10 +73,45 @@ final class Admin
                 echo wp_kses($page_content, wp_kses_allowed_html('post'));
             }
         });
+    }
 
-        // Keep every module in $submenu. Unregistering those items emptied the
-        // parent used by get_admin_page_parent(), so WP 7.1 denied nav-tab URLs
-        // such as admin.php?page=supersede-css-jlg-tokens|utilities|typography.
+    /**
+     * Hides extra module rows from the wp-admin sidebar without unregistering them.
+     *
+     * Removing the `$submenu` row (or unregistering the submenu item) makes
+     * `get_admin_page_parent()` return empty, so WordPress 7.1 403s nav-tab URLs.
+     * Pages stay in `$submenu` / `$_registered_pages`; only the printed label is
+     * cleared and the `hidden` class is applied (menu-header.php item[4]).
+     */
+    public function hideExtraSubmenuItems(): void
+    {
+        global $submenu;
+
+        if (!isset($submenu[$this->slug]) || !is_array($submenu[$this->slug])) {
+            return;
+        }
+
+        foreach ($submenu[$this->slug] as $index => $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $item_slug = isset($item[2]) && is_string($item[2]) ? $item[2] : '';
+            if ($item_slug === '' || $item_slug === $this->slug) {
+                continue;
+            }
+
+            $submenu[$this->slug][$index][0] = '';
+            $classes = isset($item[4]) && is_string($item[4]) ? $item[4] : '';
+            $tokens = preg_split('/\s+/', trim($classes), -1, PREG_SPLIT_NO_EMPTY);
+            if (!is_array($tokens)) {
+                $tokens = [];
+            }
+            if (!in_array('hidden', $tokens, true)) {
+                $tokens[] = 'hidden';
+            }
+            $submenu[$this->slug][$index][4] = implode(' ', $tokens);
+        }
     }
 
     public function renderDashboard(): void {

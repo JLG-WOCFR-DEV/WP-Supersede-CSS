@@ -32,6 +32,7 @@ final class AdminMenuAccessTest extends WP_UnitTestCase
 
         $admin = new \SSC\Admin\Admin();
         $admin->menu();
+        $admin->hideExtraSubmenuItems();
 
         $parent = \SSC\Admin\ModuleRegistry::BASE_SLUG;
         $this->assertArrayHasKey($parent, $submenu);
@@ -59,5 +60,43 @@ final class AdminMenuAccessTest extends WP_UnitTestCase
                 'Administrator must be allowed to open ' . $slug
             );
         }
+
+        $visibleSlugs = $this->visibleSubmenuSlugs($parent);
+        $this->assertContains(
+            $parent,
+            $visibleSlugs,
+            'The parent dashboard slug should remain a visible submenu child.'
+        );
+
+        foreach ($this->requiredModuleSlugs() as $slug) {
+            $this->assertNotContains(
+                $slug,
+                $visibleSlugs,
+                $slug . ' must not appear as a visible wp-admin submenu child; nav-tab/subsubsub is the navigation.'
+            );
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function visibleSubmenuSlugs(string $parent): array
+    {
+        global $submenu;
+
+        $visible = [];
+        foreach ($submenu[$parent] as $item) {
+            $title = isset($item[0]) ? trim(wp_strip_all_tags((string) $item[0])) : '';
+            $classes = isset($item[4]) ? (string) $item[4] : '';
+            if ($title === '') {
+                continue;
+            }
+            if (preg_match('/(?:^|\s)(?:hidden|hide-if-js)(?:\s|$)/', $classes)) {
+                continue;
+            }
+            $visible[] = $item[2];
+        }
+
+        return $visible;
     }
 }
