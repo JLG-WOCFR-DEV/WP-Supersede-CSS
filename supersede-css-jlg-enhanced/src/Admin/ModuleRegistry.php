@@ -460,4 +460,27 @@ final class ModuleRegistry
     {
         return self::modulesByPage()[$page_slug] ?? null;
     }
+
+    public static function groupKeyForPage(string $page_slug): ?string
+    {
+        foreach (self::modules() as $module) {
+            if (($module['page_slug'] ?? '') !== $page_slug) {
+                continue;
+            }
+
+            $group = $module['group'] ?? null;
+
+            return is_string($group) && $group !== '' ? $group : null;
+        }
+
+        return null;
+    }
+
+    public static function firstPageSlugForGroup(string $group_key): string
+    {
+        $items = self::groupedMenu()[$group_key]['items'] ?? [];
+        $first = array_key_first($items);
+
+        return is_string($first) && $first !== '' ? $first : self::BASE_SLUG;
+    }
 }

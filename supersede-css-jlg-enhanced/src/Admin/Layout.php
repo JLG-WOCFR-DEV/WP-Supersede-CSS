@@ -51,6 +51,12 @@ class Layout {
             }
         }
 
+        $allowed['table']['role'] = true;
+        if (!isset($allowed['th']) || !is_array($allowed['th'])) {
+            $allowed['th'] = [];
+        }
+        $allowed['th']['scope'] = true;
+
         $allowed['style'] = [
             'id'     => true,
             'class'  => true,
@@ -302,99 +308,58 @@ class Layout {
 
     public static function render(string $page_content, string $current_page_slug): void {
         $page_content = self::sanitize_style_blocks($page_content);
-        
+
         $menu_items = ModuleRegistry::groupedMenu();
-        $back_to_admin_aria_label = esc_attr__('Retourner sur le tableau de bord WordPress', 'supersede-css-jlg');
-        $back_to_admin_label = esc_html__('WP Admin', 'supersede-css-jlg');
-        $theme_button_label = esc_html__('Thème', 'supersede-css-jlg');
-        $theme_button_aria_label = esc_attr__('Basculer le thème clair ou sombre', 'supersede-css-jlg');
-        $command_button_label = esc_html__('Commande', 'supersede-css-jlg');
+        $active_group_key = ModuleRegistry::groupKeyForPage($current_page_slug) ?? 'fundamentals';
+        $current_group_items = $menu_items[$active_group_key]['items'] ?? [];
+        $command_button_label = esc_html__('Palette de commandes', 'supersede-css-jlg');
         $command_button_aria_label = esc_attr__('Ouvrir la palette de commandes', 'supersede-css-jlg');
-        $mobile_menu_show_label = esc_attr__('Afficher le menu', 'supersede-css-jlg');
-        $mobile_menu_sr_label = esc_html__('Menu', 'supersede-css-jlg');
 
         ?>
         <div class="wrap">
-        <div class="ssc-viewport">
-            <div class="ssc-shell">
-                <a class="ssc-skip-link" href="#ssc-main-content"><?php echo esc_html__('Passer au contenu principal', 'supersede-css-jlg'); ?></a>
-                <header class="ssc-topbar">
-                    <div class="ssc-topbar__cluster ssc-topbar__cluster--left">
-                        <a href="<?php echo esc_url(admin_url('index.php')); ?>" class="ssc-back-to-admin button" aria-label="<?php echo $back_to_admin_aria_label; ?>">
-                            <span class="dashicons dashicons-arrow-left-alt" aria-hidden="true"></span>
-                            <span class="ssc-topbar-label"><?php echo $back_to_admin_label; ?></span>
-                        </a>
-                        <button
-                            type="button"
-                            class="button ssc-mobile-menu-toggle"
-                            id="ssc-mobile-menu"
-                            aria-expanded="false"
-                            aria-controls="ssc-sidebar"
-                            aria-haspopup="true"
-                            aria-label="<?php echo $mobile_menu_show_label; ?>"
-                        >
-                            <span class="dashicons dashicons-menu" aria-hidden="true"></span>
-                            <span class="screen-reader-text"><?php echo $mobile_menu_sr_label; ?></span>
-                        </button>
-                    </div>
-                    <div class="ssc-topbar__title">
-                        <span class="ssc-title">Supersede CSS</span>
-                    </div>
-                    <div class="ssc-topbar__cluster ssc-topbar__cluster--right">
-                        <button type="button" class="button" id="ssc-theme" aria-label="<?php echo $theme_button_aria_label; ?>" aria-pressed="false">
-                            <span aria-hidden="true">🌓</span>
-                            <span class="ssc-topbar-label"><?php echo $theme_button_label; ?></span>
-                        </button>
-                        <button type="button" class="button button-primary" id="ssc-cmdk" aria-label="<?php echo $command_button_aria_label; ?>">
-                            <span aria-hidden="true">⌘K</span>
-                            <span class="ssc-topbar-label"><?php echo $command_button_label; ?></span>
-                        </button>
-                    </div>
-                </header>
-            <div class="ssc-shell-overlay" hidden></div>
-            <div class="ssc-layout">
-                <aside>
-                    <nav class="ssc-sidebar" id="ssc-sidebar" aria-label="<?php echo esc_attr__('Navigation Supersede CSS', 'supersede-css-jlg'); ?>">
+            <a class="ssc-skip-link" href="#ssc-main-content"><?php echo esc_html__('Passer au contenu principal', 'supersede-css-jlg'); ?></a>
+            <h1 class="wp-heading-inline"><?php echo esc_html__('Supersede CSS', 'supersede-css-jlg'); ?></h1>
+            <button type="button" class="page-title-action" id="ssc-cmdk" aria-label="<?php echo $command_button_aria_label; ?>">
+                <?php echo $command_button_label; ?>
+            </button>
+            <hr class="wp-header-end" />
+            <nav class="nav-tab-wrapper wp-clearfix ssc-admin-nav" aria-label="<?php echo esc_attr__('Navigation Supersede CSS', 'supersede-css-jlg'); ?>">
+                <?php foreach ($menu_items as $group): ?>
                     <?php
-                    $active_group_key = '';
-                    foreach ($menu_items as $group) {
-                        if (isset($group['items'][$current_page_slug])) {
-                            $active_group_key = $group['key'];
-                            break;
-                        }
+                    if (empty($group['items'])) {
+                        continue;
                     }
+                    $is_active = ($active_group_key === $group['key']);
+                    $tab_slug = $is_active ? $current_page_slug : ModuleRegistry::firstPageSlugForGroup($group['key']);
+                    $classes = 'nav-tab' . ($is_active ? ' nav-tab-active' : '');
                     ?>
-                    <?php foreach ($menu_items as $group): ?>
-                        <?php
-                        if (empty($group['items'])) {
-                            continue;
-                        }
-                        $group_key = $group['key'];
-                        $group_label = $group['label'];
-                        $is_open = ($active_group_key === $group_key);
-                        ?>
-                        <details class="ssc-sidebar-group" data-ssc-group="<?php echo esc_attr($group_key); ?>"<?php echo $is_open ? ' open' : ''; ?>>
-                            <summary class="ssc-sidebar-heading"><?php echo esc_html($group_label); ?></summary>
-                            <?php foreach ($group['items'] as $slug => $label): ?>
-                                <?php $is_active = ($current_page_slug === $slug); ?>
-                                <a
-                                    href="<?php echo esc_url(admin_url('admin.php?page=' . $slug)); ?>"
-                                    class="<?php echo esc_attr( $is_active ? 'active' : '' ); ?>"
-                                    <?php if ($is_active): ?>aria-current="page"<?php endif; ?>
-                                >
-                                    <?php echo esc_html($label); ?>
-                                </a>
-                            <?php endforeach; ?>
-                        </details>
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=' . $tab_slug)); ?>" class="<?php echo esc_attr($classes); ?>">
+                        <?php echo esc_html($group['label']); ?>
+                    </a>
+                <?php endforeach; ?>
+            </nav>
+            <?php if ($current_group_items !== []): ?>
+                <?php
+                $item_slugs = array_keys($current_group_items);
+                $last_slug = (string) end($item_slugs);
+                ?>
+                <ul class="subsubsub">
+                    <?php foreach ($current_group_items as $slug => $label): ?>
+                        <?php $is_current = ($current_page_slug === $slug); ?>
+                        <li>
+                            <a
+                                href="<?php echo esc_url(admin_url('admin.php?page=' . $slug)); ?>"
+                                class="<?php echo $is_current ? 'current' : ''; ?>"
+                                <?php if ($is_current): ?>aria-current="page"<?php endif; ?>
+                            ><?php echo esc_html($label); ?></a><?php echo $slug !== $last_slug ? ' |' : ''; ?>
+                        </li>
                     <?php endforeach; ?>
-                    </nav>
-                </aside>
-                <main class="ssc-main-content" id="ssc-main-content" tabindex="-1">
-                    <?php echo wp_kses( $page_content, self::allowed_tags() ); ?>
-                </main>
+                </ul>
+                <br class="clear" />
+            <?php endif; ?>
+            <div class="ssc-main-content" id="ssc-main-content" tabindex="-1">
+                <?php echo wp_kses($page_content, self::allowed_tags()); ?>
             </div>
-            </div>
-        </div>
         </div>
         <?php
     }

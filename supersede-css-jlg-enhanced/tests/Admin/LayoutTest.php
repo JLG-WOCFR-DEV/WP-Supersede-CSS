@@ -145,7 +145,7 @@ class LayoutTest extends TestCase
         $this->assertArrayHasKey('type', $firstCall['style']);
     }
 
-    public function test_render_wraps_content_with_accessible_shell_and_sanitizes_styles(): void
+    public function test_render_uses_wp_admin_charter_and_sanitizes_styles(): void
     {
         $pageContent = '<style>.foo { behavior:url(https://evil.test); color: red; }</style><p>Contenu <strong>test</strong></p>';
 
@@ -153,40 +153,71 @@ class LayoutTest extends TestCase
         Layout::render($pageContent, 'supersede-css-jlg');
         $rendered = ob_get_clean();
 
-        $this->assertStringContainsString('class="ssc-skip-link"', $rendered);
-        $this->assertStringContainsString('id="ssc-sidebar"', $rendered);
-        $this->assertStringContainsString('aria-label="Navigation Supersede CSS"', $rendered);
+        $this->assertStringContainsString('class="wrap"', $rendered);
+        $this->assertStringContainsString('<h1 class="wp-heading-inline">', $rendered);
+        $this->assertStringContainsString('nav-tab-wrapper', $rendered);
+        $this->assertStringContainsString('nav-tab-active', $rendered);
+        $this->assertStringContainsString('class="subsubsub"', $rendered);
+        $this->assertStringContainsString('id="ssc-cmdk"', $rendered);
         $this->assertStringContainsString('id="ssc-main-content"', $rendered);
         $this->assertStringContainsString('tabindex="-1"', $rendered);
         $this->assertStringContainsString('aria-current="page"', $rendered);
+        $this->assertStringContainsString('class="ssc-skip-link"', $rendered);
+
+        $this->assertStringNotContainsString('id="ssc-sidebar"', $rendered);
+        $this->assertStringNotContainsString('ssc-topbar', $rendered);
+        $this->assertStringNotContainsString('ssc-viewport', $rendered);
+        $this->assertStringNotContainsString('id="ssc-theme"', $rendered);
+        $this->assertStringNotContainsString('id="ssc-mobile-menu"', $rendered);
 
         $this->assertStringNotContainsString('behavior', $rendered);
         $this->assertStringContainsString('.foo {color:red}', $rendered);
     }
 
-    public function test_sidebar_collapses_inactive_groups_and_opens_the_active_group(): void
+    public function test_fundamentals_tab_is_active_on_dashboard(): void
     {
         ob_start();
         Layout::render('<p>Contenu</p>', 'supersede-css-jlg');
         $rendered = ob_get_clean();
 
-        $this->assertStringContainsString('<summary class="ssc-sidebar-heading">', $rendered);
-        $this->assertStringContainsString('data-ssc-group="fundamentals" open', $rendered);
-        $this->assertStringContainsString('data-ssc-group="visual-builders">', $rendered);
-        $this->assertStringNotContainsString('data-ssc-group="visual-builders" open', $rendered);
-        $this->assertStringNotContainsString('data-ssc-group="effects" open', $rendered);
-        $this->assertStringNotContainsString('data-ssc-group="tools" open', $rendered);
+        $this->assertMatchesRegularExpression(
+            '/class="nav-tab nav-tab-active"[^>]*>\s*Fondamentaux/s',
+            $rendered
+        );
+        $this->assertStringContainsString('class="current"', $rendered);
+        $this->assertStringContainsString('admin.php?page=supersede-css-jlg-tokens', $rendered);
+        $this->assertStringContainsString('admin.php?page=supersede-css-jlg-utilities', $rendered);
+        $this->assertStringNotContainsString('ssc-sidebar-heading', $rendered);
     }
 
-    public function test_sidebar_opens_the_tools_group_on_debug_center(): void
+    public function test_tools_tab_is_active_on_debug_center(): void
     {
         ob_start();
         Layout::render('<p>Contenu</p>', 'supersede-css-jlg-debug-center');
         $rendered = ob_get_clean();
 
-        $this->assertStringContainsString('data-ssc-group="tools" open', $rendered);
+        $this->assertMatchesRegularExpression(
+            '/class="nav-tab nav-tab-active"[^>]*>\s*Outils &amp; Maintenance/s',
+            $rendered
+        );
         $this->assertStringContainsString('aria-current="page"', $rendered);
-        $this->assertStringNotContainsString('data-ssc-group="fundamentals" open', $rendered);
-        $this->assertStringNotContainsString('data-ssc-group="visual-builders" open', $rendered);
+        $this->assertStringContainsString('supersede-css-jlg-debug-center', $rendered);
+        $this->assertDoesNotMatchRegularExpression(
+            '/class="nav-tab nav-tab-active"[^>]*>\s*Fondamentaux/s',
+            $rendered
+        );
+    }
+
+    public function test_typography_nav_href_matches_registered_page_slug(): void
+    {
+        ob_start();
+        Layout::render('<p>Typo</p>', 'supersede-css-jlg-typography');
+        $typography = ob_get_clean();
+
+        $this->assertStringContainsString('admin.php?page=supersede-css-jlg-typography', $typography);
+        $this->assertMatchesRegularExpression(
+            '/class="nav-tab nav-tab-active"[^>]*>\s*Générateurs Visuels/s',
+            $typography
+        );
     }
 }

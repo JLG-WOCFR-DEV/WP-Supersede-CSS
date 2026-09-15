@@ -4,7 +4,7 @@ if (!defined('ABSPATH')) {
 }
 ?>
 <div class="ssc-app ssc-animation-studio">
-    <h1><?php esc_html_e('🎬 Animation Studio', 'supersede-css-jlg'); ?></h1>
+    <h2><?php esc_html_e('🎬 Animation Studio', 'supersede-css-jlg'); ?></h2>
     <p class="description">
         <?php esc_html_e("Définissez votre animation, choisissez la surface d'aperçu et voyez instantanément le rendu sur un composant de carte contextualisé.", 'supersede-css-jlg'); ?>
     </p>

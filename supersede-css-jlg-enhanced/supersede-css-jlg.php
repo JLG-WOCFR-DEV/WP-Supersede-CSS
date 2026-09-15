@@ -2,7 +2,9 @@
 /**
  * Plugin Name: Supersede CSS JLG (Enhanced)
  * Description: Boîte à outils visuelle pour CSS avec presets, éditeurs live, tokens, et un centre de débogage amélioré.
- * Version: 10.0.8
+ * Version: 10.0.10
+ * Requires at least: 6.3
+ * Tested up to: 7.1
  * Requires PHP: 8.0
  * Author: JLG (Enhanced by AI)
  * Text Domain: supersede-css-jlg
@@ -19,7 +21,7 @@ use SSC\Support\CssSanitizer;
 use SSC\Support\PresetLibrary;
 use SSC\Support\TokenRegistry;
 
-define('SSC_VERSION','10.0.8');
+define('SSC_VERSION','10.0.10');
 define('SSC_PLUGIN_FILE', __FILE__);
 define('SSC_PLUGIN_DIR', plugin_dir_path(__FILE__));
 // CORRECTION : Déclaration de l'URL plus robuste pour éviter les erreurs 404.
@@ -406,27 +408,96 @@ if (!function_exists('ssc_enqueue_frontend_inline_css')) {
     }
 }
 
-if (!function_exists('ssc_enqueue_block_editor_inline_css')) {
+if (!function_exists('ssc_get_block_editor_iframe_css')) {
     /**
-     * Injecte le CSS Supersede dans l'éditeur de blocs.
+     * CSS injecté dans l'iframe Gutenberg : marqueur toujours présent, plus le CSS généré.
      */
-    function ssc_enqueue_block_editor_inline_css(): void
+    function ssc_get_block_editor_iframe_css(): string
     {
         $css_filtered = ssc_prepare_inline_css_for_output('editor', true);
 
-        if ($css_filtered === '') {
-            return;
-        }
-
-        $handle = ssc_get_inline_style_handle('editor', 'ssc-editor-styles-handle');
-
-        wp_register_style($handle, false, [], SSC_VERSION);
-        wp_enqueue_style($handle);
-        wp_add_inline_style($handle, '/* Supersede CSS (Editor) */' . $css_filtered);
+        return '/* SuperSede CSS (Editor iframe) */' . $css_filtered;
     }
 }
 
-add_action('enqueue_block_editor_assets', 'ssc_enqueue_block_editor_inline_css');
+if (!function_exists('ssc_enqueue_block_editor_inline_css')) {
+    /**
+     * Injecte le CSS Supersede dans le canevas de l'éditeur de blocs.
+     *
+     * Un fichier CSS réel est obligatoire : WordPress 7.1 ne copie pas dans
+     * l'iframe les handles enregistrés avec `src = false`.
+     */
+    function ssc_enqueue_block_editor_inline_css(): void
+    {
+        $handle = ssc_get_inline_style_handle('editor', 'ssc-editor-canvas');
+        $src = SSC_PLUGIN_URL . 'assets/css/editor-canvas.css';
+
+        wp_register_style($handle, $src, [], SSC_VERSION);
+        wp_enqueue_style($handle);
+
+        $css_filtered = ssc_prepare_inline_css_for_output('editor', true);
+        if ($css_filtered !== '') {
+            wp_add_inline_style($handle, '/* SuperSede CSS (Editor) */' . $css_filtered);
+        }
+    }
+}
+
+if (!function_exists('ssc_enqueue_block_canvas_inline_css')) {
+    /**
+     * Charge le CSS généré dans l'iframe du canevas Gutenberg (WP 6.3+ / 7.1).
+     *
+     * `enqueue_block_editor_assets` imprime dans le document parent (inspecteur),
+     * donc le CSS n'atteindrait pas le contenu. `enqueue_block_assets` est copié
+     * dans l'iframe. Le frontal reste sur `wp_enqueue_scripts`.
+     */
+    function ssc_enqueue_block_canvas_inline_css(): void
+    {
+        if (!is_admin()) {
+            return;
+        }
+
+        if (class_exists('\\SSC\\Admin\\PluginSettings') && !\SSC\Admin\PluginSettings::injectEditorCssEnabled()) {
+            return;
+        }
+
+        ssc_enqueue_block_editor_inline_css();
+    }
+}
+
+if (!function_exists('ssc_inject_block_editor_iframe_styles')) {
+    /**
+     * Injecte le CSS SuperSede dans `$settings['styles']` (chemin fiable vers l'iframe).
+     *
+     * @param mixed $settings Réglages Gutenberg.
+     * @param mixed $context  Contexte d'éditeur (non utilisé).
+     * @return mixed
+     */
+    function ssc_inject_block_editor_iframe_styles($settings, $context = null)
+    {
+        unset($context);
+
+        if (!is_array($settings)) {
+            return $settings;
+        }
+
+        if (class_exists('\\SSC\\Admin\\PluginSettings') && !\SSC\Admin\PluginSettings::injectEditorCssEnabled()) {
+            return $settings;
+        }
+
+        if (!isset($settings['styles']) || !is_array($settings['styles'])) {
+            $settings['styles'] = [];
+        }
+
+        $settings['styles'][] = [
+            'css' => ssc_get_block_editor_iframe_css(),
+        ];
+
+        return $settings;
+    }
+}
+
+add_action('enqueue_block_assets', 'ssc_enqueue_block_canvas_inline_css');
+add_filter('block_editor_settings_all', 'ssc_inject_block_editor_iframe_styles', 10, 2);
 
 add_action('init', static function (): void {
     load_plugin_textdomain('supersede-css-jlg', false, dirname(plugin_basename(__FILE__)) . '/languages');

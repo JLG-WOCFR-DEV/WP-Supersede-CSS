@@ -4,6 +4,11 @@
     const { __ } = wp.i18n;
     const { Notice, Spinner } = wp.components;
     const { registerStore, useSelect } = wp.data;
+    const { useBlockProps } = wp.blockEditor || {
+        useBlockProps( props ) {
+            return props || {};
+        },
+    };
     const apiFetch = wp.apiFetch;
 
     const STORE_NAME = 'supersede/token-preview';
@@ -191,6 +196,7 @@
         icon: 'admin-customizer',
         description: __( 'Affiche un aperçu des tokens Supersede CSS disponibles directement dans l\'éditeur.', 'supersede-css-jlg' ),
         edit() {
+            const blockProps = useBlockProps({ className: 'ssc-token-preview ssc-token-preview--editor' });
             const tokens = useSelect( ( select ) => select( STORE_NAME ).getTokens(), [] );
             const isLoading = useSelect( ( select ) => select( STORE_NAME ).isLoading(), [] );
             const error = useSelect( ( select ) => select( STORE_NAME ).getError(), [] );
@@ -221,7 +227,7 @@
                 inlineStyles,
                 el(
                     'div',
-                    { className: 'ssc-token-preview ssc-token-preview--editor' },
+                    blockProps,
                     content
                 )
             );

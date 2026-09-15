@@ -1,5 +1,5 @@
-:root {
-    /* Keep slightly rounder corners for the immersive UX layout */
+.ssc-app {
+    /* Keep slightly rounder corners for module cards only. */
     --ssc-radius-sm: 8px;
     --ssc-radius-md: 12px;
     --ssc-radius-lg: 16px;
