@@ -742,7 +742,7 @@
                     window.sscCopyToClipboard(payload, {
                         successMessage: translate('healthCopySuccessMessage', 'JSON copié dans le presse-papiers.'),
                         errorMessage: translate('healthCopyErrorMessage', 'La copie du JSON a échoué.')
-                    });
+                    }).catch(() => {});
                     return;
                 }
 
